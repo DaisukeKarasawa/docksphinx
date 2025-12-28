@@ -21,12 +21,12 @@ monitor:
       # 連続N回超過でイベント生成
       consecutive_count: 3
   
-  # メモリ使用量の閾値(%)
-  memory:
-    warning: 80
-    critical: 95
-    # 連続N回超過でイベント生成
-    consecutive_count: 3
+    # メモリ使用量の閾値(%)
+    memory:
+      warning: 80
+      critical: 95
+      # 連続N回超過でイベント生成
+      consecutive_count: 3
 
 # gRPCサーバー設定
 grpc:

@@ -16,7 +16,7 @@ help:
 	@echo " make build     - バイナリをビルド"
 	@echo " make clean     - ビルド成果物を削除"
 	@echo " make test      - テストを実行"
-	@echo " make proto     - Protocal Buffers から Goコードを生成"
+	@echo " make proto     - Protocol Buffers から Goコードを生成"
 	@echo " make generate  - コード生成を実行"
 	@echo " make install   - バイナリをインストール"
 	@echo " make deps      - 依存関係を更新"
