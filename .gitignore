@@ -1,3 +1,51 @@
 # Outputs directory
 # プロジェクトの仕様以外の情報（実装ファイル、設計ドキュメント、分析結果など）を配置
 outputs/
+
+# Binaries
+docksphinx
+docksphinxd
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Generated gRPC code
+api/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Config files (user-specific)
+configs/*.yaml
+configs/*.toml
+!configs/*.example
+
+# Build artifacts
+dist/
+build/
