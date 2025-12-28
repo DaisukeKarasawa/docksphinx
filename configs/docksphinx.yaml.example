@@ -1,0 +1,50 @@
+# Docksphinx 設定ファイルサンプル
+
+# 監視設定
+monitor:
+  # 収集感覚(s)
+  interval: 5
+
+  # 監視対象のフィルタ
+  filters:
+    # コンテナ名パターン(正規表現)
+    container_names: []
+    # イメージ名パターン(正規表現)
+    image_names: []
+
+  # 閾値設定
+  thresholds:
+    # CPU使用率の閾値(%)
+    cpu:
+      warning: 70
+      critical: 90
+      # 連続N回超過でイベント生成
+      consecutive_count: 3
+  
+  # メモリ使用量の閾値(%)
+  memory:
+    warning: 80
+    critical: 95
+    # 連続N回超過でイベント生成
+    consecutive_count: 3
+
+# gRPCサーバー設定
+grpc:
+  # リスニングアドレス
+  address: "127.0.0.1:50051"
+
+  # タイムアウト設定(s)
+  timeout: 30
+
+# ログ設定
+log:
+  # ログレベル: debug, info, warn, error
+  level: "info"
+
+  # ログファイルパス(空の場合は標準出力)
+  file: ""
+
+# イベント履歴設定
+event:
+  # メモリ内に保持する最大イベント数
+  max_history: 1000
