@@ -3,6 +3,7 @@ package docker
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/docker/docker/client"
 )
@@ -75,8 +76,5 @@ func isPermissionError(err error) bool {
 func contains(s, substr string) bool {
 	// Simple case-insensitive check
 	// In production, you might want to use strings.Contains with strings.ToLower
-	return len(s) >= len(substr) &&
-		(s == substr ||
-			(len(s) > len(substr) &&
-				(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr)))
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
