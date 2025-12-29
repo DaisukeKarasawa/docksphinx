@@ -133,12 +133,13 @@ func (c *Client) GetContainerDetails(ctx context.Context, containerID string) (*
 		return nil, err
 	}
 
+	status := calculateStatus(container.State)
 	return &ContainerDetails{
 		ID: 						 container.ID,
 		Name: 				   strings.TrimPrefix(container.Name, "/"),
 		Image:					 container.Image,
 		State:				   container.State.Status,
-		Status:      	 	 container.State.Status,
+		Status:      	 	 status,
 		Created:				 parseCreatedTime(container.Created),
 		StartedAt:			 container.State.StartedAt,
 		FinishedAt:			 container.State.FinishedAt,
@@ -149,6 +150,53 @@ func (c *Client) GetContainerDetails(ctx context.Context, containerID string) (*
 		Mounts:					 container.Mounts,
 		Config:					 container.Config,
 	}, nil
+}
+
+// calculateStatus converts a container's state to a human-readable status string
+func calculateStatus(state *types.ContainerState) string {
+	switch state.Status {
+	case "running":
+		if state.StartedAt != "" {
+			started, err := time.Parse(time.RFC3339Nano, state.StartedAt)
+			if err == nil {
+				duration := time.Since(started)
+				return fmt.Sprintf("Up %s", formatDuration(duration))
+			}
+		}
+		return "Up"
+	case "exited":
+		if state.FinishedAt != "" {
+			finished, err := time.Parse(time.RFC3339Nano, state.FinishedAt)
+			if err == nil {
+				duration := time.Since(finished)
+				return fmt.Sprintf("Exited (%d) %s ago", state.ExitCode, formatDuration(duration))
+			}
+		}
+		return fmt.Sprintf("Exited (%d)", state.ExitCode)
+	case "created":
+		return "Created"
+	case "paused":
+		return "Paused"
+	case "restarting":
+		return "Restarting"
+	default:
+		return state.Status
+	}
+}
+
+// formatDuration formats a time.Duration into a human-readable string
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%d seconds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%d minutes", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%.1f hours", d.Hours())
+	}
+	days := int(d.Hours() / 24)
+	return fmt.Sprintf("%d days", days)
 }
 
 // parseCreatedTime parses the Created time string and returns Unix timestamp
