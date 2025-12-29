@@ -54,7 +54,7 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 
 // GetImage retrieves detailed information about a specific image
 func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectResponse, error) {
-	imageInspect, _, err := c.apiClient.ImageInspectWithRaw(ctx, imageID)
+	imageInspect, err := c.apiClient.ImageInspect(ctx, imageID)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
@@ -63,10 +63,31 @@ func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectRe
 }
 
 // splitImageTag splits "repository:tag" into ["repository", "tag"]
+// Handles registry ports correctly (e.g., "localhost:5000/myimage:v1")
+// The tag separator is the last ':' after the last '/' (if any)
 func splitImageTag(imageTag string) []string {
-	parts := strings.SplitN(imageTag, ":", 2)
-	if len(parts) == 1 {
-		return []string{parts[0], "latest"}
+	// Find the last '/' to separate registry from repository
+	lastSlash := strings.LastIndex(imageTag, "/")
+	
+	// If there's a '/', look for ':' after it (this is the tag separator)
+	// Otherwise, look for the last ':' in the entire string
+	var tagIndex int
+	if lastSlash >= 0 {
+		// Look for ':' after the last '/'
+		tagIndex = strings.LastIndex(imageTag[lastSlash:], ":")
+		if tagIndex >= 0 {
+			tagIndex += lastSlash // Adjust index to be relative to start of string
+		}
+	} else {
+		// No '/', so the last ':' is the tag separator
+		tagIndex = strings.LastIndex(imageTag, ":")
 	}
-	return parts
+	
+	if tagIndex < 0 {
+		// No tag found, use "latest" as default
+		return []string{imageTag, "latest"}
+	}
+	
+	// Split at the tag separator
+	return []string{imageTag[:tagIndex], imageTag[tagIndex+1:]}
 }
