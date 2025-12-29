@@ -17,8 +17,7 @@ type Image struct {
 	VirtualSize int64
 }
 
-// ListImages lists all Docker images
-// This is used for filtering by image name
+// ListImages lists all Docker images including intermediate images.
 func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 	images, err := c.apiClient.ImageList(ctx, image.ListOptions{
 		All: true, // Include intermediate images
