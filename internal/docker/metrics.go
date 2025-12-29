@@ -81,7 +81,7 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 		NetworkTx:     networkTx,
 		BlockRead:     blockRead,
 		BlockWrite:    blockWrite,
-		Timestamp:     time.Now(),
+		Timestamp:     v.Read,
 	}, nil
 }
 
