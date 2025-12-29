@@ -55,6 +55,10 @@ func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions)
 	// Convert to our Container type
 	result := make([]Container, 0, len(containers))
 	for _, container := range containers {
+		if len(container.Names) == 0 {
+			continue
+		}
+
 		containerInfo := Container{
 			ID:      container.ID,
 			Name:    strings.TrimPrefix(container.Names[0], "/"), // Remove leading "/"
