@@ -117,7 +117,7 @@ func (c *Client) GetMemoryUsage(ctx context.Context, containerID string) (int64,
 		return 0, 0, err
 	}
 
-	// Note: ContainerJSON doesn't have MemoryStats field directly
+	// Note: InspectResponse doesn't have MemoryStats field directly
 	// We'll use the stats from GetContainerStats instead
 
 	return stats.MemoryUsage, stats.MemoryLimit, nil

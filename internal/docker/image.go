@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
 )
 
@@ -54,13 +53,13 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 }
 
 // GetImage retrieves detailed information about a specific image
-func (c *Client) GetImage(ctx context.Context, imageID string) (*types.ImageInspect, error) {
-	image, _, err := c.apiClient.ImageInspectWithRaw(ctx, imageID)
+func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectResponse, error) {
+	imageInspect, _, err := c.apiClient.ImageInspectWithRaw(ctx, imageID)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
 
-	return &image, nil
+	return &imageInspect, nil
 }
 
 // splitImageTag splits "repository:tag" into ["repository", "tag"]
