@@ -13,13 +13,13 @@ import (
 type ContainerStats struct {
 	ContainerID   string
 	CPUPercent    float64
-	MemoryUsage   int
-	MemoryLimit   int
+	MemoryUsage   int64
+	MemoryLimit   int64
 	MemoryPercent float64
 	NetworkRx     int64
 	NetworkTx     int64
-	BlockRead     int
-	BlockWrite    int
+	BlockRead     int64
+	BlockWrite    int64
 	Timestamp     time.Time
 }
 
@@ -42,8 +42,8 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	cpuPercent := calculateCPUPercent(&v)
 
 	// Memory usage
-	memoryUsage := int(v.MemoryStats.Usage)
-	memoryLimit := int(v.MemoryStats.Limit)
+	memoryUsage := int64(v.MemoryStats.Usage)
+	memoryLimit := int64(v.MemoryStats.Limit)
 	memoryPercent := 0.0
 	if memoryLimit > 0 {
 		memoryPercent = float64(memoryUsage) / float64(memoryLimit) * 100.0
@@ -59,15 +59,14 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	}
 
 	// Block I/O statistics
-	blockRead := 0
-	blockWrite := 0
+	var blockRead, blockWrite int64
 	if v.BlkioStats.IoServiceBytesRecursive != nil {
 		for _, entry := range v.BlkioStats.IoServiceBytesRecursive {
 			switch entry.Op {
 			case "Read":
-				blockRead += int(entry.Value)
+				blockRead += int64(entry.Value)
 			case "Write":
-				blockWrite += int(entry.Value)
+				blockWrite += int64(entry.Value)
 			}
 		}
 	}
@@ -112,7 +111,7 @@ func calculateCPUPercent(v *container.StatsResponse) float64 {
 
 // GetMemoryUsage retrieves memory usage information for a container
 // Returns RSS (Resident Set Size) if available, otherwise returns total usage
-func (c *Client) GetMemoryUsage(ctx context.Context, containerID string) (int, int, error) {
+func (c *Client) GetMemoryUsage(ctx context.Context, containerID string) (int64, int64, error) {
 	stats, err := c.GetContainerStats(ctx, containerID)
 	if err != nil {
 		return 0, 0, err
