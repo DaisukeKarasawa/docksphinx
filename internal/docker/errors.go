@@ -40,7 +40,7 @@ func HandleAPIError(err error) error {
 		return fmt.Errorf("%w: %v", ErrPermissionDenied, err)
 	}
 
-	// Return the original errors if we con't categorize it
+	// Return the original errors if we can't categorize it
 	return fmt.Errorf("Docker API error: %w", err)
 }
 
