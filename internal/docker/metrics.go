@@ -124,7 +124,7 @@ func (c *Client) GetMemoryUsage(ctx context.Context, containerID string) (int64,
 }
 
 // GetNetworkStats retrieves network statistics for a container
-// Returns total received ad transmitted bytes across all network interfaces
+// Returns total received and transmitted bytes across all network interfaces
 func (c *Client) GetNetworkStats(ctx context.Context, containerID string) (int64, int64, error) {
 	stats, err := c.GetContainerStats(ctx, containerID)
 	if err != nil {
