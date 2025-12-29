@@ -37,7 +37,11 @@ func TestListContainers(t *testing.T) {
 
 	t.Logf("Found %d containers", len(containers))
 	for _, container := range containers {
-		t.Logf("Container: %s (%s) - %s", container.Name, container.ID[:12], container.Status)
+		displayID := container.ID
+		if len(displayID) > 12 {
+			displayID = displayID[:12]
+		}
+		t.Logf("Container: %s (%s) - %s", container.Name, displayID, container.Status)
 	}
 }
 
