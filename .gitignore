@@ -5,7 +5,7 @@ outputs/
 # Binaries
 docksphinx
 docksphinxd
-/test-monitor
+test-monitor
 *.exe
 *.exe~
 *.dll
