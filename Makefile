@@ -6,6 +6,9 @@ BINARY_DOCKSPHINXD=./bin/docksphinxd
 PROTO_DIR=./proto
 API_DIR=./api
 GO_FILES=$(shell find . -name '*.go' -not -path './vendor/*' -not -path './api/*')
+# protoc と Go プラグインを探す PATH（GOPATH/bin, Homebrew 等）
+export PATH := $(shell go env GOPATH)/bin:/opt/homebrew/bin:/usr/local/bin:$(PATH)
+PROTOC ?= protoc
 
 # デフォルトターゲット
 .DEFAULT_GOAL := help
@@ -44,9 +47,10 @@ test:
 
 # Protocol BuffersからGoコードを生成
 proto:
+	@command -v $(PROTOC) >/dev/null 2>&1 || { echo "Error: protoc not found. Install with: brew install protobuf"; exit 127; }
 	@echo "Generating gRPC code..."
 	@mkdir -p $(API_DIR)/docksphinx/v1
-	protoc --go_out=$(API_DIR) \
+	$(PROTOC) --go_out=$(API_DIR) \
 	       --go_opt=paths=source_relative \
 	       --go-grpc_out=$(API_DIR) \
 	       --go-grpc_opt=paths=source_relative \
