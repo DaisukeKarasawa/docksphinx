@@ -5,7 +5,10 @@ outputs/
 # Binaries
 docksphinx
 docksphinxd
+docksphinx.exe
+docksphinxd.exe
 test-monitor
+test-grpc-server
 *.exe
 *.exe~
 *.dll
@@ -46,6 +49,11 @@ Thumbs.db
 configs/*.yaml
 configs/*.toml
 !configs/*.example
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
 
 # Build artifacts
 dist/
