@@ -9,10 +9,10 @@ import (
 
 // Image represents a Docker image with its basic information
 type Image struct {
-	ID				  string
+	ID          string
 	Repository  string
-	Tag 	 		  string
-	Size  		  int64
+	Tag         string
+	Size        int64
 	Created     int64
 	VirtualSize int64
 }
@@ -39,9 +39,9 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 		}
 
 		result = append(result, Image{
-			ID: 				 img.ID,
+			ID:          img.ID,
 			Repository:  repository,
-			Tag:   			 tag,
+			Tag:         tag,
 			Size:        img.Size,
 			Created:     img.Created,
 			VirtualSize: img.VirtualSize,
@@ -67,7 +67,7 @@ func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectRe
 func splitImageTag(imageTag string) []string {
 	// Find the last '/' to separate registry from repository
 	lastSlash := strings.LastIndex(imageTag, "/")
-	
+
 	// If there's a '/', look for ':' after it (this is the tag separator)
 	// Otherwise, look for the last ':' in the entire string
 	var tagIndex int
@@ -81,12 +81,12 @@ func splitImageTag(imageTag string) []string {
 		// No '/', so the last ':' is the tag separator
 		tagIndex = strings.LastIndex(imageTag, ":")
 	}
-	
+
 	if tagIndex < 0 {
 		// No tag found, use "latest" as default
 		return []string{imageTag, "latest"}
 	}
-	
+
 	// Split at the tag separator
 	return []string{imageTag[:tagIndex], imageTag[tagIndex+1:]}
 }

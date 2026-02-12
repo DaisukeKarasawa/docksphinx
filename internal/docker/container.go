@@ -108,12 +108,12 @@ func (c *Client) GetContainer(ctx context.Context, containerID string) (*contain
 
 // ContainerDetails represents detailed container information
 type ContainerDetails struct {
-	ID							string
-	Name						string
-	Image						string
-	State					  string
-	Status         	string 
-	Created					int64
+	ID              string
+	Name            string
+	Image           string
+	State           string
+	Status          string
+	Created         int64
 	StartedAt       string
 	FinishedAt      string
 	RestartCount    int
@@ -143,20 +143,20 @@ func (c *Client) GetContainerDetails(ctx context.Context, containerID string) (*
 
 	status := calculateStatus(containerInspect.State)
 	return &ContainerDetails{
-		ID: 						 containerInspect.ID,
-		Name: 				   strings.TrimPrefix(containerInspect.Name, "/"),
-		Image:					 containerInspect.Image,
-		State:				   containerInspect.State.Status,
-		Status:      	 	 status,
-		Created:				 parseCreatedTime(containerInspect.Created),
-		StartedAt:			 containerInspect.State.StartedAt,
-		FinishedAt:			 containerInspect.State.FinishedAt,
-		RestartCount:		 containerInspect.RestartCount,
-		Platform:				 containerInspect.Platform,
-		Hostname:  		 	 hostname,
+		ID:              containerInspect.ID,
+		Name:            strings.TrimPrefix(containerInspect.Name, "/"),
+		Image:           containerInspect.Image,
+		State:           containerInspect.State.Status,
+		Status:          status,
+		Created:         parseCreatedTime(containerInspect.Created),
+		StartedAt:       containerInspect.State.StartedAt,
+		FinishedAt:      containerInspect.State.FinishedAt,
+		RestartCount:    containerInspect.RestartCount,
+		Platform:        containerInspect.Platform,
+		Hostname:        hostname,
 		NetworkSettings: containerInspect.NetworkSettings,
-		Mounts:					 containerInspect.Mounts,
-		Config:					 config,
+		Mounts:          containerInspect.Mounts,
+		Config:          config,
 	}, nil
 }
 

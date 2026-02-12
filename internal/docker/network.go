@@ -9,8 +9,8 @@ import (
 // Network represents a Docker network with its basic information
 type Network struct {
 	ID       string
-	Name 		 string
-	Driver	 string
+	Name     string
+	Driver   string
 	Scope    string
 	Internal bool
 	Labels   map[string]string
@@ -26,8 +26,8 @@ func (c *Client) ListNetworks(ctx context.Context) ([]Network, error) {
 	result := make([]Network, 0, len(networks))
 	for _, net := range networks {
 		result = append(result, Network{
-			ID:   		net.ID,
-			Name:		  net.Name,
+			ID:       net.ID,
+			Name:     net.Name,
 			Driver:   net.Driver,
 			Scope:    net.Scope,
 			Internal: net.Internal,
