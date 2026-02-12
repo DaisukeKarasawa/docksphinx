@@ -2,11 +2,11 @@
 # プロジェクトの仕様以外の情報（実装ファイル、設計ドキュメント、分析結果など）を配置
 outputs/
 
-# Binaries
-docksphinx
-docksphinxd
-docksphinx.exe
-docksphinxd.exe
+# Binaries (root-level)
+/docksphinx
+/docksphinxd
+/docksphinx.exe
+/docksphinxd.exe
 test-monitor
 test-grpc-server
 *.exe
