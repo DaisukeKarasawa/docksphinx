@@ -4,9 +4,9 @@ outputs/
 
 # Binaries
 docksphinx
-docksphinxd
+bin/docksphinxd
 docksphinx.exe
-docksphinxd.exe
+bin/docksphinxd.exe
 test-monitor
 test-grpc-server
 *.exe
