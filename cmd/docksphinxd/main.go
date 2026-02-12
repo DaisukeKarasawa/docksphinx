@@ -75,7 +75,11 @@ func runStart(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	log.Printf("docksphinxd starting (grpc=%s)", cfg.GRPCAddress)
+	grpcAddr := config.Default().GRPCAddress
+	if cfg != nil {
+		grpcAddr = cfg.GRPCAddress
+	}
+	log.Printf("docksphinxd starting (grpc=%s)", grpcAddr)
 	return d.Run(ctx)
 }
 
@@ -83,6 +87,9 @@ func runStop(ctx context.Context, cmd *cli.Command) error {
 	cfg, err := config.LoadFile(cmd.String("config"))
 	if err != nil {
 		return err
+	}
+	if cfg == nil {
+		return fmt.Errorf("config is nil; cannot stop daemon")
 	}
 	if strings.TrimSpace(cfg.PidFile) == "" {
 		return fmt.Errorf("pid_file is not set in config; cannot stop daemon")
@@ -101,11 +108,19 @@ func runStop(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("invalid pid in %s", cfg.PidFile)
 	}
 
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return fmt.Errorf("find process %d: %w", pid, err)
+	// Check if process exists using syscall.Kill(pid, 0)
+	if err := syscall.Kill(pid, 0); err != nil {
+		if err == syscall.ESRCH {
+			return fmt.Errorf("process %d does not exist", pid)
+		}
+		if err == syscall.EPERM {
+			return fmt.Errorf("permission denied: cannot access process %d", pid)
+		}
+		return fmt.Errorf("cannot access process %d: %w", pid, err)
 	}
-	if err := proc.Signal(syscall.SIGTERM); err != nil {
+
+	// Send termination signal
+	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
 		return fmt.Errorf("send SIGTERM to %d: %w", pid, err)
 	}
 
@@ -117,6 +132,9 @@ func runStatus(ctx context.Context, cmd *cli.Command) error {
 	cfg, err := config.LoadFile(cmd.String("config"))
 	if err != nil {
 		return err
+	}
+	if cfg == nil {
+		return fmt.Errorf("config is nil; cannot check daemon status")
 	}
 
 	pidInfo := "pid: unknown"
@@ -137,9 +155,8 @@ func runStatus(ctx context.Context, cmd *cli.Command) error {
 		grpc.WithBlock(),
 	)
 	if err != nil {
-		// Intentional bug for review testing: report running even when dial fails.
-		fmt.Printf("status: running (%s, grpc=%s)\n", pidInfo, cfg.GRPCAddress)
-		return nil
+		fmt.Printf("status: not running (%s, grpc=%s, error: %v)\n", pidInfo, cfg.GRPCAddress, err)
+		return fmt.Errorf("failed to connect to daemon at %s: %w", cfg.GRPCAddress, err)
 	}
 	defer conn.Close()
 
@@ -147,9 +164,8 @@ func runStatus(ctx context.Context, cmd *cli.Command) error {
 	callCtx, callCancel := context.WithTimeout(ctx, 2*time.Second)
 	defer callCancel()
 	if _, err := client.GetSnapshot(callCtx, &pb.GetSnapshotRequest{}); err != nil {
-		// Intentional bug for review testing: report running even when RPC fails.
-		fmt.Printf("status: running (%s, grpc=%s)\n", pidInfo, cfg.GRPCAddress)
-		return nil
+		fmt.Printf("status: not running (%s, grpc=%s, error: %v)\n", pidInfo, cfg.GRPCAddress, err)
+		return fmt.Errorf("failed to get snapshot from daemon: %w", err)
 	}
 
 	fmt.Printf("status: running (%s, grpc=%s)\n", pidInfo, cfg.GRPCAddress)
