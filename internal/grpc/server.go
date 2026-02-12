@@ -17,12 +17,13 @@ import (
 // Server is the gRPC server for DocksphinxService
 type Server struct {
 	pb.UnimplementedDocksphinxServiceServer
-	lis    net.Listener
-	grpc   *grpc.Server
-	opts   *ServerOptions
-	engine *monitor.Engine
-	bcast  *Broadcaster
-	mu     sync.Mutex
+	lis         net.Listener
+	grpc        *grpc.Server
+	opts        *ServerOptions
+	engine      *monitor.Engine
+	bcast       *Broadcaster
+	cancelBcast context.CancelFunc
+	mu          sync.Mutex
 }
 
 // ServerOptions configures the gRPC server
@@ -42,10 +43,11 @@ func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
 	}
 	s := grpc.NewServer()
 	bcast := NewBroadcaster()
-	srv := &Server{lis: lis, grpc: s, opts: opts, engine: engine, bcast: bcast}
+	ctx, cancel := context.WithCancel(context.Background())
+	srv := &Server{lis: lis, grpc: s, opts: opts, engine: engine, bcast: bcast, cancelBcast: cancel}
 	pb.RegisterDocksphinxServiceServer(s, srv)
 	reflection.Register(s)
-	go bcast.Run(engine.GetEventChannel())
+	go bcast.Run(ctx, engine.GetEventChannel())
 	return srv, nil
 }
 
@@ -54,10 +56,14 @@ func (s *Server) Start() error {
 	return s.grpc.Serve(s.lis)
 }
 
-// Stop gracefully stops the gRPC server
+// Stop gracefully stops the gRPC server and the broadcaster goroutine
 func (s *Server) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.cancelBcast != nil {
+		s.cancelBcast()
+		s.cancelBcast = nil
+	}
 	if s.grpc != nil {
 		s.grpc.GracefulStop()
 		s.grpc = nil
