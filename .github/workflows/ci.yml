@@ -7,6 +7,7 @@ on:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
+      - "proto/**/*.proto"
       - ".github/workflows/ci.yml"
   push:
     branches: [master, main]
@@ -14,6 +15,7 @@ on:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
+      - "proto/**/*.proto"
       - ".github/workflows/ci.yml"
 
 permissions:
@@ -40,6 +42,30 @@ jobs:
 
       - name: Download dependencies
         run: go mod download
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - name: Generate proto code
+        run: |
+          if [ -d "proto" ] && [ "$(ls -A proto 2>/dev/null)" ]; then
+            mkdir -p api/docksphinx/v1
+            protoc --go_out=api \
+                   --go_opt=paths=source_relative \
+                   --go-grpc_out=api \
+                   --go-grpc_opt=paths=source_relative \
+                   --proto_path=proto \
+                   proto/docksphinx/v1/*.proto || echo "Warning: proto generation skipped"
+          else
+            echo "No proto files found, skipping generation"
+          fi
 
       - name: Verify formatting (gofmt)
         run: |
@@ -70,6 +96,30 @@ jobs:
 
       - name: Download dependencies
         run: go mod download
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+      - name: Generate proto code
+        run: |
+          if [ -d "proto" ] && [ "$(ls -A proto 2>/dev/null)" ]; then
+            mkdir -p api/docksphinx/v1
+            protoc --go_out=api \
+                   --go_opt=paths=source_relative \
+                   --go-grpc_out=api \
+                   --go-grpc_opt=paths=source_relative \
+                   --proto_path=proto \
+                   proto/docksphinx/v1/*.proto || echo "Warning: proto generation skipped"
+          else
+            echo "No proto files found, skipping generation"
+          fi
 
       - name: Run tests
         run: go test -v ./...
