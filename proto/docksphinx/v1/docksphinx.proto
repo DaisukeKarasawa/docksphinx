@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package docksphinx.v1;
+
+option go_package = "docksphinx/api/docksphinx/v1";
+
+// ContainerInfo represents container summary for list/snapshot
+message ContainerInfo {
+  string container_id = 1;
+  string container_name = 2;
+  string image_name = 3;
+  string state = 4;
+  string status = 5;
+  int64 last_seen_unix = 6;
+}
+
+// Metrics for a container
+message ContainerMetrics {
+  string container_id = 1;
+  double cpu_percent = 2;
+  int64 memory_usage = 3;
+  int64 memory_limit = 4;
+  double memory_percent = 5;
+  int64 network_rx = 6;
+  int64 network_tx = 7;
+}
+
+// Event from the monitoring engine (lifecycle + threshold)
+message Event {
+  string id = 1;
+  string type = 2;  // started, stopped, restarted, died, cpu_threshold, mem_threshold
+  int64 timestamp_unix = 3;
+  string container_id = 4;
+  string container_name = 5;
+  string image_name = 6;
+  string message = 7;
+  map<string, string> data = 8;  // threshold value, level, etc. (string representation)
+}
+
+// Snapshot: current containers + metrics (one-shot)
+message Snapshot {
+  repeated ContainerInfo containers = 1;
+  map<string, ContainerMetrics> metrics = 2;  // key: container_id
+  int64 at_unix = 3;
+}
+
+// Stream update: delta or full snapshot for tail/tui
+message StreamUpdate {
+  oneof payload {
+    Snapshot snapshot = 1;
+    Event event = 2;
+  }
+}
+
+service DocksphinxService {
+  // One-shot: current containers + metrics
+  rpc GetSnapshot(GetSnapshotRequest) returns (Snapshot);
+  // Streaming: snapshot first, then StreamUpdate (events + optional periodic snapshots)
+  rpc Stream(StreamRequest) returns (stream StreamUpdate);
+}
+
+message GetSnapshotRequest {}
+
+message StreamRequest {
+  bool include_initial_snapshot = 1;  // send full snapshot on connect
+}
