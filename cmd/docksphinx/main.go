@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"os/signal"
 	"strings"
@@ -28,6 +30,11 @@ var grpcAddressFlag = &cli.StringFlag{
 	Sources: cli.EnvVars("DOCKSPHINX_GRPC_ADDRESS"),
 }
 
+var insecureFlag = &cli.BoolFlag{
+	Name:  "insecure",
+	Usage: "allow insecure (plaintext) gRPC connection to non-loopback addresses",
+}
+
 func main() {
 	app := &cli.Command{
 		Name:  "docksphinx",
@@ -45,13 +52,32 @@ func main() {
 	}
 }
 
+func isLoopback(address string) bool {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		host = address
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func warnInsecure(address string, insecure bool) {
+	if !insecure && !isLoopback(address) {
+		fmt.Fprintf(os.Stderr, "WARNING: connecting to %s over plaintext (no TLS). Use --insecure to suppress this warning.\n", address)
+	}
+}
+
 func snapshotCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "snapshot",
 		Usage: "Get current container list and metrics once",
-		Flags: []cli.Flag{grpcAddressFlag},
+		Flags: []cli.Flag{grpcAddressFlag, insecureFlag},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			address := cmd.String("grpc-address")
+			warnInsecure(address, cmd.Bool("insecure"))
 
 			client, err := dgrpc.NewClient(ctx, address)
 			if err != nil {
@@ -74,11 +100,12 @@ func tailCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "tail",
 		Usage: "Stream events and updates in real time",
-		Flags: []cli.Flag{grpcAddressFlag},
-		Action: func(parentCtx context.Context, cmd *cli.Command) error {
-			address := cmd.String("grpc-address")
+		Flags: []cli.Flag{grpcAddressFlag, insecureFlag},
+			Action: func(parentCtx context.Context, cmd *cli.Command) error {
+				address := cmd.String("grpc-address")
+				warnInsecure(address, cmd.Bool("insecure"))
 
-			ctx, cancel := signal.NotifyContext(parentCtx, os.Interrupt, syscall.SIGTERM)
+				ctx, cancel := signal.NotifyContext(parentCtx, os.Interrupt, syscall.SIGTERM)
 			defer cancel()
 
 			client, err := dgrpc.NewClient(ctx, address)
@@ -96,13 +123,15 @@ func tailCommand() *cli.Command {
 			errs := make(chan error, 1)
 
 			go func() {
-				defer close(ch)
-				for {
-					update, err := stream.Recv()
-					if err != nil {
-						errs <- err
-						return
-					}
+					defer close(ch)
+					for {
+						update, err := stream.Recv()
+						if err != nil {
+							if !errors.Is(err, io.EOF) {
+								errs <- err
+							}
+							return
+						}
 					select {
 					case ch <- update:
 					case <-ctx.Done():
@@ -175,10 +204,15 @@ func printSnapshot(snapshot *pb.Snapshot) {
 			mem = metrics.GetMemoryPercent()
 		}
 
+		name := container.GetContainerName()
+		if strings.HasPrefix(name, "/") {
+			name = name[1:]
+		}
+
 		fmt.Printf(
 			"%s\t%s\t%s\t%s\t%.2f\t%.2f\n",
 			shortContainerID(containerID),
-			container.GetContainerName(),
+			name,
 			container.GetImageName(),
 			container.GetState(),
 			cpu, mem,
@@ -207,12 +241,20 @@ func shortContainerID(id string) string {
 	return id[:12]
 }
 
+func isConnectionRefused(err error) bool {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		return errors.Is(opErr.Err, syscall.ECONNREFUSED)
+	}
+	return false
+}
+
 func wrapDaemonError(op, address string, err error) error {
 	if err == nil {
 		return nil
 	}
 
-	if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "connection refused") {
+	if errors.Is(err, context.DeadlineExceeded) || isConnectionRefused(err) {
 		return fmt.Errorf("%s daemon (%s): %w. start daemon with `docksphinxd start`", op, address, err)
 	}
 
