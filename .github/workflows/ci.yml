@@ -50,19 +50,24 @@ jobs:
 
       - name: Install protoc plugins
         run: |
+          export PATH="$PATH:$(go env GOPATH)/bin"
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
       - name: Generate proto code
         run: |
           if [ -d "proto" ] && [ "$(ls -A proto 2>/dev/null)" ]; then
+            echo "Found proto directory, generating code..."
             mkdir -p api/docksphinx/v1
+            export PATH="$PATH:$(go env GOPATH)/bin"
             protoc --go_out=api \
                    --go_opt=paths=source_relative \
                    --go-grpc_out=api \
                    --go-grpc_opt=paths=source_relative \
                    --proto_path=proto \
-                   proto/docksphinx/v1/*.proto || echo "Warning: proto generation skipped"
+                   proto/docksphinx/v1/*.proto
+            echo "Proto generation completed"
+            ls -la api/docksphinx/v1/ || echo "Warning: api/docksphinx/v1 directory not found"
           else
             echo "No proto files found, skipping generation"
           fi
@@ -104,19 +109,24 @@ jobs:
 
       - name: Install protoc plugins
         run: |
+          export PATH="$PATH:$(go env GOPATH)/bin"
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
       - name: Generate proto code
         run: |
           if [ -d "proto" ] && [ "$(ls -A proto 2>/dev/null)" ]; then
+            echo "Found proto directory, generating code..."
             mkdir -p api/docksphinx/v1
+            export PATH="$PATH:$(go env GOPATH)/bin"
             protoc --go_out=api \
                    --go_opt=paths=source_relative \
                    --go-grpc_out=api \
                    --go-grpc_opt=paths=source_relative \
                    --proto_path=proto \
-                   proto/docksphinx/v1/*.proto || echo "Warning: proto generation skipped"
+                   proto/docksphinx/v1/*.proto
+            echo "Proto generation completed"
+            ls -la api/docksphinx/v1/ || echo "Warning: api/docksphinx/v1 directory not found"
           else
             echo "No proto files found, skipping generation"
           fi
