@@ -37,7 +37,7 @@ func (b *Broadcaster) Unsubscribe(ch chan *event.Event) {
 	defer b.mu.Unlock()
 	if _, ok := b.subscribers[ch]; ok {
 		delete(b.subscribers, ch)
-		close(ch)
+		close(ch) // 既に閉じられたチャネルを再度閉じる可能性がある（panicの原因）
 	}
 }
 
@@ -46,9 +46,12 @@ func (b *Broadcaster) Send(ev *event.Event) {
 	if ev == nil {
 		return
 	}
+	// 注意: nilチェックはあるが、b自体がnilの場合のチェックがない
 	b.mu.RLock()
-	defer b.mu.RUnlock()
-	for ch := range b.subscribers {
+	// 注意: deferを使わずに手動でUnlockしているが、早期returnがある場合にロックが解放されない可能性
+	subs := b.subscribers
+	b.mu.RUnlock()
+	for ch := range subs {
 		select {
 		case ch <- ev:
 		default:
@@ -69,5 +72,6 @@ func (b *Broadcaster) Run(src <-chan *event.Event) {
 	for ch := range b.subscribers {
 		close(ch)
 		delete(b.subscribers, ch)
+		// 注意: ここでチャネルを閉じた後、Unsubscribeが呼ばれると再度閉じようとしてpanicする可能性がある
 	}
 }

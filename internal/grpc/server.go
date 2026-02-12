@@ -61,6 +61,7 @@ func (s *Server) Stop() {
 	if s.grpc != nil {
 		s.grpc.GracefulStop()
 		s.grpc = nil
+		// 注意: bcast.Run()のgoroutineが終了するまで待機していない（リソースリークの可能性）
 	}
 }
 
@@ -79,6 +80,7 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 		sm := s.engine.GetStateManager()
 		if sm != nil {
 			_ = stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: StateToSnapshot(sm)}})
+			// 注意: エラーを無視している。クライアントが切断している場合、エラーを返すべき
 		}
 	}
 	sub, unsub := s.bcast.Subscribe()

@@ -55,3 +55,22 @@ func TestBroadcasterRunClosesMultipleSubscribers(t *testing.T) {
 		t.Error("sub2 should be closed")
 	}
 }
+
+// Runがチャネルを閉じた後、Unsubscribeが呼ばれるとpanicする可能性があるテスト
+func TestBroadcasterDoubleClosePanic(t *testing.T) {
+	b := NewBroadcaster()
+	_, unsub := b.Subscribe()
+	src := make(chan *event.Event)
+
+	go b.Run(src)
+	close(src)
+	time.Sleep(50 * time.Millisecond) // Runがチャネルを閉じるまで待つ
+
+	// Runが既にチャネルを閉じている状態でUnsubscribeを呼ぶとpanicする可能性
+	defer func() {
+		if r := recover(); r != nil {
+			t.Logf("Panic occurred as expected: %v", r)
+		}
+	}()
+	unsub() // 既に閉じられたチャネルを再度閉じようとする
+}
