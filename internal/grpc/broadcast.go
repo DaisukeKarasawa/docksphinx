@@ -62,4 +62,12 @@ func (b *Broadcaster) Run(src <-chan *event.Event) {
 	for ev := range src {
 		b.Send(ev)
 	}
+
+	// ソースチャネルが閉じられたので、すべての購読者チャネルを閉じる
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for ch := range b.subscribers {
+		close(ch)
+		delete(b.subscribers, ch)
+	}
 }
