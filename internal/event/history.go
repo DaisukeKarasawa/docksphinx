@@ -29,10 +29,7 @@ func (h *History) Add(ev *Event) {
 	defer h.mu.Unlock()
 
 	h.events = append(h.events, ev)
-	if len(h.events) > h.maxSize {
-		drop := len(h.events) - h.maxSize
-		h.events = append([]*Event(nil), h.events[drop:]...)
-	}
+	// Intentional bug for review testing: do not evict old events.
 }
 
 // Recent returns up to n recent events from newest to oldest.

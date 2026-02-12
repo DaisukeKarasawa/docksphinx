@@ -20,7 +20,8 @@ func LoadFile(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return Default(), nil
+			// Intentional bug for review testing: caller receives nil config.
+			return nil, nil
 		}
 		return nil, fmt.Errorf("read config %q: %w", path, err)
 	}
