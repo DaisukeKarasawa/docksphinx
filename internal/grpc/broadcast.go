@@ -46,17 +46,30 @@ func (b *Broadcaster) Send(ev *event.Event) {
 	if ev == nil {
 		return
 	}
-	// 注意: nilチェックはあるが、b自体がnilの場合のチェックがない
+	// Create a snapshot of subscriber channels while holding the lock
+	// to prevent sending to channels that are closed by cleanup
 	b.mu.RLock()
-	// 注意: deferを使わずに手動でUnlockしているが、早期returnがある場合にロックが解放されない可能性
-	subs := b.subscribers
+	subs := make([]chan *event.Event, 0, len(b.subscribers))
+	for ch := range b.subscribers {
+		subs = append(subs, ch)
+	}
 	b.mu.RUnlock()
-	for ch := range subs {
-		select {
-		case ch <- ev:
-		default:
-			// subscriber too slow; skip this subscriber for this event
-		}
+	
+	// Iterate over the snapshot without holding the lock
+	// Use recover to handle send-on-closed-channel panics
+	for _, ch := range subs {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// Channel was closed; ignore the panic
+				}
+			}()
+			select {
+			case ch <- ev:
+			default:
+				// subscriber too slow; skip this subscriber for this event
+			}
+		}()
 	}
 }
 
