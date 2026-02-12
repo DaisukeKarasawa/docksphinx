@@ -6,6 +6,7 @@ toolchain go1.24.11
 
 require (
 	github.com/urfave/cli/v3 v3.6.1
+	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
 )
