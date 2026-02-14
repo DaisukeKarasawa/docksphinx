@@ -85,6 +85,9 @@ func NewStateManager() *StateManager {
 
 // GetState retrieves the current state of a container
 func (sm *StateManager) GetState(containerID string) (*ContainerState, bool) {
+	if sm == nil {
+		return nil, false
+	}
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
@@ -98,6 +101,9 @@ func (sm *StateManager) GetState(containerID string) (*ContainerState, bool) {
 // UpdateState updates the state of a container
 // Returns true if the state changed (for event detection)
 func (sm *StateManager) UpdateState(containerID string, state *ContainerState) bool {
+	if sm == nil || state == nil {
+		return false
+	}
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -123,6 +129,9 @@ func (sm *StateManager) UpdateState(containerID string, state *ContainerState) b
 // RemoveState removes a container from state tracking
 // Called when a container is removed
 func (sm *StateManager) RemoveState(containerID string) {
+	if sm == nil {
+		return
+	}
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -131,6 +140,9 @@ func (sm *StateManager) RemoveState(containerID string) {
 
 // GetAllStates returns all current container states
 func (sm *StateManager) GetAllStates() map[string]*ContainerState {
+	if sm == nil {
+		return nil
+	}
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
@@ -145,6 +157,9 @@ func (sm *StateManager) GetAllStates() map[string]*ContainerState {
 
 // Clear removes all states (useful for testing or reset)
 func (sm *StateManager) Clear() {
+	if sm == nil {
+		return
+	}
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -154,6 +169,9 @@ func (sm *StateManager) Clear() {
 
 // UpdateResources updates non-container resource snapshots.
 func (sm *StateManager) UpdateResources(resources ResourceState) {
+	if sm == nil {
+		return
+	}
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -167,6 +185,9 @@ func (sm *StateManager) UpdateResources(resources ResourceState) {
 
 // GetResources returns latest non-container resource snapshot.
 func (sm *StateManager) GetResources() ResourceState {
+	if sm == nil {
+		return ResourceState{}
+	}
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	return ResourceState{

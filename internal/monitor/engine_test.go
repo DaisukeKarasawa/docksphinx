@@ -131,6 +131,36 @@ func TestStateManager(t *testing.T) {
 	}
 }
 
+func TestStateManagerNilSafetyContracts(t *testing.T) {
+	var sm *StateManager
+
+	if state, ok := sm.GetState("x"); ok || state != nil {
+		t.Fatalf("expected nil,false for nil receiver GetState, got %#v %v", state, ok)
+	}
+	if changed := sm.UpdateState("x", &ContainerState{ContainerID: "x"}); changed {
+		t.Fatalf("expected nil receiver UpdateState to return false")
+	}
+	sm.RemoveState("x") // should not panic
+	if got := sm.GetAllStates(); got != nil {
+		t.Fatalf("expected nil receiver GetAllStates to return nil, got %#v", got)
+	}
+	sm.Clear() // should not panic
+	sm.UpdateResources(ResourceState{
+		Images: []docker.Image{{ID: "img"}},
+	}) // should not panic
+	if got := sm.GetResources(); len(got.Images) != 0 || len(got.Networks) != 0 || len(got.Volumes) != 0 || len(got.Groups) != 0 {
+		t.Fatalf("expected zero-value resources for nil receiver, got %#v", got)
+	}
+
+	alive := NewStateManager()
+	if changed := alive.UpdateState("x", nil); changed {
+		t.Fatalf("expected UpdateState with nil state to return false")
+	}
+	if got := alive.GetAllStates(); len(got) != 0 {
+		t.Fatalf("expected UpdateState(nil) not to mutate states, got %#v", got)
+	}
+}
+
 func TestDetector(t *testing.T) {
 	sm := NewStateManager()
 	detector := NewDetector(sm)
