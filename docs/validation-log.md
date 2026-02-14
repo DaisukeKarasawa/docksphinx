@@ -1134,3 +1134,30 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` に `TestHistoryPreservesTypedNilInNestedContainers` を追加し、`Event.Data` のネストした `map`/`slice` 内でも typed nil が保持されることを確認。
+
+---
+
+## 2026-02-14 (event history limit-order and Add(nil) contract tightening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` の契約テストを強化:
+  - `TestHistoryRecentLimitContract` で `limit<=0` / `limit>len` の newest-first 順序を明示検証
+  - `TestHistoryNilSafetyContracts` で `Add(nil)` が既存履歴を維持することを確認
