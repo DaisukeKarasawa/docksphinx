@@ -2896,3 +2896,34 @@ make quality
   - listener 解放
   - address 再バインド可能
  であることを回帰固定。
+
+---
+
+## 2026-02-14 (daemon runtime trim-normalization hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/daemon.newLogger` で `log.level` / `log.file` をローカル trim 正規化して解釈するよう修正し、`Validate` の caller-order-independent 契約と実行時挙動を整合。
+- `internal/daemon.writePID` / `removePID` で `daemon.pid_file` を trim 正規化して使用し、前後空白付き設定でも期待パスに対して操作するよう修正。
+- `daemon_test.go` に以下を追加:
+  - `TestNewLoggerUsesTrimmedCaseInsensitiveLevel`
+  - `TestNewLoggerTrimsLogFilePath`
+  - `TestDaemonPIDHelpersTrimConfiguredPath`
+- 実装途中で `gosec G304`（variable path の `os.OpenFile`）を検出したため、設定値が事前検証済みである前提を `#nosec G304` コメントで明示して再実行 PASS を確認。
