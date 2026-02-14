@@ -2422,3 +2422,30 @@ make quality
 - `Ping` / `ListContainers` / `GetContainer` / `ListImages` / `ListNetworks` / `ListVolumes` / `GetContainerStats` など公開ラッパー全体にガード適用。
 - `Close` は nil receiver / nil apiClient で no-op、`GetAPIClient` は nil receiver で nil 返却へ hardening。
 - `internal/docker/client_nil_safety_test.go` を追加し、主要公開メソッドの nil receiver / zero-value client 契約を回帰固定。
+
+---
+
+## 2026-02-14 (docker inspect-state nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/docker.GetContainerDetails` で `containerInspect.State` が nil の場合でも panic せず `State/StartedAt/FinishedAt` を安全に組み立てるよう修正。
+- `calculateStatus` を nil-safe 化し、`nil` 入力時は `"Unknown"` を返す契約を追加。
+- `internal/docker/client_nil_safety_test.go` に `TestCalculateStatusNilState` / `TestCalculateStatusKnownStates` を追加し、nil/既知ステータスの表示契約を回帰固定。
