@@ -1799,3 +1799,30 @@ make quality
   - `internal/snapshotorder.TestLessNetworkInfo`
   - `internal/snapshotorder.TestLessVolumeInfo`
   - `internal/snapshotorder.TestLessImageInfo`
+
+---
+
+## 2026-02-14 (tui container comparator deduplication pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx/tui.go` の `renderContainers` と `filteredContainerRowsForDetail` で重複していた sort predicate を `lessContainerForMode` + `lessContainerNameID` に集約。
+- CPU/MEM/Uptime/Name の tie-break 契約（同値時 `container_name` → `container_id`）を単一実装へ統一し、表示/詳細でのドリフト余地を排除。
+- 既存の TUI ソート回帰テスト群（`TestFilteredContainerRowsForDetail*`）が通過することを確認し、挙動不変を検証。
