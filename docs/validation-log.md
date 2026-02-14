@@ -1699,3 +1699,29 @@ make quality
   - `TestRenderNetworksUsesDeterministicTieBreakersAndNonMutating`
   - `TestRenderVolumesUsesDeterministicTieBreakersAndNonMutating`
   - `TestRenderGroupsUsesDeterministicTieBreakersAndNonMutating`
+
+---
+
+## 2026-02-14 (grpc recent-events second-level timestamp contract alignment pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.lessInternalEvent` の timestamp 比較を `time.Time` 全精度から `Unix()`（秒）へ変更し、CLI 側の `pb.Event.TimestampUnix` 並び順契約と一致させた。
+- `TestEventsToProtoSortsDeterministicallyWithoutMutatingInput` を拡張し、同一秒でナノ秒のみ異なるイベントでも `id asc` が優先されることを確認。
