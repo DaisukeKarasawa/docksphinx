@@ -1316,3 +1316,28 @@ make quality
 
 - `internal/grpc.TestStateToSnapshotSortsComposeGroupsAndFields` を拡張し、`StateToSnapshot` 実行後も `StateManager` 側の `Groups` 順序および group 内スライス順序が未変更であることを確認。
 - 併せて、呼び出し元入力スライス（`inputGroups`）が変更されないことを確認。
+
+---
+
+## 2026-02-14 (monitor compose grouping non-mutating regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.TestBuildComposeGroupsDoesNotMutateInputStateNetworks` を追加し、`buildComposeGroups` 呼び出し後も入力 `ContainerState.NetworkNames` が未変更であることを確認。
