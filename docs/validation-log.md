@@ -3508,3 +3508,34 @@ make quality
 - `internal/grpc/server_test.go` に以下を追加し、panic せず `Unavailable` へ収束する契約を回帰固定:
   - `TestServerGetSnapshotHandlesNilLikeContext`
   - `TestServerStreamHandlesNilStreamContext`
+
+---
+
+## 2026-02-14 (TUI nil-app focus/search key-path hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./cmd/docksphinx -run "TestCaptureInput(TabHandlesNilApp|SearchHandlesNilApp)"
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./cmd/docksphinx -run "TestCaptureInput(TabHandlesNilApp|SearchHandlesNilApp)"`: PASS（修正前は panic 再現）
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.tuiModel.cycleFocus` で `app==nil` 時に `SetFocus` を呼ばず no-op return するよう変更し、`Tab/←→` 経路の nil-app panic を防止。
+- `cmd/docksphinx.tuiModel.openSearchModal` でも `app==nil` no-op return を追加し、`/` キー経路の nil-app panic を防止。
+- `cmd/docksphinx/tui_test.go` に以下を追加し、nil app 注入時でも panic せず入力が処理される契約を回帰固定:
+  - `TestCaptureInputTabHandlesNilApp`
+  - `TestCaptureInputSearchHandlesNilApp`
