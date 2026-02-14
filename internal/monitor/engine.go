@@ -466,6 +466,7 @@ func buildComposeGroups(states map[string]*ContainerState) []ComposeGroup {
 		for netName := range acc.nets {
 			acc.group.NetworkNames = append(acc.group.NetworkNames, netName)
 		}
+		sort.Strings(acc.group.ContainerIDs)
 		sort.Strings(acc.group.NetworkNames)
 		sort.Strings(acc.group.ContainerNames)
 		out = append(out, acc.group)

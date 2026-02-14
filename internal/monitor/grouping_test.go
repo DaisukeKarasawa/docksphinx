@@ -1,6 +1,9 @@
 package monitor
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 func TestBuildComposeGroupsUsesComposeLabels(t *testing.T) {
 	states := map[string]*ContainerState{
@@ -30,6 +33,9 @@ func TestBuildComposeGroupsUsesComposeLabels(t *testing.T) {
 	}
 	if len(g.ContainerIDs) != 2 {
 		t.Fatalf("expected 2 container ids, got %d", len(g.ContainerIDs))
+	}
+	if !reflect.DeepEqual(g.ContainerIDs, []string{"id1", "id2"}) {
+		t.Fatalf("expected sorted container ids [id1 id2], got %#v", g.ContainerIDs)
 	}
 	if len(g.NetworkNames) != 1 || g.NetworkNames[0] != "shop_default" {
 		t.Fatalf("unexpected network names: %#v", g.NetworkNames)
