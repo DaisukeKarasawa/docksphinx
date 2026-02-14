@@ -58,6 +58,7 @@ PID ファイルが破損している場合は誤動作防止のためエラー�
 ```bash
 ./bin/docksphinx tail --config ./configs/docksphinx.yaml.example
 ```
+接続断（EOF/一時エラー）時は自動で再接続します（Ctrl+C で終了）。
 
 TUI:
 ```bash
