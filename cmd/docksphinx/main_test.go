@@ -380,3 +380,18 @@ func TestResolveAddress(t *testing.T) {
 		}
 	})
 }
+
+func TestFormatDateOrNA(t *testing.T) {
+	t.Run("missing timestamp returns N/A", func(t *testing.T) {
+		if got := formatDateOrNA(0); got != "N/A" {
+			t.Fatalf("expected N/A for zero timestamp, got %q", got)
+		}
+	})
+
+	t.Run("valid timestamp returns formatted date", func(t *testing.T) {
+		unix := time.Date(2026, 2, 14, 10, 0, 0, 0, time.UTC).Unix()
+		if got := formatDateOrNA(unix); got != "2026-02-14" {
+			t.Fatalf("expected formatted date, got %q", got)
+		}
+	})
+}

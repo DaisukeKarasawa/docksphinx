@@ -317,7 +317,7 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 				img.GetRepository(),
 				img.GetTag(),
 				img.GetSize(),
-				time.Unix(img.GetCreatedUnix(), 0).Format("2006-01-02"),
+				formatDateOrNA(img.GetCreatedUnix()),
 			)
 		}
 	}
@@ -355,6 +355,13 @@ func formatUptimeOrNA(c *pb.ContainerInfo) string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%d", c.GetUptimeSeconds())
+}
+
+func formatDateOrNA(unix int64) string {
+	if unix <= 0 {
+		return "N/A"
+	}
+	return time.Unix(unix, 0).Format("2006-01-02")
 }
 
 func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
