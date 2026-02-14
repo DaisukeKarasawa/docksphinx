@@ -64,6 +64,20 @@
   - `outputs/refactor-report.md`
   - `docs/risk-register.md`
 
+## フェーズ7: 運用ドキュメント強化
+- [x] quickstart/適用手順を整備
+- [x] 障害初動/launchd/セキュリティ基準を整備
+- [x] 回帰テスト/承認テンプレ/マスターチェックを整備
+- 証跡:
+  - `docs/quickstart.md`
+  - `docs/incident-playbook.md`
+  - `docs/macos-launchd-checklist.md`
+  - `docs/security-baseline-checklist.md`
+  - `docs/minimal-regression-suite.md`
+  - `docs/acceptance-signoff-template.md`
+  - `docs/master-checklist.md`
+  - `docs/plan-execution-report.md`
+
 ---
 
 ## 完了判定（運用ルール準拠）
