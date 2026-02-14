@@ -108,3 +108,37 @@ func TestRenderImagesShowsNAForMissingCreatedTimestamp(t *testing.T) {
 		t.Fatalf("expected created column to render N/A, got %q", got)
 	}
 }
+
+func TestFilteredContainerRowsForDetailUsesNameTieBreakForStableOrdering(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Containers: []*pb.ContainerInfo{
+			{ContainerId: "id-b", ContainerName: "b-web", ImageName: "b:latest", State: "running", UptimeSeconds: 20},
+			{ContainerId: "id-a", ContainerName: "a-web", ImageName: "a:latest", State: "running", UptimeSeconds: 20},
+		},
+		Metrics: map[string]*pb.ContainerMetrics{
+			"id-b": {CpuPercent: 50, MemoryPercent: 60},
+			"id-a": {CpuPercent: 50, MemoryPercent: 60},
+		},
+	}
+
+	assertOrder := func(mode sortMode, want []string) {
+		t.Helper()
+		m.sortMode = mode
+		rows := m.filteredContainerRowsForDetail()
+		if len(rows) != len(want) {
+			t.Fatalf("expected %d rows, got %d", len(want), len(rows))
+		}
+		got := make([]string, 0, len(rows))
+		for _, r := range rows {
+			got = append(got, r.GetContainerName())
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("unexpected order for mode=%v: got=%v want=%v", mode, got, want)
+		}
+	}
+
+	assertOrder(sortCPU, []string{"a-web", "b-web"})
+	assertOrder(sortMemory, []string{"a-web", "b-web"})
+	assertOrder(sortUptime, []string{"a-web", "b-web"})
+}

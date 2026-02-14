@@ -447,11 +447,26 @@ func (m *tuiModel) renderContainers() {
 
 	switch m.sortMode {
 	case sortCPU:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].cpu > rows[j].cpu })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].cpu == rows[j].cpu {
+				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			}
+			return rows[i].cpu > rows[j].cpu
+		})
 	case sortMemory:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].mem > rows[j].mem })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].mem == rows[j].mem {
+				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			}
+			return rows[i].mem > rows[j].mem
+		})
 	case sortUptime:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds() })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].c.GetUptimeSeconds() == rows[j].c.GetUptimeSeconds() {
+				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			}
+			return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds()
+		})
 	default:
 		sort.Slice(rows, func(i, j int) bool { return rows[i].c.GetContainerName() < rows[j].c.GetContainerName() })
 	}
@@ -722,11 +737,26 @@ func (m *tuiModel) filteredContainerRowsForDetail() []*pb.ContainerInfo {
 	}
 	switch m.sortMode {
 	case sortCPU:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].cpu > rows[j].cpu })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].cpu == rows[j].cpu {
+				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			}
+			return rows[i].cpu > rows[j].cpu
+		})
 	case sortMemory:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].mem > rows[j].mem })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].mem == rows[j].mem {
+				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			}
+			return rows[i].mem > rows[j].mem
+		})
 	case sortUptime:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds() })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].c.GetUptimeSeconds() == rows[j].c.GetUptimeSeconds() {
+				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			}
+			return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds()
+		})
 	default:
 		sort.Slice(rows, func(i, j int) bool { return rows[i].c.GetContainerName() < rows[j].c.GetContainerName() })
 	}
