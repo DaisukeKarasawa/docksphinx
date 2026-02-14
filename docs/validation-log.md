@@ -3121,3 +3121,31 @@ make quality
 
 - `cmd/docksphinxd.waitForProcessExit` に `checker==nil` ガードを追加し、nil function 呼び出し panic ではなく明示エラー（`process checker is nil`）を返す契約へ強化。
 - `main_test.go` に `TestWaitForProcessExitNilChecker` を追加し、nil checker 入力時の明示エラー契約を回帰固定。
+
+---
+
+## 2026-02-14 (PID inspection checker nil-guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinxd.describePIDStatus` / `inspectPID` に `checker==nil` ガードを追加し、nil callback 呼び出し panic を防止して明示エラー（`pid checker is nil`）を返す契約へ強化。
+- `main_test.go` に以下を追加し、nil checker 境界を回帰固定:
+  - `TestDescribePIDStatusNilCheckerReturnsError`
+  - `TestInspectPIDNilCheckerReturnsError`
