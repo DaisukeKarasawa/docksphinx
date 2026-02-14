@@ -1,4 +1,4 @@
-.PHONY: build clean test test-race proto generate install deps security quality help
+.PHONY: build clean test test-race proto generate install deps security quality help dev
 
 # 変数定義
 BINARY_DOCKSPHINX=./bin/docksphinx
