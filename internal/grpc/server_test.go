@@ -134,6 +134,39 @@ func TestNewServerTrimsAddressBeforeListen(t *testing.T) {
 	}
 }
 
+func TestNewServerDoesNotMutateCallerOptions(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	opts := &ServerOptions{
+		Address:          " 127.0.0.1:0 ",
+		EnableReflection: false,
+		RecentEventLimit: 0,
+	}
+
+	srv, err := NewServer(opts, engine)
+	if err != nil {
+		t.Fatalf("expected NewServer to succeed: %v", err)
+	}
+	defer srv.Stop()
+
+	if opts.Address != " 127.0.0.1:0 " {
+		t.Fatalf("expected caller options address unchanged, got %q", opts.Address)
+	}
+	if opts.RecentEventLimit != 0 {
+		t.Fatalf("expected caller options recent limit unchanged, got %d", opts.RecentEventLimit)
+	}
+	if got := srv.recentEventLimit(); got != 50 {
+		t.Fatalf("expected server to apply default recent event limit, got %d", got)
+	}
+}
+
 func TestServerStartReturnsErrorWhenUninitialized(t *testing.T) {
 	var nilServer *Server
 	if err := nilServer.Start(); err == nil {

@@ -40,24 +40,27 @@ func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
 	if engine == nil {
 		return nil, fmt.Errorf("engine is nil")
 	}
+	resolved := ServerOptions{}
 	if opts == nil {
-		opts = &ServerOptions{Address: "127.0.0.1:50051", RecentEventLimit: 50}
+		resolved = ServerOptions{Address: "127.0.0.1:50051", RecentEventLimit: 50}
+	} else {
+		resolved = *opts
 	}
-	opts.Address = strings.TrimSpace(opts.Address)
-	if opts.Address == "" {
+	resolved.Address = strings.TrimSpace(resolved.Address)
+	if resolved.Address == "" {
 		return nil, fmt.Errorf("address cannot be empty")
 	}
-	if opts.RecentEventLimit <= 0 {
-		opts.RecentEventLimit = 50
+	if resolved.RecentEventLimit <= 0 {
+		resolved.RecentEventLimit = 50
 	}
-	lis, err := net.Listen("tcp", opts.Address)
+	lis, err := net.Listen("tcp", resolved.Address)
 	if err != nil {
-		return nil, fmt.Errorf("listen %s: %w", opts.Address, err)
+		return nil, fmt.Errorf("listen %s: %w", resolved.Address, err)
 	}
 	s := grpc.NewServer()
 	bcast := NewBroadcaster()
 	bcastCtx, bcastCancel := context.WithCancel(context.Background())
-	srv := &Server{lis: lis, grpc: s, opts: opts, engine: engine, bcast: bcast, bcastCancel: bcastCancel}
+	srv := &Server{lis: lis, grpc: s, opts: &resolved, engine: engine, bcast: bcast, bcastCancel: bcastCancel}
 	pb.RegisterDocksphinxServiceServer(s, srv)
 	if opts.EnableReflection {
 		reflection.Register(s)
