@@ -162,16 +162,27 @@ func (c *Client) GetContainerDetails(ctx context.Context, containerID string) (*
 		config = containerInspect.Config
 	}
 
+	var (
+		stateStatus string
+		startedAt   string
+		finishedAt  string
+	)
+	if containerInspect.State != nil {
+		stateStatus = containerInspect.State.Status
+		startedAt = containerInspect.State.StartedAt
+		finishedAt = containerInspect.State.FinishedAt
+	}
+
 	status := calculateStatus(containerInspect.State)
 	return &ContainerDetails{
 		ID:              containerInspect.ID,
 		Name:            strings.TrimPrefix(containerInspect.Name, "/"),
 		Image:           containerInspect.Image,
-		State:           containerInspect.State.Status,
+		State:           stateStatus,
 		Status:          status,
 		Created:         parseCreatedTime(containerInspect.Created),
-		StartedAt:       containerInspect.State.StartedAt,
-		FinishedAt:      containerInspect.State.FinishedAt,
+		StartedAt:       startedAt,
+		FinishedAt:      finishedAt,
 		RestartCount:    containerInspect.RestartCount,
 		Platform:        containerInspect.Platform,
 		Hostname:        hostname,
@@ -183,6 +194,9 @@ func (c *Client) GetContainerDetails(ctx context.Context, containerID string) (*
 
 // calculateStatus converts a container's state to a human-readable status string
 func calculateStatus(state *container.State) string {
+	if state == nil {
+		return "Unknown"
+	}
 	switch state.Status {
 	case "running":
 		if state.StartedAt != "" {

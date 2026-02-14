@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/docker/docker/api/types/container"
 )
 
 func TestClientMethodsReturnExplicitErrorWhenReceiverNil(t *testing.T) {
@@ -120,5 +122,20 @@ func TestClientMethodsReturnExplicitErrorWhenAPIClientMissing(t *testing.T) {
 
 	if err := c.Close(); err != nil {
 		t.Fatalf("expected Close on missing api client to be no-op, got %v", err)
+	}
+}
+
+func TestCalculateStatusNilState(t *testing.T) {
+	if got := calculateStatus(nil); got != "Unknown" {
+		t.Fatalf("expected nil container state to map to Unknown, got %q", got)
+	}
+}
+
+func TestCalculateStatusKnownStates(t *testing.T) {
+	if got := calculateStatus(&container.State{Status: "created"}); got != "Created" {
+		t.Fatalf("expected created status, got %q", got)
+	}
+	if got := calculateStatus(&container.State{Status: "paused"}); got != "Paused" {
+		t.Fatalf("expected paused status, got %q", got)
 	}
 }
