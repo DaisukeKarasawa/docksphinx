@@ -85,6 +85,7 @@ This file defines instructions for coding agents working on this project.
 - Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
 - CLI/TUI stream-consumer loops should validate required runtime arguments (stream clients, UI app handles) and return explicit errors instead of panicking on nil inputs.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
+- CLI action handlers should validate required `*cli.Command` inputs and return explicit errors instead of dereferencing nil command pointers.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
 - When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
