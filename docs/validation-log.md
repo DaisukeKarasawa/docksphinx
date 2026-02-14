@@ -1725,3 +1725,40 @@ make quality
 
 - `internal/grpc.lessInternalEvent` の timestamp 比較を `time.Time` 全精度から `Unix()`（秒）へ変更し、CLI 側の `pb.Event.TimestampUnix` 並び順契約と一致させた。
 - `TestEventsToProtoSortsDeterministicallyWithoutMutatingInput` を拡張し、同一秒でナノ秒のみ異なるイベントでも `id asc` が優先されることを確認。
+
+---
+
+## 2026-02-14 (shared recent-event ordering comparator refactor pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/eventorder` パッケージを新設し、recent-event の tie-break 優先順位を共通化:
+  - `timestamp(unix seconds) desc`
+  - `id asc`
+  - `container_name asc`
+  - `type asc`
+  - `message asc`
+  - `container_id asc`
+  - `image_name asc`
+- `cmd/docksphinx.selectRecentEvents` は `eventorder.LessPB` を利用。
+- `internal/grpc.EventsToProto` は `eventorder.LessInternal` を利用。
+- 追加テスト:
+  - `internal/eventorder.TestLessPBAndLessInternalProduceSameOrder`
+  - `internal/eventorder.TestLessInternalUsesSecondLevelTimestampBeforeID`
