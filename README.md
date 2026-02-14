@@ -35,6 +35,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - コントリビューション作業フロー: `docs/contribution-workflow.md`
 - 障害初動プレイブック: `docs/incident-playbook.md`
 - macOS launchd チェックリスト: `docs/macos-launchd-checklist.md`
+- セキュリティベースラインチェックリスト: `docs/security-baseline-checklist.md`
 
 ## 補足
 
