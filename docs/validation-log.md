@@ -854,3 +854,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Data` 内のネストした map/slice 変更が履歴へ波及しないことを確認。
+
+---
+
+## 2026-02-14 (event history lock-hold reduction pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused change
+
+- `internal/event.History` で `Add` の clone と `Recent` の deep-copy をロック外へ移し、ロック保持区間を最小化（挙動は維持）。
