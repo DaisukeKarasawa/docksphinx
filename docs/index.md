@@ -44,3 +44,4 @@
 - `faq.md`
 - `glossary.md`
 - `navigation-map.md`
+- `maintenance-routine.md`
