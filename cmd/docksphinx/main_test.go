@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -141,5 +144,33 @@ func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Fatalf("expected output to contain %q, got:\n%s", want, out)
 		}
+	}
+}
+
+func TestShouldReconnectTail(t *testing.T) {
+	activeCtx := context.Background()
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	tests := []struct {
+		name string
+		ctx  context.Context
+		err  error
+		want bool
+	}{
+		{name: "nil error", ctx: activeCtx, err: nil, want: false},
+		{name: "context canceled error", ctx: activeCtx, err: context.Canceled, want: false},
+		{name: "ctx already canceled", ctx: canceledCtx, err: io.EOF, want: false},
+		{name: "io eof should reconnect", ctx: activeCtx, err: io.EOF, want: true},
+		{name: "other error should reconnect", ctx: activeCtx, err: errors.New("boom"), want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldReconnectTail(tt.ctx, tt.err)
+			if got != tt.want {
+				t.Fatalf("shouldReconnectTail()=%t, want %t", got, tt.want)
+			}
+		})
 	}
 }

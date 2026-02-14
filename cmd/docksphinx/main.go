@@ -144,7 +144,7 @@ func runTail(parent context.Context, address string) error {
 
 		recvErr := consumeStream(ctx, stream)
 		_ = client.Close()
-		if recvErr == nil || errors.Is(recvErr, context.Canceled) {
+		if !shouldReconnectTail(ctx, recvErr) {
 			return nil
 		}
 
@@ -161,7 +161,7 @@ func consumeStream(ctx context.Context, stream pb.DocksphinxService_StreamClient
 		update, err := stream.Recv()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil
+				return io.EOF
 			}
 			return err
 		}
@@ -178,6 +178,19 @@ func consumeStream(ctx context.Context, stream pb.DocksphinxService_StreamClient
 			return ctx.Err()
 		}
 	}
+}
+
+func shouldReconnectTail(ctx context.Context, recvErr error) bool {
+	if ctx != nil && ctx.Err() != nil {
+		return false
+	}
+	if recvErr == nil {
+		return false
+	}
+	if errors.Is(recvErr, context.Canceled) {
+		return false
+	}
+	return true
 }
 
 func printSnapshot(snapshot *pb.Snapshot) {
