@@ -2785,3 +2785,32 @@ make quality
 
 - `internal/grpc.Broadcaster.Subscribe` で `subscribers` map の遅延初期化を追加し、`&Broadcaster{}` のゼロ値構築経路でも subscribe 時に panic しないよう強化。
 - `broadcast_test.go` に `TestBroadcasterSubscribeInitializesNilSubscriberMap` を追加し、ゼロ値 broadcaster で subscribe/unsubscribe 契約（登録1件・unsubでclose）を回帰固定。
+
+---
+
+## 2026-02-14 (grpc server address trim/validation hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.NewServer` で `opts.Address` を `TrimSpace` 正規化し、空白-only 入力は `address cannot be empty` で明示拒否するよう強化。
+- `server_test.go` に以下を追加:
+  - `TestNewServerRejectsWhitespaceAddress`
+  - `TestNewServerTrimsAddressBeforeListen`
+- gRPC server 側でも address 入力境界（trim + empty reject）の契約を回帰固定。
