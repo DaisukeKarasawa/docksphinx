@@ -89,6 +89,11 @@ func (s *Server) Address() string {
 
 // GetSnapshot implements DocksphinxService
 func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*pb.Snapshot, error) {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return nil, status.FromContextError(err).Err()
+		}
+	}
 	if s.engine == nil {
 		return nil, status.Error(codes.Unavailable, "engine not available")
 	}
@@ -105,6 +110,9 @@ func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*
 func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_StreamServer) error {
 	if stream == nil {
 		return status.Error(codes.InvalidArgument, "stream is nil")
+	}
+	if err := stream.Context().Err(); err != nil {
+		return status.FromContextError(err).Err()
 	}
 	if s.engine == nil {
 		return status.Error(codes.Unavailable, "engine not available")

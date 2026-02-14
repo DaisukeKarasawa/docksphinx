@@ -95,6 +95,16 @@ func TestServerGetSnapshotReturnsUnavailableWhenEngineMissing(t *testing.T) {
 	}
 }
 
+func TestServerGetSnapshotReturnsContextErrorWhenCanceled(t *testing.T) {
+	srv := &Server{}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := srv.GetSnapshot(ctx, &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled error, got %v", err)
+	}
+}
+
 func TestServerStreamReturnsInitialSnapshotSendError(t *testing.T) {
 	engine, err := monitor.NewEngine(monitor.EngineConfig{
 		Interval:         time.Second,
@@ -237,6 +247,16 @@ func TestServerStreamReturnsUnavailableWhenDependenciesMissing(t *testing.T) {
 	err = (&Server{engine: engine}).Stream(&pb.StreamRequest{}, stream)
 	if status.Code(err) != codes.Unavailable {
 		t.Fatalf("expected unavailable for missing broadcaster, got %v", err)
+	}
+}
+
+func TestServerStreamReturnsContextErrorWhenAlreadyCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	stream := &stubStreamServer{ctx: ctx}
+	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled error, got %v", err)
 	}
 }
 
