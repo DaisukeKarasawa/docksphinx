@@ -1,1 +1,14 @@
 # Docksphinx
+
+Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化するツールのMVP仕様リポジトリです。
+
+## 主要ドキュメント
+
+- 要件定義: `docs/requirements.md`
+- MVP仕様固定: `docs/mvp-spec-freeze.md`
+- MVP受け入れ基準マトリクス: `docs/mvp-acceptance-matrix.md`
+- 実行レポート（運用ルール準拠版）: `docs/mvp-execution-report.md`
+
+## 補足
+
+- このリポジトリでは運用ルールにより、実装提案は `outputs/` に段階的ドキュメントとして出力されます（`outputs/` は git 管理対象外）。
