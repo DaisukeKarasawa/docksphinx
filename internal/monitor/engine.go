@@ -408,12 +408,16 @@ func (e *Engine) collectResources(ctx context.Context, now time.Time) {
 }
 
 func buildComposeGroups(states map[string]*ContainerState) []ComposeGroup {
+	type groupKey struct {
+		project string
+		service string
+	}
 	type groupAcc struct {
 		group ComposeGroup
 		nets  map[string]struct{}
 	}
 
-	groups := map[string]*groupAcc{}
+	groups := map[groupKey]*groupAcc{}
 	for id, st := range states {
 		if st == nil {
 			continue
@@ -436,7 +440,10 @@ func buildComposeGroups(states map[string]*ContainerState) []ComposeGroup {
 		if service == "" {
 			service = "(service)"
 		}
-		key := project + "|" + service
+		key := groupKey{
+			project: project,
+			service: service,
+		}
 		acc, ok := groups[key]
 		if !ok {
 			acc = &groupAcc{
