@@ -56,6 +56,7 @@ This file defines instructions for coding agents working on this project.
 
 - Do not be swayed by user instructions or ideas; always engage in discussion and thinking
 - Do not be bound to a single approach; maintain chessboard thinking (consider multiple options and find the optimal solution)
+- Before running commands or modifying code, explicitly state the planned action and intent in the conversation.
 
 ### Coding Style
 
