@@ -169,7 +169,7 @@ func markAlreadyReported(err error) error {
 	if err == nil {
 		return ErrAlreadyReported
 	}
-	return fmt.Errorf("%w: %v", ErrAlreadyReported, err)
+	return errors.Join(ErrAlreadyReported, err)
 }
 
 func readPID(path string) (int, error) {

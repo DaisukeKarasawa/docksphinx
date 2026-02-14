@@ -262,6 +262,9 @@ func TestMarkAlreadyReported(t *testing.T) {
 		if !errors.Is(err, ErrAlreadyReported) {
 			t.Fatalf("expected ErrAlreadyReported wrapper, got: %v", err)
 		}
+		if !errors.Is(err, orig) {
+			t.Fatalf("expected original error to be preserved, got: %v", err)
+		}
 		if !strings.Contains(err.Error(), "boom") {
 			t.Fatalf("expected wrapped original message, got: %v", err)
 		}
