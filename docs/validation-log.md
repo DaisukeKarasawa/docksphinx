@@ -1854,3 +1854,34 @@ make quality
 - 追加テスト:
   - `TestLessPBNilSafety`
   - `TestLessInternalNilSafety`
+
+---
+
+## 2026-02-14 (snapshot comparator nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/snapshotorder` の比較関数（containers/groups/networks/volumes/images）に nil-safe guard を追加し、`nil` 混在比較で panic しないよう防御化（`non-nil < nil`）。
+- 追加テスト:
+  - `TestLessContainerInfoNilSafety`
+  - `TestLessComposeGroupNilSafety`
+  - `TestLessNetworkInfoNilSafety`
+  - `TestLessVolumeInfoNilSafety`
+  - `TestLessImageInfoNilSafety`
