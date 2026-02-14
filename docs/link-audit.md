@@ -48,6 +48,7 @@ README の「主要ドキュメント」節にある以下リンク:
 - `docs/review-sequence.md`
 - `docs/navigation-map.md`
 - `docs/maintenance-routine.md`
+- `docs/owner-rotation-note.md`
 
 ---
 
