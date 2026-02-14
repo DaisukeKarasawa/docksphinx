@@ -5,6 +5,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 ## 主要ドキュメント
 
 - ドキュメント索引: `docs/index.md`
+- クイックスタート: `docs/quickstart.md`
 - 要件定義: `docs/requirements.md`
 - MVP仕様固定: `docs/mvp-spec-freeze.md`
 - MVP受け入れ基準マトリクス: `docs/mvp-acceptance-matrix.md`
