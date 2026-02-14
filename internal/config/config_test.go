@@ -79,3 +79,39 @@ daemon:
 		t.Fatalf("expected event.max_history=500, got %d", cfg.Event.MaxHistory)
 	}
 }
+
+func TestSaveAndLoadRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "saved.yaml")
+
+	cfg := Default()
+	cfg.Monitor.Interval = 7
+	cfg.Event.MaxHistory = 777
+	cfg.Daemon.PIDFile = filepath.Join(dir, "docksphinxd.pid")
+
+	if err := cfg.Save(path); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat saved file failed: %v", err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("expected file mode 0600, got %o", info.Mode().Perm())
+	}
+
+	loaded, resolved, err := Load(path)
+	if err != nil {
+		t.Fatalf("load after save failed: %v", err)
+	}
+	if resolved != path {
+		t.Fatalf("resolved path mismatch: got %s, want %s", resolved, path)
+	}
+	if loaded.Monitor.Interval != 7 {
+		t.Fatalf("expected monitor.interval=7, got %d", loaded.Monitor.Interval)
+	}
+	if loaded.Event.MaxHistory != 777 {
+		t.Fatalf("expected event.max_history=777, got %d", loaded.Event.MaxHistory)
+	}
+}
