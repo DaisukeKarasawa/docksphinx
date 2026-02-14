@@ -7,12 +7,14 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
+	dcfg "docksphinx/internal/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -345,6 +347,36 @@ func TestIsConnectionRefused(t *testing.T) {
 		err := &net.OpError{Err: syscall.ETIMEDOUT}
 		if isConnectionRefused(err) {
 			t.Fatal("did not expect ETIMEDOUT to be detected as refused")
+		}
+	})
+}
+
+func TestResolveAddress(t *testing.T) {
+	t.Run("addr override takes precedence even if config path is invalid", func(t *testing.T) {
+		got, err := resolveAddress("/definitely/not/found.yaml", " 127.0.0.1:12345 ")
+		if err != nil {
+			t.Fatalf("expected override to bypass config loading, got error: %v", err)
+		}
+		if got != "127.0.0.1:12345" {
+			t.Fatalf("expected trimmed override address, got %q", got)
+		}
+	})
+
+	t.Run("load address from config when override is empty", func(t *testing.T) {
+		cfg := dcfg.Default()
+		cfg.GRPC.Address = "127.0.0.1:54321"
+
+		path := filepath.Join(t.TempDir(), "docksphinx.yaml")
+		if err := cfg.Save(path); err != nil {
+			t.Fatalf("failed to save test config: %v", err)
+		}
+
+		got, err := resolveAddress(path, "")
+		if err != nil {
+			t.Fatalf("expected config load success, got error: %v", err)
+		}
+		if got != "127.0.0.1:54321" {
+			t.Fatalf("expected config grpc address, got %q", got)
 		}
 	})
 }
