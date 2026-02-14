@@ -879,3 +879,28 @@ make quality
 ### Focused change
 
 - `internal/event.History` で `Add` の clone と `Recent` の deep-copy をロック外へ移し、ロック保持区間を最小化（挙動は維持）。
+
+---
+
+## 2026-02-14 (event history concurrent access regression test pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` の `TestHistoryConcurrentAddAndRecent` を追加し、`Add` と `Recent` の同時実行時にも上限契約（`len<=limit`）と非nil返却が維持されることを確認。
