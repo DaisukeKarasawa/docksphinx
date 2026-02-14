@@ -25,6 +25,7 @@ func Load(configPath string) (*Config, string, error) {
 		return cfg, "", nil
 	}
 
+	// #nosec G304 -- resolved path is normalized and validated by ResolveConfigPath.
 	data, err := os.ReadFile(resolved)
 	if err != nil {
 		return nil, "", fmt.Errorf("read config %q: %w", resolved, err)
@@ -84,6 +85,10 @@ func DefaultConfigCandidates() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve home directory: %w", err)
 	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("resolve working directory: %w", err)
+	}
 
 	xdg := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME"))
 	if xdg == "" {
@@ -91,8 +96,8 @@ func DefaultConfigCandidates() ([]string, error) {
 	}
 
 	return []string{
-		"/workspace/configs/docksphinx.yaml",
-		"/workspace/configs/docksphinx.yml",
+		filepath.Join(wd, "configs", "docksphinx.yaml"),
+		filepath.Join(wd, "configs", "docksphinx.yml"),
 		filepath.Join(xdg, "docksphinx", "config.yaml"),
 		filepath.Join(xdg, "docksphinx", "config.yml"),
 	}, nil

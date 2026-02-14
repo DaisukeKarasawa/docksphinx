@@ -407,6 +407,16 @@ func buildComposeGroups(states map[string]*ContainerState) []ComposeGroup {
 		}
 		project := st.ComposeProject
 		service := st.ComposeService
+		if project == "" && service == "" {
+			for _, netName := range st.NetworkNames {
+				if isSystemNetwork(netName) {
+					continue
+				}
+				project = "network:" + netName
+				service = "(heuristic)"
+				break
+			}
+		}
 		if project == "" {
 			project = "(ungrouped)"
 		}
@@ -454,4 +464,13 @@ func buildComposeGroups(states map[string]*ContainerState) []ComposeGroup {
 		return out[i].Project < out[j].Project
 	})
 	return out
+}
+
+func isSystemNetwork(name string) bool {
+	switch name {
+	case "", "bridge", "host", "none":
+		return true
+	default:
+		return false
+	}
 }

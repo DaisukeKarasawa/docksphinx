@@ -176,10 +176,10 @@ func newLogger(cfg *config.Config) (*slog.Logger, io.Closer, error) {
 	}
 
 	dir := filepath.Dir(cfg.Log.File)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, nil, fmt.Errorf("create log directory %q: %w", dir, err)
 	}
-	f, err := os.OpenFile(cfg.Log.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o640)
+	f, err := os.OpenFile(cfg.Log.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return nil, nil, fmt.Errorf("open log file %q: %w", cfg.Log.File, err)
 	}
@@ -192,7 +192,7 @@ func (d *Daemon) writePID() error {
 	if path == "" {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	return os.WriteFile(path, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0o600)

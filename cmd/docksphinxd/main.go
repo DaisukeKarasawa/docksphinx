@@ -11,12 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	pb "docksphinx/api/docksphinx/v1"
 	"docksphinx/internal/config"
 	"docksphinx/internal/daemon"
+	dgrpc "docksphinx/internal/grpc"
 	"github.com/urfave/cli/v3"
-	ggrpc "google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -123,6 +121,7 @@ func runStatus(ctx context.Context, cmd *cli.Command) error {
 }
 
 func readPID(path string) (int, error) {
+	// #nosec G304 -- path is loaded from validated config and expected absolute pid path.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -145,21 +144,15 @@ func checkGRPCHealth(parent context.Context, address string, timeout time.Durati
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 
-	conn, err := ggrpc.DialContext(
-		ctx,
-		address,
-		ggrpc.WithTransportCredentials(insecure.NewCredentials()),
-		ggrpc.WithBlock(),
-	)
+	client, err := dgrpc.NewClient(ctx, address)
 	if err != nil {
 		return fmt.Errorf("dial daemon: %w", err)
 	}
-	defer conn.Close()
+	defer client.Close()
 
-	client := pb.NewDocksphinxServiceClient(conn)
 	callCtx, callCancel := context.WithTimeout(parent, 2*time.Second)
 	defer callCancel()
-	if _, err := client.GetSnapshot(callCtx, &pb.GetSnapshotRequest{}); err != nil {
+	if _, err := client.GetSnapshot(callCtx); err != nil {
 		return fmt.Errorf("health rpc failed: %w", err)
 	}
 	return nil

@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"strings"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/client"
 )
 
 // Error types for better error handling
 var (
-	ErrDockerNotRunning  = errors.New("Docker daemon is not running")
-	ErrPermissionDenied  = errors.New("permission denied: unable to access Docker daemon")
+	ErrDockerNotRunning  = errors.New("docker daemon is not running")
+	ErrPermissionDenied  = errors.New("permission denied: unable to access docker daemon")
 	ErrContainerNotFound = errors.New("container not found")
 	ErrImageNotFound     = errors.New("image not found")
 	ErrNetworkNotFound   = errors.New("network not found")
@@ -25,7 +26,7 @@ func HandleAPIError(err error) error {
 	}
 
 	// Check for specific Docker client errors
-	if client.IsErrNotFound(err) {
+	if cerrdefs.IsNotFound(err) {
 		// Try to determine what type of resource was not found
 		// This is a simplified check; in practice, you might want more specific checks
 		return fmt.Errorf("%w: %v", ErrContainerNotFound, err)
@@ -41,7 +42,7 @@ func HandleAPIError(err error) error {
 	}
 
 	// Return the original errors if we can't categorize it
-	return fmt.Errorf("Docker API error: %w", err)
+	return fmt.Errorf("docker api error: %w", err)
 }
 
 // IsNotFoundError checks if an error indicates a resource was not found

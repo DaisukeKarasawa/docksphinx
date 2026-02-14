@@ -125,7 +125,7 @@ func TestThresholdMonitor(t *testing.T) {
 		t.Errorf("Expected CPU count to be 1, got %d", state.CPUThresholdCount)
 	}
 
-	events = th.CheckThresholds("test-container", "test", "test-image", 75.0, 50.0, state)
+	_ = th.CheckThresholds("test-container", "test", "test-image", 75.0, 50.0, state)
 	events = th.CheckThresholds("test-container", "test", "test-image", 75.0, 50.0, state)
 	if len(events) != 1 {
 		t.Errorf("Expected 1 event, got %d", len(events))

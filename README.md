@@ -1,1 +1,62 @@
 # Docksphinx
+
+Docker 環境をローカルで継続監視し、`snapshot` / `tail` / `tui` で可視化する MVP ツールです。
+
+## Build
+
+```bash
+make build
+```
+
+## Daemon
+
+起動:
+```bash
+./bin/docksphinxd start --config ./configs/docksphinx.yaml.example
+```
+
+状態確認:
+```bash
+./bin/docksphinxd status --config ./configs/docksphinx.yaml.example
+```
+
+停止:
+```bash
+./bin/docksphinxd stop --config ./configs/docksphinx.yaml.example
+```
+
+## CLI
+
+スナップショット:
+```bash
+./bin/docksphinx snapshot --config ./configs/docksphinx.yaml.example
+```
+
+ストリーム:
+```bash
+./bin/docksphinx tail --config ./configs/docksphinx.yaml.example
+```
+
+TUI:
+```bash
+./bin/docksphinx tui --config ./configs/docksphinx.yaml.example
+```
+
+## TUI キー操作
+
+- `Tab` / `←` / `→`: パネル切替
+- `j` / `k` または `↑` / `↓`: 移動
+- `/`: 検索フィルタ
+- `s`: ソート切替（containers）
+- `p`: 一時停止（表示は継続）
+- `q`: 終了
+
+## 重要な MVP 制約
+
+- 読み取り専用（コンテナ実行操作なし）
+- gRPC は既定で `127.0.0.1` bind
+- volume 使用量は Docker API 制約により **metadata-only**
+
+詳細は以下を参照:
+- `docs/metrics-definition.md`
+- `docs/macos-launchd.md`

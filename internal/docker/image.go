@@ -9,12 +9,11 @@ import (
 
 // Image represents a Docker image with its basic information
 type Image struct {
-	ID          string
-	Repository  string
-	Tag         string
-	Size        int64
-	Created     int64
-	VirtualSize int64
+	ID         string
+	Repository string
+	Tag        string
+	Size       int64
+	Created    int64
 }
 
 // ListImages lists all Docker images including intermediate images.
@@ -39,12 +38,11 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 		}
 
 		result = append(result, Image{
-			ID:          img.ID,
-			Repository:  repository,
-			Tag:         tag,
-			Size:        img.Size,
-			Created:     img.Created,
-			VirtualSize: img.VirtualSize,
+			ID:         img.ID,
+			Repository: repository,
+			Tag:        tag,
+			Size:       img.Size,
+			Created:    img.Created,
 		})
 	}
 

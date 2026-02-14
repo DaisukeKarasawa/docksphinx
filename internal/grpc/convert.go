@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -64,8 +65,8 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 			UptimeSeconds:    st.UptimeSeconds,
 			ComposeProject:   st.ComposeProject,
 			ComposeService:   st.ComposeService,
-			RestartCount:     int32(st.RestartCount),
-			VolumeMountCount: int32(st.VolumeMountCount),
+			RestartCount:     clampIntToInt32(st.RestartCount),
+			VolumeMountCount: clampIntToInt32(st.VolumeMountCount),
 		})
 		metrics[st.ContainerID] = &pb.ContainerMetrics{
 			ContainerId:   st.ContainerID,
@@ -107,7 +108,7 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 			Driver:         net.Driver,
 			Scope:          net.Scope,
 			Internal:       net.Internal,
-			ContainerCount: int32(net.ContainerCount),
+			ContainerCount: clampIntToInt32(net.ContainerCount),
 		})
 	}
 	sort.Slice(networks, func(i, j int) bool {
@@ -120,7 +121,7 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 			Name:       vol.Name,
 			Driver:     vol.Driver,
 			Mountpoint: vol.Mountpoint,
-			RefCount:   int32(vol.RefCount),
+			RefCount:   clampInt64ToInt32(vol.RefCount),
 			UsageNote:  vol.UsageNote,
 		})
 	}
@@ -159,4 +160,24 @@ func EventsToProto(events []*event.Event) []*pb.Event {
 		}
 	}
 	return out
+}
+
+func clampIntToInt32(v int) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
+
+func clampInt64ToInt32(v int64) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
 }

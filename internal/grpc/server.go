@@ -79,6 +79,14 @@ func (s *Server) Stop() {
 	}
 }
 
+// Address returns listening address.
+func (s *Server) Address() string {
+	if s == nil || s.lis == nil {
+		return ""
+	}
+	return s.lis.Addr().String()
+}
+
 // GetSnapshot implements DocksphinxService
 func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*pb.Snapshot, error) {
 	sm := s.engine.GetStateManager()

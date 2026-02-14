@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -42,8 +43,8 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	cpuPercent := calculateCPUPercent(&v)
 
 	// Memory usage
-	memoryUsage := int64(v.MemoryStats.Usage)
-	memoryLimit := int64(v.MemoryStats.Limit)
+	memoryUsage := clampUint64ToInt64(v.MemoryStats.Usage)
+	memoryLimit := clampUint64ToInt64(v.MemoryStats.Limit)
 	memoryPercent := 0.0
 	if memoryLimit > 0 {
 		memoryPercent = float64(memoryUsage) / float64(memoryLimit) * 100.0
@@ -53,8 +54,8 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	var networkRx, networkTx int64
 	if v.Networks != nil {
 		for _, network := range v.Networks {
-			networkRx += int64(network.RxBytes)
-			networkTx += int64(network.TxBytes)
+			networkRx += clampUint64ToInt64(network.RxBytes)
+			networkTx += clampUint64ToInt64(network.TxBytes)
 		}
 	}
 
@@ -64,9 +65,9 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 		for _, entry := range v.BlkioStats.IoServiceBytesRecursive {
 			switch entry.Op {
 			case "Read":
-				blockRead += int64(entry.Value)
+				blockRead += clampUint64ToInt64(entry.Value)
 			case "Write":
-				blockWrite += int64(entry.Value)
+				blockWrite += clampUint64ToInt64(entry.Value)
 			}
 		}
 	}
@@ -83,6 +84,13 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 		BlockWrite:    blockWrite,
 		Timestamp:     v.Read,
 	}, nil
+}
+
+func clampUint64ToInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
 }
 
 // calculateCPUPercent calculates CPU usage percentage
