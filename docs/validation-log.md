@@ -3209,3 +3209,32 @@ make quality
 - `cmd/docksphinx/tui_test.go` に以下を追加し、比較ヘルパーの nil 混在境界を回帰固定:
   - `TestLessContainerNameIDNilSafety`
   - `TestLessContainerForModeNilSafety`
+
+---
+
+## 2026-02-14 (tail backoff boundary hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.nextBackoff` に `current<=0` ガードを追加し、非正値入力時に最小バックオフ `500ms` へ補正して busy-loop リスクを抑止。
+- `cmd/docksphinx/main_test.go` に `TestNextBackoff` を追加し、以下を回帰固定:
+  - 0/負値入力の最小バックオフ補正
+  - 通常倍化
+  - 上限 `5s` clamp
