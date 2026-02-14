@@ -232,6 +232,9 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 		return snapshotorder.LessContainerInfo(containers[i], containers[j])
 	})
 	for _, c := range containers {
+		if c == nil {
+			continue
+		}
 		m := snapshot.GetMetrics()[c.GetContainerId()]
 		cpu := "N/A"
 		mem := "N/A"
@@ -258,6 +261,9 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 	} else {
 		fmt.Fprintln(out, "\nRECENT EVENTS")
 		for _, ev := range recent {
+			if ev == nil {
+				continue
+			}
 			fmt.Fprintf(
 				out,
 				"[%s] %-14s %-24s %s\n",
@@ -276,6 +282,9 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 			return snapshotorder.LessComposeGroup(groups[i], groups[j])
 		})
 		for _, g := range groups {
+			if g == nil {
+				continue
+			}
 			networkNames := append([]string(nil), g.GetNetworkNames()...)
 			sort.Strings(networkNames)
 			fmt.Fprintf(
@@ -296,6 +305,9 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 			return snapshotorder.LessNetworkInfo(networks[i], networks[j])
 		})
 		for _, n := range networks {
+			if n == nil {
+				continue
+			}
 			fmt.Fprintf(
 				out,
 				"%s\tdriver=%s\tscope=%s\tcontainers=%d\n",
@@ -314,6 +326,9 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 			return snapshotorder.LessVolumeInfo(volumes[i], volumes[j])
 		})
 		for _, v := range volumes {
+			if v == nil {
+				continue
+			}
 			fmt.Fprintf(
 				out,
 				"%s\tdriver=%s\trefs=%d\tnote=%s\n",
@@ -332,6 +347,9 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 			return snapshotorder.LessImageInfo(images[i], images[j])
 		})
 		for _, img := range images {
+			if img == nil {
+				continue
+			}
 			fmt.Fprintf(
 				out,
 				"%s:%s\tsize=%d\tcreated=%s\n",

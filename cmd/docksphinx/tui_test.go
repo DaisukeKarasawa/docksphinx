@@ -347,3 +347,90 @@ func TestRenderGroupsUsesDeterministicTieBreakersAndNonMutating(t *testing.T) {
 		t.Fatalf("expected source group network names unchanged, before=%v after=%v", beforeNets, afterNets)
 	}
 }
+
+func TestRenderResourcesSkipNilEntries(t *testing.T) {
+	t.Run("images", func(t *testing.T) {
+		m := newTUIModel()
+		m.snapshot = &pb.Snapshot{
+			Images: []*pb.ImageInfo{
+				nil,
+				{Repository: "busybox", Tag: "latest", Size: 123, CreatedUnix: 1},
+			},
+		}
+		m.renderImages()
+		if got := m.center.GetCell(1, 0).Text; got != "busybox" {
+			t.Fatalf("expected first image row to be busybox, got %q", got)
+		}
+		if rows := m.center.GetRowCount(); rows != 2 {
+			t.Fatalf("expected header+1 data row after nil-skip, got rowCount=%d", rows)
+		}
+	})
+
+	t.Run("networks", func(t *testing.T) {
+		m := newTUIModel()
+		m.snapshot = &pb.Snapshot{
+			Networks: []*pb.NetworkInfo{
+				nil,
+				{Name: "net1", Driver: "bridge", Scope: "local", ContainerCount: 1},
+			},
+		}
+		m.renderNetworks()
+		if got := m.center.GetCell(1, 0).Text; got != "net1" {
+			t.Fatalf("expected first network row to be net1, got %q", got)
+		}
+		if rows := m.center.GetRowCount(); rows != 2 {
+			t.Fatalf("expected header+1 data row after nil-skip, got rowCount=%d", rows)
+		}
+	})
+
+	t.Run("volumes", func(t *testing.T) {
+		m := newTUIModel()
+		m.snapshot = &pb.Snapshot{
+			Volumes: []*pb.VolumeInfo{
+				nil,
+				{Name: "vol1", Driver: "local", RefCount: 1, UsageNote: "metadata-only", Mountpoint: "/v"},
+			},
+		}
+		m.renderVolumes()
+		if got := m.center.GetCell(1, 0).Text; got != "vol1" {
+			t.Fatalf("expected first volume row to be vol1, got %q", got)
+		}
+		if rows := m.center.GetRowCount(); rows != 2 {
+			t.Fatalf("expected header+1 data row after nil-skip, got rowCount=%d", rows)
+		}
+	})
+
+	t.Run("groups", func(t *testing.T) {
+		m := newTUIModel()
+		m.snapshot = &pb.Snapshot{
+			Groups: []*pb.ComposeGroup{
+				nil,
+				{Project: "proj", Service: "svc", ContainerNames: []string{"c1"}, NetworkNames: []string{"n1"}},
+			},
+		}
+		m.renderGroups()
+		if got := m.center.GetCell(1, 0).Text; got != "proj" {
+			t.Fatalf("expected first group row project to be proj, got %q", got)
+		}
+		if rows := m.center.GetRowCount(); rows != 2 {
+			t.Fatalf("expected header+1 data row after nil-skip, got rowCount=%d", rows)
+		}
+	})
+}
+
+func TestFilteredContainerRowsForDetailSkipsNilEntries(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Containers: []*pb.ContainerInfo{
+			nil,
+			{ContainerId: "id-a", ContainerName: "a-web", ImageName: "a:latest", State: "running", UptimeSeconds: 10},
+		},
+	}
+	rows := m.filteredContainerRowsForDetail()
+	if len(rows) != 1 {
+		t.Fatalf("expected one non-nil container row, got %d", len(rows))
+	}
+	if rows[0].GetContainerId() != "id-a" {
+		t.Fatalf("expected id-a row, got %#v", rows[0])
+	}
+}

@@ -741,3 +741,63 @@ func TestPrintSnapshotToUsesDeterministicTieBreakers(t *testing.T) {
 	mustAppearBefore("dupvol\tdriver=aa", "dupvol\tdriver=zb")
 	mustAppearBefore("same:latest\tsize=1\tcreated=", "same:latest\tsize=2\tcreated=")
 }
+
+func TestPrintSnapshotToSkipsNilResourceEntries(t *testing.T) {
+	snapshot := &pb.Snapshot{
+		AtUnix: time.Now().Unix(),
+		Containers: []*pb.ContainerInfo{
+			nil,
+			{ContainerId: "aaaaaaaaaaaa1111", ContainerName: "web", State: "running", ImageName: "img:a"},
+		},
+		RecentEvents: []*pb.Event{
+			nil,
+			{Id: "ev-1", TimestampUnix: 100, Type: "started", ContainerName: "web", Message: "ok"},
+		},
+		Groups: []*pb.ComposeGroup{
+			nil,
+			{Project: "proj", Service: "svc", ContainerIds: []string{"id1"}, NetworkNames: []string{"net1"}},
+		},
+		Networks: []*pb.NetworkInfo{
+			nil,
+			{Name: "net1", Driver: "bridge", Scope: "local", ContainerCount: 1},
+		},
+		Volumes: []*pb.VolumeInfo{
+			nil,
+			{Name: "vol1", Driver: "local", RefCount: 1, UsageNote: "metadata-only"},
+		},
+		Images: []*pb.ImageInfo{
+			nil,
+			{Repository: "repo", Tag: "latest", Size: 1, CreatedUnix: 1},
+		},
+	}
+
+	var buf bytes.Buffer
+	printSnapshotTo(snapshot, &buf)
+	out := buf.String()
+
+	mustContain := []string{
+		"aaaaaaaaaaaa\tweb\trunning",
+		"proj/svc\tcontainers=1\tnetworks=net1",
+		"net1\tdriver=bridge\tscope=local\tcontainers=1",
+		"vol1\tdriver=local\trefs=1\tnote=metadata-only",
+		"repo:latest\tsize=1\tcreated=1970-01-01",
+	}
+	for _, s := range mustContain {
+		if !strings.Contains(out, s) {
+			t.Fatalf("expected output to contain %q, got:\n%s", s, out)
+		}
+	}
+
+	mustNotContain := []string{
+		"\t\t\tN/A\tN/A\tN/A\t",
+		"/\tcontainers=0\tnetworks=",
+		"\tdriver=\tscope=\tcontainers=0",
+		"\tdriver=\trefs=0\tnote=",
+		":\tsize=0\tcreated=N/A",
+	}
+	for _, s := range mustNotContain {
+		if strings.Contains(out, s) {
+			t.Fatalf("expected output not to contain nil-entry artifact %q, got:\n%s", s, out)
+		}
+	}
+}

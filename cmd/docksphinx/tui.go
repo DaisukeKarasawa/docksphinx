@@ -426,6 +426,9 @@ func (m *tuiModel) renderContainers() {
 	}
 	rows := make([]row, 0, len(m.snapshot.GetContainers()))
 	for _, c := range m.snapshot.GetContainers() {
+		if c == nil {
+			continue
+		}
 		metric := m.snapshot.GetMetrics()[c.GetContainerId()]
 		r := row{c: c}
 		if metric != nil {
@@ -506,6 +509,9 @@ func (m *tuiModel) renderImages() {
 
 	row := 1
 	for _, img := range images {
+		if img == nil {
+			continue
+		}
 		if !m.matchesFilter(img.GetRepository() + " " + img.GetTag()) {
 			continue
 		}
@@ -536,6 +542,9 @@ func (m *tuiModel) renderNetworks() {
 	})
 	row := 1
 	for _, n := range networks {
+		if n == nil {
+			continue
+		}
 		if !m.matchesFilter(n.GetName() + " " + n.GetDriver()) {
 			continue
 		}
@@ -567,6 +576,9 @@ func (m *tuiModel) renderVolumes() {
 	})
 	row := 1
 	for _, v := range volumes {
+		if v == nil {
+			continue
+		}
 		if !m.matchesFilter(v.GetName() + " " + v.GetDriver()) {
 			continue
 		}
@@ -598,6 +610,9 @@ func (m *tuiModel) renderGroups() {
 	})
 	row := 1
 	for _, g := range groups {
+		if g == nil {
+			continue
+		}
 		containerNames := append([]string(nil), g.GetContainerNames()...)
 		networkNames := append([]string(nil), g.GetNetworkNames()...)
 		sort.Strings(containerNames)
@@ -737,6 +752,9 @@ func (m *tuiModel) filteredContainerRowsForDetail() []*pb.ContainerInfo {
 	}
 	rows := make([]row, 0, len(m.snapshot.GetContainers()))
 	for _, c := range m.snapshot.GetContainers() {
+		if c == nil {
+			continue
+		}
 		metric := m.snapshot.GetMetrics()[c.GetContainerId()]
 		cpu := 0.0
 		mem := 0.0
