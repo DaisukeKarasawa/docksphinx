@@ -390,10 +390,25 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 	if len(events) == 0 || limit <= 0 {
 		return nil
 	}
-	if len(events) <= limit {
-		return events
+	sorted := make([]*pb.Event, 0, len(events))
+	for _, ev := range events {
+		if ev != nil {
+			sorted = append(sorted, ev)
+		}
 	}
-	return events[:limit]
+	if len(sorted) == 0 {
+		return nil
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].GetTimestampUnix() != sorted[j].GetTimestampUnix() {
+			return sorted[i].GetTimestampUnix() > sorted[j].GetTimestampUnix()
+		}
+		return sorted[i].GetId() < sorted[j].GetId()
+	})
+	if len(sorted) <= limit {
+		return sorted
+	}
+	return sorted[:limit]
 }
 
 func waitOrDone(ctx context.Context, d time.Duration) error {

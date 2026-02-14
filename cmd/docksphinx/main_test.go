@@ -90,6 +90,16 @@ func TestSelectRecentEvents(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(got))
 	}
+
+	unsorted := []*pb.Event{
+		{Id: "b", TimestampUnix: 100},
+		{Id: "a", TimestampUnix: 200},
+		{Id: "c", TimestampUnix: 150},
+	}
+	got = selectRecentEvents(unsorted, 3)
+	if got[0].GetId() != "a" || got[1].GetId() != "c" || got[2].GetId() != "b" {
+		t.Fatalf("expected timestamp-desc order [a c b], got [%s %s %s]", got[0].GetId(), got[1].GetId(), got[2].GetId())
+	}
 }
 
 func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
