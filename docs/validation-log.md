@@ -3375,3 +3375,29 @@ make quality
   - `app==nil` で明示エラー（`tui application is nil`）
   - `ctx` は `normalizeParentContext` で正規化
 - `cmd/docksphinx/tui_test.go` に `TestTUIStreamLoopNilGuards` を追加し、nil receiver / nil app の両境界で panic せず明示エラーへ収束することを回帰固定。
+
+---
+
+## 2026-02-14 (process-exit wait helper nil-context normalization pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinxd.waitForProcessExit` で `ctx` を `normalizeParentContext` に通すよう変更し、`ctx.Done()` 参照前に nil 親 context を正規化して panic を防止。
+- `cmd/docksphinxd/main_test.go` に `TestWaitForProcessExitHandlesNilParentContext` を追加し、nil-like context 入力でも `ESRCH` 経路で正常終了することを回帰固定。
