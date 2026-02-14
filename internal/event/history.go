@@ -59,8 +59,37 @@ func cloneEvent(in *Event) *Event {
 	if in.Data != nil {
 		out.Data = make(map[string]interface{}, len(in.Data))
 		for k, v := range in.Data {
-			out.Data[k] = v
+			out.Data[k] = cloneValue(v)
 		}
 	}
 	return &out
+}
+
+func cloneValue(v interface{}) interface{} {
+	switch x := v.(type) {
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(x))
+		for k, vv := range x {
+			out[k] = cloneValue(vv)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(x))
+		for i, vv := range x {
+			out[i] = cloneValue(vv)
+		}
+		return out
+	case []string:
+		return append([]string(nil), x...)
+	case []int:
+		return append([]int(nil), x...)
+	case []int64:
+		return append([]int64(nil), x...)
+	case []float64:
+		return append([]float64(nil), x...)
+	case []bool:
+		return append([]bool(nil), x...)
+	default:
+		return x
+	}
 }

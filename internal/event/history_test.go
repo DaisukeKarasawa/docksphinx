@@ -28,12 +28,16 @@ func TestHistoryRecentReturnsNewestFirstWithinLimit(t *testing.T) {
 func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	h := NewHistory(5)
 
+	nestedMap := map[string]interface{}{"name": "alpha"}
+	nestedSlice := []interface{}{"x", "y"}
 	original := &Event{
 		ID:        "e1",
 		Type:      EventTypeCPUThreshold,
 		Timestamp: time.Unix(100, 0),
 		Data: map[string]interface{}{
-			"cpu": 95.5,
+			"cpu":  95.5,
+			"meta": nestedMap,
+			"tags": nestedSlice,
 		},
 		Message: "high cpu",
 	}
@@ -44,6 +48,8 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	original.Message = "changed"
 	original.Data["cpu"] = 1.0
 	original.Data["new"] = "x"
+	nestedMap["name"] = "mutated"
+	nestedSlice[0] = "changed"
 
 	got := h.Recent(1)
 	if len(got) != 1 {
@@ -52,13 +58,25 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if got[0].ID != "e1" || got[0].Message != "high cpu" {
 		t.Fatalf("expected stored event to keep original values, got id=%q message=%q", got[0].ID, got[0].Message)
 	}
-	if !reflect.DeepEqual(got[0].Data, map[string]interface{}{"cpu": 95.5}) {
+	if gotMeta, ok := got[0].Data["meta"].(map[string]interface{}); !ok || gotMeta["name"] != "alpha" {
+		t.Fatalf("expected nested map to be isolated, got %#v", got[0].Data["meta"])
+	}
+	if gotTags, ok := got[0].Data["tags"].([]interface{}); !ok || len(gotTags) != 2 || gotTags[0] != "x" {
+		t.Fatalf("expected nested slice to be isolated, got %#v", got[0].Data["tags"])
+	}
+	if !reflect.DeepEqual(got[0].Data["cpu"], 95.5) {
 		t.Fatalf("expected stored data to be unchanged, got %#v", got[0].Data)
 	}
 
 	// mutate returned event; history must stay isolated on next read.
 	got[0].ID = "mutated-output"
 	got[0].Data["cpu"] = 0.0
+	if meta, ok := got[0].Data["meta"].(map[string]interface{}); ok {
+		meta["name"] = "out-mutated"
+	}
+	if tags, ok := got[0].Data["tags"].([]interface{}); ok && len(tags) > 0 {
+		tags[0] = "out-changed"
+	}
 
 	gotAgain := h.Recent(1)
 	if gotAgain[0].ID != "e1" {
@@ -66,5 +84,11 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotAgain[0].Data["cpu"] != 95.5 {
 		t.Fatalf("expected history data to be immune from output mutation, got cpu=%v", gotAgain[0].Data["cpu"])
+	}
+	if gotMeta, ok := gotAgain[0].Data["meta"].(map[string]interface{}); !ok || gotMeta["name"] != "alpha" {
+		t.Fatalf("expected nested map in history to stay unchanged, got %#v", gotAgain[0].Data["meta"])
+	}
+	if gotTags, ok := gotAgain[0].Data["tags"].([]interface{}); !ok || len(gotTags) != 2 || gotTags[0] != "x" {
+		t.Fatalf("expected nested slice in history to stay unchanged, got %#v", gotAgain[0].Data["tags"])
 	}
 }
