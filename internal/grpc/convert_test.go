@@ -332,3 +332,100 @@ func TestEventToProtoNil(t *testing.T) {
 		t.Fatalf("expected nil for nil input, got %#v", out)
 	}
 }
+
+func TestEventsToProtoSortsDeterministicallyWithoutMutatingInput(t *testing.T) {
+	base := time.Unix(1700000100, 0)
+	events := []*event.Event{
+		{
+			ID:            "",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     base,
+			ContainerID:   "cid-2",
+			ContainerName: "same",
+			ImageName:     "img-b",
+			Message:       "a",
+		},
+		nil,
+		{
+			ID:            "",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     base,
+			ContainerID:   "cid-1",
+			ContainerName: "same",
+			ImageName:     "img-c",
+			Message:       "a",
+		},
+		{
+			ID:            "",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     base,
+			ContainerID:   "cid-1",
+			ContainerName: "same",
+			ImageName:     "img-a",
+			Message:       "a",
+		},
+		{
+			ID:            "",
+			Type:          event.EventTypeMemThreshold,
+			Timestamp:     base,
+			ContainerID:   "cid-0",
+			ContainerName: "same",
+			ImageName:     "img-a",
+			Message:       "a",
+		},
+		{
+			ID:            "z",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     base.Add(-time.Second),
+			ContainerID:   "cid-z",
+			ContainerName: "older",
+			ImageName:     "img-z",
+			Message:       "z",
+		},
+	}
+
+	key := func(id, name, typ, msg, cid, image string) string {
+		return id + "|" + name + "|" + typ + "|" + msg + "|" + cid + "|" + image
+	}
+	before := []string{
+		key(events[0].ID, events[0].ContainerName, string(events[0].Type), events[0].Message, events[0].ContainerID, events[0].ImageName),
+		key(events[2].ID, events[2].ContainerName, string(events[2].Type), events[2].Message, events[2].ContainerID, events[2].ImageName),
+		key(events[3].ID, events[3].ContainerName, string(events[3].Type), events[3].Message, events[3].ContainerID, events[3].ImageName),
+		key(events[4].ID, events[4].ContainerName, string(events[4].Type), events[4].Message, events[4].ContainerID, events[4].ImageName),
+		key(events[5].ID, events[5].ContainerName, string(events[5].Type), events[5].Message, events[5].ContainerID, events[5].ImageName),
+	}
+
+	got := EventsToProto(events)
+	if len(got) != 5 {
+		t.Fatalf("expected 5 converted events, got len=%d", len(got))
+	}
+
+	gotOrder := []string{
+		key(got[0].GetId(), got[0].GetContainerName(), got[0].GetType(), got[0].GetMessage(), got[0].GetContainerId(), got[0].GetImageName()),
+		key(got[1].GetId(), got[1].GetContainerName(), got[1].GetType(), got[1].GetMessage(), got[1].GetContainerId(), got[1].GetImageName()),
+		key(got[2].GetId(), got[2].GetContainerName(), got[2].GetType(), got[2].GetMessage(), got[2].GetContainerId(), got[2].GetImageName()),
+		key(got[3].GetId(), got[3].GetContainerName(), got[3].GetType(), got[3].GetMessage(), got[3].GetContainerId(), got[3].GetImageName()),
+		key(got[4].GetId(), got[4].GetContainerName(), got[4].GetType(), got[4].GetMessage(), got[4].GetContainerId(), got[4].GetImageName()),
+	}
+	wantOrder := []string{
+		"|same|cpu_threshold|a|cid-1|img-a",
+		"|same|cpu_threshold|a|cid-1|img-c",
+		"|same|cpu_threshold|a|cid-2|img-b",
+		"|same|mem_threshold|a|cid-0|img-a",
+		"z|older|cpu_threshold|z|cid-z|img-z",
+	}
+	if !reflect.DeepEqual(gotOrder, wantOrder) {
+		t.Fatalf("unexpected converted event order:\n got=%v\nwant=%v", gotOrder, wantOrder)
+	}
+
+	after := []string{
+		key(events[0].ID, events[0].ContainerName, string(events[0].Type), events[0].Message, events[0].ContainerID, events[0].ImageName),
+		key(events[2].ID, events[2].ContainerName, string(events[2].Type), events[2].Message, events[2].ContainerID, events[2].ImageName),
+		key(events[3].ID, events[3].ContainerName, string(events[3].Type), events[3].Message, events[3].ContainerID, events[3].ImageName),
+		key(events[4].ID, events[4].ContainerName, string(events[4].Type), events[4].Message, events[4].ContainerID, events[4].ImageName),
+		key(events[5].ID, events[5].ContainerName, string(events[5].Type), events[5].Message, events[5].ContainerID, events[5].ImageName),
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("expected input event ordering fields unchanged, before=%v after=%v", before, after)
+	}
+}

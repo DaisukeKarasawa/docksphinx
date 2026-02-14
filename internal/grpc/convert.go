@@ -200,14 +200,52 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 }
 
 func EventsToProto(events []*event.Event) []*pb.Event {
-	out := make([]*pb.Event, 0, len(events))
+	if len(events) == 0 {
+		return nil
+	}
+	sorted := make([]*event.Event, 0, len(events))
 	for _, ev := range events {
+		if ev != nil {
+			sorted = append(sorted, ev)
+		}
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return lessInternalEvent(sorted[i], sorted[j])
+	})
+
+	out := make([]*pb.Event, 0, len(sorted))
+	for _, ev := range sorted {
 		converted := EventToProto(ev)
 		if converted != nil {
 			out = append(out, converted)
 		}
 	}
 	return out
+}
+
+func lessInternalEvent(a, b *event.Event) bool {
+	if !a.Timestamp.Equal(b.Timestamp) {
+		return a.Timestamp.After(b.Timestamp)
+	}
+	if a.ID != b.ID {
+		return a.ID < b.ID
+	}
+	if a.ContainerName != b.ContainerName {
+		return a.ContainerName < b.ContainerName
+	}
+	if a.Type != b.Type {
+		return a.Type < b.Type
+	}
+	if a.Message != b.Message {
+		return a.Message < b.Message
+	}
+	if a.ContainerID != b.ContainerID {
+		return a.ContainerID < b.ContainerID
+	}
+	if a.ImageName != b.ImageName {
+		return a.ImageName < b.ImageName
+	}
+	return false
 }
 
 func clampIntToInt32(v int) int32 {
