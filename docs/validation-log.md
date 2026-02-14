@@ -2284,3 +2284,29 @@ make quality
 - `internal/monitor.StateManager` の主要メソッド（`GetState` / `UpdateState` / `RemoveState` / `GetAllStates` / `Clear` / `UpdateResources` / `GetResources`）に nil receiver ガードを追加し、panic を回避。
 - `UpdateState(containerID, nil)` を no-op (`false`) にし、nil state 入力時の不正更新を防止。
 - `TestStateManagerNilSafetyContracts` を追加し、nil receiver 各メソッドおよび `UpdateState(nil)` の契約を回帰固定。
+
+---
+
+## 2026-02-14 (detector nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.Detector.DetectStateChange` に `nil receiver` / `nil stateManager` ガードを追加し、panic せず empty events を返すよう修正。
+- `TestDetectorNilSafetyContracts` を追加し、上記 no-op 契約を回帰固定。
