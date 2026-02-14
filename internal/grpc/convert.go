@@ -10,6 +10,7 @@ import (
 
 	pb "docksphinx/api/docksphinx/v1"
 	"docksphinx/internal/event"
+	"docksphinx/internal/eventorder"
 	"docksphinx/internal/monitor"
 )
 
@@ -210,7 +211,7 @@ func EventsToProto(events []*event.Event) []*pb.Event {
 		}
 	}
 	sort.Slice(sorted, func(i, j int) bool {
-		return lessInternalEvent(sorted[i], sorted[j])
+		return eventorder.LessInternal(sorted[i], sorted[j])
 	})
 
 	out := make([]*pb.Event, 0, len(sorted))
@@ -221,31 +222,6 @@ func EventsToProto(events []*event.Event) []*pb.Event {
 		}
 	}
 	return out
-}
-
-func lessInternalEvent(a, b *event.Event) bool {
-	if a.Timestamp.Unix() != b.Timestamp.Unix() {
-		return a.Timestamp.Unix() > b.Timestamp.Unix()
-	}
-	if a.ID != b.ID {
-		return a.ID < b.ID
-	}
-	if a.ContainerName != b.ContainerName {
-		return a.ContainerName < b.ContainerName
-	}
-	if a.Type != b.Type {
-		return a.Type < b.Type
-	}
-	if a.Message != b.Message {
-		return a.Message < b.Message
-	}
-	if a.ContainerID != b.ContainerID {
-		return a.ContainerID < b.ContainerID
-	}
-	if a.ImageName != b.ImageName {
-		return a.ImageName < b.ImageName
-	}
-	return false
 }
 
 func clampIntToInt32(v int) int32 {
