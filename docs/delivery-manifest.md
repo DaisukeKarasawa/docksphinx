@@ -29,6 +29,42 @@
   - レビュー観点チェックリスト
 - `docs/command-reference.md`
   - 運用コマンド集
+- `docs/index.md`
+  - ドキュメント索引
+- `docs/quickstart.md`
+  - 最短適用手順
+- `docs/final-status.md`
+  - 現時点の完了/未完要約
+- `docs/risk-register.md`
+  - リスク台帳
+- `docs/validation-log-template.md`
+  - 検証ログ記録テンプレ
+- `docs/plan-completion-checklist.md`
+  - PLAN完了証跡
+- `docs/requirements-traceability.md`
+  - 要件と成果物の対応表
+- `docs/contribution-workflow.md`
+  - 参加者向け標準フロー
+- `docs/incident-playbook.md`
+  - 障害初動手順
+- `docs/macos-launchd-checklist.md`
+  - launchd運用確認項目
+- `docs/security-baseline-checklist.md`
+  - セキュリティ基準確認項目
+- `docs/minimal-regression-suite.md`
+  - 最小回帰テスト
+- `docs/acceptance-signoff-template.md`
+  - 受け入れサインオフ雛形
+- `docs/review-sequence.md`
+  - レビュー順序
+- `docs/navigation-map.md`
+  - 文書導線図
+- `docs/maintenance-routine.md`
+  - 定期運用項目
+- `docs/owner-rotation-note.md`
+  - 担当交代時メモ
+- `docs/master-checklist.md`
+  - 横断マスターチェック
 
 ---
 
