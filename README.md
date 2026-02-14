@@ -42,6 +42,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - ドキュメント導線マップ: `docs/navigation-map.md`
 - 定期メンテナンス運用: `docs/maintenance-routine.md`
 - オーナー交代メモ: `docs/owner-rotation-note.md`
+- マスターチェックリスト: `docs/master-checklist.md`
 
 ## 補足
 
