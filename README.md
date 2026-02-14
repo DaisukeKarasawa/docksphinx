@@ -37,6 +37,7 @@ internal error 以外の失敗は `make security` をエラー終了します。
 ```bash
 ./bin/docksphinxd stop --config ./configs/docksphinx.yaml.example
 ```
+`stop` は SIGTERM 送信後、最大5秒プロセス終了を待機して結果を返します。
 
 ## CLI
 
