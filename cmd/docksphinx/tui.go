@@ -279,8 +279,14 @@ func (m *tuiModel) cycleFocus(app *tview.Application, forward bool) {
 }
 
 func (m *tuiModel) moveSelection(delta int) {
+	if m == nil {
+		return
+	}
 	switch m.focusPanel {
 	case panelLeft:
+		if m.left == nil || len(targetOrder) == 0 {
+			return
+		}
 		next := m.left.GetCurrentItem() + delta
 		if next < 0 {
 			next = 0
@@ -291,13 +297,22 @@ func (m *tuiModel) moveSelection(delta int) {
 		m.left.SetCurrentItem(next)
 		m.setTarget(targetOrder[next])
 	case panelCenter:
+		if m.center == nil {
+			return
+		}
+		rowCount := m.center.GetRowCount()
+		if rowCount <= 1 {
+			m.center.Select(0, 0)
+			m.renderRight()
+			return
+		}
 		row, col := m.center.GetSelection()
 		row += delta
 		if row < 1 {
 			row = 1
 		}
-		if row >= m.center.GetRowCount() {
-			row = m.center.GetRowCount() - 1
+		if row >= rowCount {
+			row = rowCount - 1
 		}
 		m.center.Select(row, col)
 		m.renderRight()
@@ -667,7 +682,18 @@ func (m *tuiModel) renderGroups() {
 }
 
 func (m *tuiModel) renderRight() {
+	if m == nil || m.right == nil {
+		return
+	}
+	if m.targetIdx < 0 || m.targetIdx >= len(targetOrder) {
+		m.right.SetText("[gray]No selection")
+		return
+	}
 	target := targetOrder[m.targetIdx]
+	if m.center == nil {
+		m.right.SetText("[gray]No selection")
+		return
+	}
 	row, _ := m.center.GetSelection()
 	if row <= 0 {
 		m.right.SetText("[gray]No selection")

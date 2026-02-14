@@ -603,6 +603,59 @@ func TestCaptureInputSearchHandlesNilApp(t *testing.T) {
 	}
 }
 
+func TestMoveSelectionNilSafety(t *testing.T) {
+	t.Run("nil receiver no panic", func(t *testing.T) {
+		var m *tuiModel
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected nil receiver moveSelection to be safe, got panic %v", r)
+			}
+		}()
+		m.moveSelection(1)
+	})
+
+	t.Run("zero-value model center panel no panic", func(t *testing.T) {
+		m := &tuiModel{focusPanel: panelCenter}
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected zero-value moveSelection to be safe, got panic %v", r)
+			}
+		}()
+		m.moveSelection(1)
+	})
+}
+
+func TestCaptureInputMoveKeysHandleEmptyCenterTable(t *testing.T) {
+	m := newTUIModel()
+	m.focusPanel = panelCenter
+	m.center.Clear() // rowCount=0 boundary
+
+	handler := m.captureInput(tview.NewApplication(), func() {})
+	if handler == nil {
+		t.Fatal("expected non-nil input handler")
+	}
+
+	events := []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone),
+		tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone),
+	}
+
+	for _, ev := range events {
+		func(event *tcell.EventKey) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("expected no panic on empty-center move key %v, got %v", event.Key(), r)
+				}
+			}()
+			if got := handler(event); got != nil {
+				t.Fatalf("expected handled move key to return nil event, got %#v", got)
+			}
+		}(ev)
+	}
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 
