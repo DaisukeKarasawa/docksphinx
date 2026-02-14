@@ -91,3 +91,22 @@ make security
 - `go.mod` toolchain を `go1.24.13` へ更新。
 - 更新前に binary-mode `govulncheck` で検出された標準ライブラリ脆弱性（GO-2026-4341 / GO-2026-4340 / GO-2026-4337）について、
   更新後の binary-mode 再スキャンで `No vulnerabilities found` を確認。
+
+---
+
+## 2026-02-14 (final stability pass)
+
+### Unified gate run
+
+```bash
+make quality
+```
+
+結果:
+- `make test`: PASS
+- `make test-race`: PASS
+- `make security`:
+  - `staticcheck`: PASS
+  - `gosec -exclude-dir=api`: PASS (Issues: 0)
+  - `govulncheck -mode=binary`: PASS (`docksphinx`, `docksphinxd` ともに No vulnerabilities found)
+  - `govulncheck ./...`: internal error（既知、warning表示）
