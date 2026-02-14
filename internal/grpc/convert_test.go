@@ -382,6 +382,24 @@ func TestEventsToProtoSortsDeterministicallyWithoutMutatingInput(t *testing.T) {
 			ImageName:     "img-z",
 			Message:       "z",
 		},
+		{
+			ID:            "b",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     base.Add(900 * time.Millisecond),
+			ContainerID:   "cid-b",
+			ContainerName: "same-second",
+			ImageName:     "img-b",
+			Message:       "same-second",
+		},
+		{
+			ID:            "a",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     base.Add(100 * time.Millisecond),
+			ContainerID:   "cid-a",
+			ContainerName: "same-second",
+			ImageName:     "img-a",
+			Message:       "same-second",
+		},
 	}
 
 	key := func(id, name, typ, msg, cid, image string) string {
@@ -393,11 +411,13 @@ func TestEventsToProtoSortsDeterministicallyWithoutMutatingInput(t *testing.T) {
 		key(events[3].ID, events[3].ContainerName, string(events[3].Type), events[3].Message, events[3].ContainerID, events[3].ImageName),
 		key(events[4].ID, events[4].ContainerName, string(events[4].Type), events[4].Message, events[4].ContainerID, events[4].ImageName),
 		key(events[5].ID, events[5].ContainerName, string(events[5].Type), events[5].Message, events[5].ContainerID, events[5].ImageName),
+		key(events[6].ID, events[6].ContainerName, string(events[6].Type), events[6].Message, events[6].ContainerID, events[6].ImageName),
+		key(events[7].ID, events[7].ContainerName, string(events[7].Type), events[7].Message, events[7].ContainerID, events[7].ImageName),
 	}
 
 	got := EventsToProto(events)
-	if len(got) != 5 {
-		t.Fatalf("expected 5 converted events, got len=%d", len(got))
+	if len(got) != 7 {
+		t.Fatalf("expected 7 converted events, got len=%d", len(got))
 	}
 
 	gotOrder := []string{
@@ -406,12 +426,16 @@ func TestEventsToProtoSortsDeterministicallyWithoutMutatingInput(t *testing.T) {
 		key(got[2].GetId(), got[2].GetContainerName(), got[2].GetType(), got[2].GetMessage(), got[2].GetContainerId(), got[2].GetImageName()),
 		key(got[3].GetId(), got[3].GetContainerName(), got[3].GetType(), got[3].GetMessage(), got[3].GetContainerId(), got[3].GetImageName()),
 		key(got[4].GetId(), got[4].GetContainerName(), got[4].GetType(), got[4].GetMessage(), got[4].GetContainerId(), got[4].GetImageName()),
+		key(got[5].GetId(), got[5].GetContainerName(), got[5].GetType(), got[5].GetMessage(), got[5].GetContainerId(), got[5].GetImageName()),
+		key(got[6].GetId(), got[6].GetContainerName(), got[6].GetType(), got[6].GetMessage(), got[6].GetContainerId(), got[6].GetImageName()),
 	}
 	wantOrder := []string{
 		"|same|cpu_threshold|a|cid-1|img-a",
 		"|same|cpu_threshold|a|cid-1|img-c",
 		"|same|cpu_threshold|a|cid-2|img-b",
 		"|same|mem_threshold|a|cid-0|img-a",
+		"a|same-second|cpu_threshold|same-second|cid-a|img-a",
+		"b|same-second|cpu_threshold|same-second|cid-b|img-b",
 		"z|older|cpu_threshold|z|cid-z|img-z",
 	}
 	if !reflect.DeepEqual(gotOrder, wantOrder) {
@@ -424,6 +448,8 @@ func TestEventsToProtoSortsDeterministicallyWithoutMutatingInput(t *testing.T) {
 		key(events[3].ID, events[3].ContainerName, string(events[3].Type), events[3].Message, events[3].ContainerID, events[3].ImageName),
 		key(events[4].ID, events[4].ContainerName, string(events[4].Type), events[4].Message, events[4].ContainerID, events[4].ImageName),
 		key(events[5].ID, events[5].ContainerName, string(events[5].Type), events[5].Message, events[5].ContainerID, events[5].ImageName),
+		key(events[6].ID, events[6].ContainerName, string(events[6].Type), events[6].Message, events[6].ContainerID, events[6].ImageName),
+		key(events[7].ID, events[7].ContainerName, string(events[7].Type), events[7].Message, events[7].ContainerID, events[7].ImageName),
 	}
 	if !reflect.DeepEqual(before, after) {
 		t.Fatalf("expected input event ordering fields unchanged, before=%v after=%v", before, after)

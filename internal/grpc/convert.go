@@ -224,8 +224,8 @@ func EventsToProto(events []*event.Event) []*pb.Event {
 }
 
 func lessInternalEvent(a, b *event.Event) bool {
-	if !a.Timestamp.Equal(b.Timestamp) {
-		return a.Timestamp.After(b.Timestamp)
+	if a.Timestamp.Unix() != b.Timestamp.Unix() {
+		return a.Timestamp.Unix() > b.Timestamp.Unix()
 	}
 	if a.ID != b.ID {
 		return a.ID < b.ID
