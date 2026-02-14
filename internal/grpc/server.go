@@ -63,11 +63,17 @@ func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
 
 // Start starts the gRPC server (blocking). Call from a goroutine.
 func (s *Server) Start() error {
+	if s == nil || s.grpc == nil || s.lis == nil {
+		return fmt.Errorf("server is not initialized")
+	}
 	return s.grpc.Serve(s.lis)
 }
 
 // Stop gracefully stops the gRPC server
 func (s *Server) Stop() {
+	if s == nil {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.grpc != nil {
@@ -89,6 +95,9 @@ func (s *Server) Address() string {
 
 // GetSnapshot implements DocksphinxService
 func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*pb.Snapshot, error) {
+	if s == nil {
+		return nil, status.Error(codes.Unavailable, "server not available")
+	}
 	if ctx != nil {
 		if err := ctx.Err(); err != nil {
 			return nil, status.FromContextError(err).Err()
@@ -108,6 +117,9 @@ func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*
 
 // Stream implements DocksphinxService
 func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_StreamServer) error {
+	if s == nil {
+		return status.Error(codes.Unavailable, "server not available")
+	}
 	if stream == nil {
 		return status.Error(codes.InvalidArgument, "stream is nil")
 	}

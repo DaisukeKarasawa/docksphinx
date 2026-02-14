@@ -85,6 +85,28 @@ func TestServerSnapshotAndStreamInitial(t *testing.T) {
 	}
 }
 
+func TestServerStartReturnsErrorWhenUninitialized(t *testing.T) {
+	var nilServer *Server
+	if err := nilServer.Start(); err == nil {
+		t.Fatal("expected error for nil server start")
+	}
+
+	empty := &Server{}
+	if err := empty.Start(); err == nil {
+		t.Fatal("expected error for uninitialized server start")
+	}
+}
+
+func TestServerStopNilReceiverNoPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected no panic on nil server stop, got %v", r)
+		}
+	}()
+	var nilServer *Server
+	nilServer.Stop()
+}
+
 func TestServerGetSnapshotReturnsUnavailableWhenEngineMissing(t *testing.T) {
 	srv := &Server{
 		opts: &ServerOptions{RecentEventLimit: 10},
@@ -92,6 +114,14 @@ func TestServerGetSnapshotReturnsUnavailableWhenEngineMissing(t *testing.T) {
 	_, err := srv.GetSnapshot(context.Background(), &pb.GetSnapshotRequest{})
 	if status.Code(err) != codes.Unavailable {
 		t.Fatalf("expected unavailable error, got %v", err)
+	}
+}
+
+func TestServerGetSnapshotReturnsUnavailableWhenReceiverNil(t *testing.T) {
+	var srv *Server
+	_, err := srv.GetSnapshot(context.Background(), &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for nil receiver, got %v", err)
 	}
 }
 
@@ -257,6 +287,15 @@ func TestServerStreamReturnsContextErrorWhenAlreadyCanceled(t *testing.T) {
 	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
 	if status.Code(err) != codes.Canceled {
 		t.Fatalf("expected canceled error, got %v", err)
+	}
+}
+
+func TestServerStreamReturnsUnavailableWhenReceiverNil(t *testing.T) {
+	var srv *Server
+	stream := &stubStreamServer{ctx: context.Background()}
+	err := srv.Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for nil receiver, got %v", err)
 	}
 }
 
