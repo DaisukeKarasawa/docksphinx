@@ -177,3 +177,18 @@ func TestEngineIntegration(t *testing.T) {
 	states := engine.GetStateManager().GetAllStates()
 	t.Logf("Tracking %d containers", len(states))
 }
+
+func TestEngineStartFailsWithNilDockerClient(t *testing.T) {
+	config := EngineConfig{
+		Interval:   1 * time.Second,
+		Thresholds: DefaultThresholdConfig(),
+	}
+	engine, err := NewEngine(config, nil)
+	if err != nil {
+		t.Fatalf("NewEngine should not fail for nil client setup test: %v", err)
+	}
+
+	if err := engine.Start(); err == nil {
+		t.Fatal("expected Start to fail when docker client is nil")
+	}
+}

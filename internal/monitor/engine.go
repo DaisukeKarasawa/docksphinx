@@ -95,6 +95,9 @@ func (e *Engine) Start() error {
 	if e.running {
 		return fmt.Errorf("monitoring engine is already running")
 	}
+	if e.dockerClient == nil {
+		return fmt.Errorf("docker client is nil")
+	}
 
 	e.running = true
 	e.wg.Add(1)
@@ -141,6 +144,10 @@ func (e *Engine) monitorLoop() {
 
 // collectAndDetect collects container information and detects events
 func (e *Engine) collectAndDetect() {
+	if e.dockerClient == nil {
+		e.logger.Error("docker client is nil; skipping collection")
+		return
+	}
 	ctx, cancel := context.WithTimeout(e.ctx, 30*time.Second)
 	defer cancel()
 	now := time.Now()
