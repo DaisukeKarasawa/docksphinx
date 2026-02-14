@@ -65,6 +65,7 @@ This file defines instructions for coding agents working on this project.
 
 - Use [gitmoji](https://gist.github.com/parmentf/035de27d6ed1dce0b36a) in commit messages
 - Commit message format: `<gitmoji> <commit message>`
+- For long-running implementation sessions, commit and push immediately after each meaningful change (`git add -A && git commit ... && git push`). Avoid batching unrelated changes.
 
 ## File Structure
 
