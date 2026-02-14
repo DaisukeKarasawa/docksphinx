@@ -57,7 +57,7 @@ type tuiModel struct {
 }
 
 func runTUI(parent context.Context, address string) error {
-	ctx, cancel := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(normalizeParentContext(parent), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	app := tview.NewApplication()

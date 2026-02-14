@@ -117,7 +117,7 @@ func runSnapshot(ctx context.Context, address string) error {
 }
 
 func runTail(parent context.Context, address string) error {
-	ctx, cancel := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(normalizeParentContext(parent), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	backoff := 500 * time.Millisecond
@@ -459,6 +459,13 @@ func nextBackoff(current time.Duration) time.Duration {
 		return 5 * time.Second
 	}
 	return next
+}
+
+func normalizeParentContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 func isLoopback(address string) bool {

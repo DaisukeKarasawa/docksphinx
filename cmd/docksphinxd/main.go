@@ -93,7 +93,7 @@ func runStart(parent context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	ctx, cancel := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(normalizeParentContext(parent), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	return d.Run(ctx)
 }
@@ -128,7 +128,7 @@ func runStop(parent context.Context, cmd *cli.Command) error {
 	}
 	fmt.Printf("Sent SIGTERM to PID %d\n", pid)
 
-	waitCtx, cancel := context.WithTimeout(parent, 5*time.Second)
+	waitCtx, cancel := context.WithTimeout(normalizeParentContext(parent), 5*time.Second)
 	defer cancel()
 	if err := waitForProcessExit(waitCtx, pid, 100*time.Millisecond, func(targetPID int) error {
 		return syscall.Kill(targetPID, 0)
@@ -215,9 +215,7 @@ func readPID(path string) (int, error) {
 }
 
 func checkGRPCHealth(parent context.Context, address string, timeout time.Duration) error {
-	if parent == nil {
-		parent = context.Background()
-	}
+	parent = normalizeParentContext(parent)
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
@@ -236,6 +234,13 @@ func checkGRPCHealth(parent context.Context, address string, timeout time.Durati
 		return fmt.Errorf("health rpc failed: %w", err)
 	}
 	return nil
+}
+
+func normalizeParentContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 func waitForProcessExit(

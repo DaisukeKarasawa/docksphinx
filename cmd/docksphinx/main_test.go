@@ -341,6 +341,28 @@ func TestWaitOrDone(t *testing.T) {
 	})
 }
 
+func TestNormalizeParentContext(t *testing.T) {
+	t.Run("nil-like context normalizes to background", func(t *testing.T) {
+		ctxMap := map[string]context.Context{}
+		got := normalizeParentContext(ctxMap["missing"])
+		if got == nil {
+			t.Fatal("expected non-nil normalized context")
+		}
+		if err := got.Err(); err != nil {
+			t.Fatalf("expected active background context, got err=%v", err)
+		}
+	})
+
+	t.Run("non-nil context is preserved", func(t *testing.T) {
+		orig, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		got := normalizeParentContext(orig)
+		if got != orig {
+			t.Fatal("expected original non-nil context to be preserved")
+		}
+	})
+}
+
 func TestNextBackoff(t *testing.T) {
 	tests := []struct {
 		name    string
