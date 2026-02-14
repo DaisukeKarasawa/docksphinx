@@ -53,6 +53,7 @@ This file defines instructions for coding agents working on this project.
 - Config-to-runtime conversion helpers (e.g., `Config.EngineConfig`) should be nil-receiver safe and fall back to explicit defaults.
 - Config persistence helpers (e.g., `Config.Save`) should reject whitespace-only paths after trim and return explicit errors on nil receivers.
 - Normalize user-provided address/path strings with trim operations before emptiness validation to reject whitespace-only inputs deterministically.
+- Validation helpers should remain robust even when called before normalization (apply local trim/case-normalization for comparisons without requiring caller order).
 - Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
 - Detection/evaluation helpers (e.g., detector paths) should also be nil-safe and prefer empty-result contracts over panics when dependencies are missing.
 - Monitoring helpers with internal maps should lazily initialize map fields so zero-value construction paths remain panic-safe.
