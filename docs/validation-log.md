@@ -1604,3 +1604,30 @@ make quality
 ### Focused regression assertion
 
 - `cmd/docksphinx.TestPrintSnapshotToUsesDeterministicTieBreakers` を拡張し、`project/service` が同値な `GROUPS` 行でも `container_ids` ベース tie-break が適用され、表示順が決定的に固定されることを確認。
+
+---
+
+## 2026-02-14 (recent-events full tie-break ordering hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.selectRecentEvents` の比較関数を `lessRecentEvent` へ集約し、`timestamp desc` / `id asc` に加えて  
+  `container_name` → `type` → `message` → `container_id` → `image_name` の tie-break を追加。
+- `TestSelectRecentEvents` を拡張し、`timestamp` と `id` が同値（空）なケースでも追加 tie-break 連鎖により順序が固定されることを確認。
