@@ -66,6 +66,37 @@ func TestStateManager(t *testing.T) {
 	if exists {
 		t.Error("Expected state to be removed")
 	}
+
+	sm.UpdateResources(ResourceState{
+		Images: []docker.Image{
+			{ID: "img1", Repository: "repo1", Tag: "latest"},
+		},
+		Groups: []ComposeGroup{
+			{
+				Project:        "proj",
+				Service:        "svc",
+				ContainerIDs:   []string{"c1"},
+				ContainerNames: []string{"web"},
+				NetworkNames:   []string{"net1"},
+			},
+		},
+	})
+
+	resources := sm.GetResources()
+	if len(resources.Images) != 1 || resources.Images[0].ID != "img1" {
+		t.Fatalf("Expected resource images to be copied")
+	}
+	// mutate returned copy and ensure manager state is isolated
+	resources.Images[0].ID = "mutated"
+	resources.Groups[0].ContainerIDs[0] = "mutated"
+
+	resources2 := sm.GetResources()
+	if resources2.Images[0].ID != "img1" {
+		t.Fatalf("Expected internal images to remain unchanged, got %s", resources2.Images[0].ID)
+	}
+	if resources2.Groups[0].ContainerIDs[0] != "c1" {
+		t.Fatalf("Expected internal groups to remain unchanged, got %s", resources2.Groups[0].ContainerIDs[0])
+	}
 }
 
 func TestDetector(t *testing.T) {

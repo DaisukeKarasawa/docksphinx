@@ -154,7 +154,12 @@ func (sm *StateManager) UpdateResources(resources ResourceState) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	sm.resources = resources
+	sm.resources = ResourceState{
+		Images:   append([]docker.Image(nil), resources.Images...),
+		Networks: append([]docker.Network(nil), resources.Networks...),
+		Volumes:  append([]docker.Volume(nil), resources.Volumes...),
+		Groups:   cloneComposeGroups(resources.Groups),
+	}
 }
 
 // GetResources returns latest non-container resource snapshot.
@@ -165,6 +170,23 @@ func (sm *StateManager) GetResources() ResourceState {
 		Images:   append([]docker.Image(nil), sm.resources.Images...),
 		Networks: append([]docker.Network(nil), sm.resources.Networks...),
 		Volumes:  append([]docker.Volume(nil), sm.resources.Volumes...),
-		Groups:   append([]ComposeGroup(nil), sm.resources.Groups...),
+		Groups:   cloneComposeGroups(sm.resources.Groups),
 	}
+}
+
+func cloneComposeGroups(in []ComposeGroup) []ComposeGroup {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]ComposeGroup, 0, len(in))
+	for _, g := range in {
+		out = append(out, ComposeGroup{
+			Project:        g.Project,
+			Service:        g.Service,
+			ContainerIDs:   append([]string(nil), g.ContainerIDs...),
+			ContainerNames: append([]string(nil), g.ContainerNames...),
+			NetworkNames:   append([]string(nil), g.NetworkNames...),
+		})
+	}
+	return out
 }
