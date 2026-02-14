@@ -68,6 +68,7 @@ This file defines instructions for coding agents working on this project.
 - Validation helpers should remain robust even when called before normalization (apply local trim/case-normalization for comparisons without requiring caller order).
 - Runtime consumers of validated config values (log level/path, pid path, etc.) should also apply local trim/normalization to keep behavior consistent with validation acceptance.
 - Address classification/diagnostic helpers (e.g., loopback checks and plaintext warning emitters) should trim runtime inputs before both classification and message rendering.
+- Address warning helpers should treat empty normalized addresses as no-op inputs to avoid noisy or misleading diagnostics.
 - PID helper paths in CLI/daemon commands should use trimmed paths consistently for both read and remove operations.
 - PID status/inspection helpers that accept process-check callbacks should reject nil callbacks explicitly rather than invoking them blindly.
 - Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
