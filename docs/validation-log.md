@@ -2703,3 +2703,32 @@ make quality
   - 新規 `running` のみ開始イベント対象
   - `exists=true && oldState=nil` でも panic せず判定可能
   - 既存状態では旧状態との比較で遷移判定
+
+---
+
+## 2026-02-14 (monitor engine partial-init context/stop hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.collectAndDetect` で `e.ctx` を `normalizeContext` 経由で正規化し、部分初期化（`ctx=nil`）状態でも `context.WithTimeout` で panic しないよう強化。
+- `internal/monitor.Stop` で `cancel` / `eventChan` nil ガードを追加し、部分初期化状態（`running=true` だが依存未設定）でも安全停止できるよう hardening。
+- `engine_test.go` に以下を追加:
+  - `TestEngineCollectAndDetectHandlesNilContext`
+  - `TestEngineStopHandlesNilCancelAndEventChannel`
