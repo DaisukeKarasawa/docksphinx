@@ -23,9 +23,10 @@ func (h *History) Add(ev *Event) {
 	if h == nil || ev == nil {
 		return
 	}
+	cloned := cloneEvent(ev)
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.events = append(h.events, cloneEvent(ev))
+	h.events = append(h.events, cloned)
 	if len(h.events) > h.maxSize {
 		h.events = h.events[len(h.events)-h.maxSize:]
 	}
@@ -37,16 +38,22 @@ func (h *History) Recent(limit int) []*Event {
 		return nil
 	}
 	h.mu.RLock()
-	defer h.mu.RUnlock()
 	if len(h.events) == 0 {
+		h.mu.RUnlock()
 		return nil
 	}
 	if limit <= 0 || limit > len(h.events) {
 		limit = len(h.events)
 	}
-	out := make([]*Event, 0, limit)
+	selected := make([]*Event, 0, limit)
 	for i := len(h.events) - 1; i >= len(h.events)-limit; i-- {
-		out = append(out, cloneEvent(h.events[i]))
+		selected = append(selected, h.events[i])
+	}
+	h.mu.RUnlock()
+
+	out := make([]*Event, 0, len(selected))
+	for _, ev := range selected {
+		out = append(out, cloneEvent(ev))
 	}
 	return out
 }
