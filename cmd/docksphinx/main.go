@@ -125,7 +125,7 @@ func runTail(parent context.Context, address string) error {
 
 		client, err := dgrpc.NewClient(ctx, address)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "tail connect failed: %v (retrying in %s)\n", err, backoff)
+			logTailRetry(os.Stderr, "connect", err, backoff)
 			if err := waitOrDone(ctx, backoff); err != nil {
 				return nil
 			}
@@ -136,7 +136,7 @@ func runTail(parent context.Context, address string) error {
 		stream, err := client.Stream(ctx, true)
 		if err != nil {
 			_ = client.Close()
-			fmt.Fprintf(os.Stderr, "tail subscribe failed: %v (retrying in %s)\n", err, backoff)
+			logTailRetry(os.Stderr, "subscribe", err, backoff)
 			if err := waitOrDone(ctx, backoff); err != nil {
 				return nil
 			}
@@ -150,12 +150,19 @@ func runTail(parent context.Context, address string) error {
 			return nil
 		}
 
-		fmt.Fprintf(os.Stderr, "tail stream disconnected: %v (reconnecting)\n", recvErr)
+		logTailRetry(os.Stderr, "stream disconnected", recvErr, backoff)
 		if err := waitOrDone(ctx, backoff); err != nil {
 			return nil
 		}
 		backoff = nextBackoff(backoff)
 	}
+}
+
+func logTailRetry(out io.Writer, phase string, err error, backoff time.Duration) {
+	if out == nil {
+		return
+	}
+	fmt.Fprintf(out, "tail %s failed: %v (retrying in %s)\n", phase, err, backoff)
 }
 
 func consumeStream(ctx context.Context, stream pb.DocksphinxService_StreamClient) error {

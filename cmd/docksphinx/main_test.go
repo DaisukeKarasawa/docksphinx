@@ -174,3 +174,20 @@ func TestShouldReconnectTail(t *testing.T) {
 		})
 	}
 }
+
+func TestLogTailRetry(t *testing.T) {
+	t.Run("writes expected format", func(t *testing.T) {
+		var buf bytes.Buffer
+		logTailRetry(&buf, "connect", errors.New("boom"), 2*time.Second)
+
+		got := buf.String()
+		want := "tail connect failed: boom (retrying in 2s)\n"
+		if got != want {
+			t.Fatalf("unexpected log format:\n got: %q\nwant: %q", got, want)
+		}
+	})
+
+	t.Run("nil writer is no-op", func(t *testing.T) {
+		logTailRetry(nil, "subscribe", errors.New("boom"), 500*time.Millisecond)
+	})
+}
