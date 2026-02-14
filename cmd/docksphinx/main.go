@@ -268,21 +268,33 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 
 	if len(snapshot.GetGroups()) > 0 {
 		fmt.Fprintln(out, "\nGROUPS")
-		for _, g := range snapshot.GetGroups() {
+		groups := append([]*pb.ComposeGroup(nil), snapshot.GetGroups()...)
+		sort.Slice(groups, func(i, j int) bool {
+			li := groups[i].GetProject() + "/" + groups[i].GetService()
+			lj := groups[j].GetProject() + "/" + groups[j].GetService()
+			return li < lj
+		})
+		for _, g := range groups {
+			networkNames := append([]string(nil), g.GetNetworkNames()...)
+			sort.Strings(networkNames)
 			fmt.Fprintf(
 				out,
 				"%s/%s\tcontainers=%d\tnetworks=%s\n",
 				g.GetProject(),
 				g.GetService(),
 				len(g.GetContainerIds()),
-				strings.Join(g.GetNetworkNames(), ","),
+				strings.Join(networkNames, ","),
 			)
 		}
 	}
 
 	if len(snapshot.GetNetworks()) > 0 {
 		fmt.Fprintln(out, "\nNETWORKS")
-		for _, n := range snapshot.GetNetworks() {
+		networks := append([]*pb.NetworkInfo(nil), snapshot.GetNetworks()...)
+		sort.Slice(networks, func(i, j int) bool {
+			return networks[i].GetName() < networks[j].GetName()
+		})
+		for _, n := range networks {
 			fmt.Fprintf(
 				out,
 				"%s\tdriver=%s\tscope=%s\tcontainers=%d\n",
@@ -296,7 +308,11 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 
 	if len(snapshot.GetVolumes()) > 0 {
 		fmt.Fprintln(out, "\nVOLUMES")
-		for _, v := range snapshot.GetVolumes() {
+		volumes := append([]*pb.VolumeInfo(nil), snapshot.GetVolumes()...)
+		sort.Slice(volumes, func(i, j int) bool {
+			return volumes[i].GetName() < volumes[j].GetName()
+		})
+		for _, v := range volumes {
 			fmt.Fprintf(
 				out,
 				"%s\tdriver=%s\trefs=%d\tnote=%s\n",
@@ -310,7 +326,13 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 
 	if len(snapshot.GetImages()) > 0 {
 		fmt.Fprintln(out, "\nIMAGES")
-		for _, img := range snapshot.GetImages() {
+		images := append([]*pb.ImageInfo(nil), snapshot.GetImages()...)
+		sort.Slice(images, func(i, j int) bool {
+			li := images[i].GetRepository() + ":" + images[i].GetTag()
+			lj := images[j].GetRepository() + ":" + images[j].GetTag()
+			return li < lj
+		})
+		for _, img := range images {
 			fmt.Fprintf(
 				out,
 				"%s:%s\tsize=%d\tcreated=%s\n",

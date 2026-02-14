@@ -435,3 +435,47 @@ func TestPrintSnapshotToImageCreatedMissingRendersNA(t *testing.T) {
 		t.Fatalf("expected created=N/A output, got:\n%s", out)
 	}
 }
+
+func TestPrintSnapshotToSortsResourceSections(t *testing.T) {
+	snapshot := &pb.Snapshot{
+		AtUnix: time.Now().Unix(),
+		Groups: []*pb.ComposeGroup{
+			{Project: "zeta", Service: "api", NetworkNames: []string{"net_b", "net_a"}},
+			{Project: "alpha", Service: "web", NetworkNames: []string{"net_z", "net_x"}},
+		},
+		Networks: []*pb.NetworkInfo{
+			{Name: "znet", Driver: "bridge", Scope: "local", ContainerCount: 1},
+			{Name: "anet", Driver: "bridge", Scope: "local", ContainerCount: 2},
+		},
+		Volumes: []*pb.VolumeInfo{
+			{Name: "zvol", Driver: "local", RefCount: 1, UsageNote: "metadata-only"},
+			{Name: "avol", Driver: "local", RefCount: 2, UsageNote: "metadata-only"},
+		},
+		Images: []*pb.ImageInfo{
+			{Repository: "zrepo", Tag: "latest", Size: 2, CreatedUnix: 1},
+			{Repository: "arepo", Tag: "latest", Size: 1, CreatedUnix: 1},
+		},
+	}
+
+	var buf bytes.Buffer
+	printSnapshotTo(snapshot, &buf)
+	out := buf.String()
+
+	mustAppearBefore := func(first, second string) {
+		t.Helper()
+		i := strings.Index(out, first)
+		j := strings.Index(out, second)
+		if i == -1 || j == -1 {
+			t.Fatalf("missing expected markers %q or %q in output:\n%s", first, second, out)
+		}
+		if i >= j {
+			t.Fatalf("expected %q to appear before %q in output:\n%s", first, second, out)
+		}
+	}
+
+	mustAppearBefore("alpha/web", "zeta/api")
+	mustAppearBefore("anet\tdriver=", "znet\tdriver=")
+	mustAppearBefore("avol\tdriver=", "zvol\tdriver=")
+	mustAppearBefore("arepo:latest\tsize=", "zrepo:latest\tsize=")
+	mustAppearBefore("net_x,net_z", "net_a,net_b")
+}
