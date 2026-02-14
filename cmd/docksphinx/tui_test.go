@@ -699,6 +699,55 @@ func TestRenderStatusNilSafety(t *testing.T) {
 	})
 }
 
+func TestSetTargetAndRefreshCenterNilSafety(t *testing.T) {
+	t.Run("nil receiver no panic", func(t *testing.T) {
+		var m *tuiModel
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected nil receiver setTarget/refreshCenter to be safe, got panic %v", r)
+			}
+		}()
+		m.setTarget("containers")
+		m.refreshCenter()
+	})
+
+	t.Run("zero-value model no panic", func(t *testing.T) {
+		m := &tuiModel{}
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected zero-value setTarget/refreshCenter to be safe, got panic %v", r)
+			}
+		}()
+		m.setTarget("containers")
+		m.refreshCenter()
+	})
+
+	t.Run("refreshCenter clamps out-of-range target index", func(t *testing.T) {
+		m := newTUIModel()
+		m.targetIdx = len(targetOrder)
+
+		m.refreshCenter()
+
+		if m.targetIdx != 0 {
+			t.Fatalf("expected target index to clamp to 0, got %d", m.targetIdx)
+		}
+		if got := m.center.GetCell(0, 0).Text; !strings.Contains(got, "NAME") {
+			t.Fatalf("expected containers header after clamp, got %q", got)
+		}
+	})
+
+	t.Run("setTarget with unknown target recovers invalid target index", func(t *testing.T) {
+		m := newTUIModel()
+		m.targetIdx = len(targetOrder)
+
+		m.setTarget("unknown-target")
+
+		if m.targetIdx != 0 {
+			t.Fatalf("expected unknown target to recover invalid index to 0, got %d", m.targetIdx)
+		}
+	})
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 

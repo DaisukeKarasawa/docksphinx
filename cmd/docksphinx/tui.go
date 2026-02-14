@@ -413,11 +413,19 @@ func (m *tuiModel) queueStatus(app *tview.Application, message string) {
 }
 
 func (m *tuiModel) setTarget(target string) {
+	if m == nil || len(targetOrder) == 0 {
+		return
+	}
+	found := false
 	for i, t := range targetOrder {
 		if t == target {
 			m.targetIdx = i
+			found = true
 			break
 		}
+	}
+	if !found && (m.targetIdx < 0 || m.targetIdx >= len(targetOrder)) {
+		m.targetIdx = 0
 	}
 	m.refreshCenter()
 }
@@ -429,6 +437,12 @@ func (m *tuiModel) refreshAll() {
 }
 
 func (m *tuiModel) refreshCenter() {
+	if m == nil || m.center == nil || len(targetOrder) == 0 {
+		return
+	}
+	if m.targetIdx < 0 || m.targetIdx >= len(targetOrder) {
+		m.targetIdx = 0
+	}
 	target := targetOrder[m.targetIdx]
 	m.center.Clear()
 
