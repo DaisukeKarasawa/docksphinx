@@ -1441,3 +1441,29 @@ make quality
 ### Focused regression assertion
 
 - `cmd/docksphinx.TestSelectRecentEvents` を拡張し、`selectRecentEvents` の連続呼び出し結果が相互に参照共有せず（独立 clone）、1回目の返却値ミューテーションが2回目返却値へ波及しないことを確認。
+
+---
+
+## 2026-02-14 (tui detail sorting non-mutating regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.TestFilteredContainerRowsForDetailSortAndNonMutating` を追加し、`filteredContainerRowsForDetail` の sort mode（CPU/MEM/Uptime/Name）ごとの順序契約を固定。
+- 併せて、同関数の実行で `Snapshot.Containers` の入力順序が変化しないこと（non-mutating）を確認。
