@@ -22,6 +22,9 @@ func NewDetector(stateManager *StateManager) *Detector {
 // DetectStateChange detects state changes and returns events
 // This is called after updating container states
 func (d *Detector) DetectStateChange(containerID, containerName, imageName, currentState string) []*event.Event {
+	if d == nil || d.stateManager == nil {
+		return nil
+	}
 	oldState, exists := d.stateManager.GetState(containerID)
 
 	var events []*event.Event

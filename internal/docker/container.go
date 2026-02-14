@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,12 +14,14 @@ import (
 
 // Container represents a Docker container with its basic information
 type Container struct {
-	ID      string
-	Name    string
-	Image   string
-	Status  string
-	State   string
-	Created int64
+	ID           string
+	Name         string
+	Image        string
+	Status       string
+	State        string
+	Created      int64
+	Labels       map[string]string
+	NetworkNames []string
 }
 
 // ListContainersOptions specifies options for listing containers
@@ -34,6 +37,12 @@ type ListContainersOptions struct {
 // ListContainers lists all containers matching the given options
 // This is the main function for getting container information
 func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions) ([]Container, error) {
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx = normalizeContext(ctx)
+
 	// Build filter arguments
 	filterArgs := filters.NewArgs()
 
@@ -43,7 +52,7 @@ func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions)
 	}
 
 	// Get container list from Docker API
-	containers, err := c.apiClient.ContainerList(ctx, container.ListOptions{
+	containers, err := apiClient.ContainerList(ctx, container.ListOptions{
 		All:     opts.All,
 		Filters: filterArgs,
 	})
@@ -65,6 +74,14 @@ func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions)
 			Status:  container.Status,
 			State:   container.State,
 			Created: container.Created,
+			Labels:  container.Labels,
+		}
+		if container.NetworkSettings != nil {
+			containerInfo.NetworkNames = make([]string, 0, len(container.NetworkSettings.Networks))
+			for name := range container.NetworkSettings.Networks {
+				containerInfo.NetworkNames = append(containerInfo.NetworkNames, name)
+			}
+			sort.Strings(containerInfo.NetworkNames)
 		}
 
 		// Apply name pattern filter if specified
@@ -98,7 +115,11 @@ func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions)
 // GetContainer retrieves detailed information about a specific container
 // containerID can be either the full ID or a short ID prefix
 func (c *Client) GetContainer(ctx context.Context, containerID string) (*container.InspectResponse, error) {
-	containerInspect, err := c.apiClient.ContainerInspect(ctx, containerID)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	containerInspect, err := apiClient.ContainerInspect(normalizeContext(ctx), containerID)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
@@ -108,12 +129,12 @@ func (c *Client) GetContainer(ctx context.Context, containerID string) (*contain
 
 // ContainerDetails represents detailed container information
 type ContainerDetails struct {
-	ID							string
-	Name						string
-	Image						string
-	State					  string
-	Status         	string 
-	Created					int64
+	ID              string
+	Name            string
+	Image           string
+	State           string
+	Status          string
+	Created         int64
 	StartedAt       string
 	FinishedAt      string
 	RestartCount    int
@@ -141,27 +162,41 @@ func (c *Client) GetContainerDetails(ctx context.Context, containerID string) (*
 		config = containerInspect.Config
 	}
 
+	var (
+		stateStatus string
+		startedAt   string
+		finishedAt  string
+	)
+	if containerInspect.State != nil {
+		stateStatus = containerInspect.State.Status
+		startedAt = containerInspect.State.StartedAt
+		finishedAt = containerInspect.State.FinishedAt
+	}
+
 	status := calculateStatus(containerInspect.State)
 	return &ContainerDetails{
-		ID: 						 containerInspect.ID,
-		Name: 				   strings.TrimPrefix(containerInspect.Name, "/"),
-		Image:					 containerInspect.Image,
-		State:				   containerInspect.State.Status,
-		Status:      	 	 status,
-		Created:				 parseCreatedTime(containerInspect.Created),
-		StartedAt:			 containerInspect.State.StartedAt,
-		FinishedAt:			 containerInspect.State.FinishedAt,
-		RestartCount:		 containerInspect.RestartCount,
-		Platform:				 containerInspect.Platform,
-		Hostname:  		 	 hostname,
+		ID:              containerInspect.ID,
+		Name:            strings.TrimPrefix(containerInspect.Name, "/"),
+		Image:           containerInspect.Image,
+		State:           stateStatus,
+		Status:          status,
+		Created:         parseCreatedTime(containerInspect.Created),
+		StartedAt:       startedAt,
+		FinishedAt:      finishedAt,
+		RestartCount:    containerInspect.RestartCount,
+		Platform:        containerInspect.Platform,
+		Hostname:        hostname,
 		NetworkSettings: containerInspect.NetworkSettings,
-		Mounts:					 containerInspect.Mounts,
-		Config:					 config,
+		Mounts:          containerInspect.Mounts,
+		Config:          config,
 	}, nil
 }
 
 // calculateStatus converts a container's state to a human-readable status string
 func calculateStatus(state *container.State) string {
+	if state == nil {
+		return "Unknown"
+	}
 	switch state.Status {
 	case "running":
 		if state.StartedAt != "" {

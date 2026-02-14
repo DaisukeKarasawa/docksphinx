@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"sync"
 
 	"docksphinx/internal/event"
@@ -24,8 +25,16 @@ func NewBroadcaster() *Broadcaster {
 // Subscribe adds a new subscriber and returns a channel and an unsubscribe function.
 // Call the returned function (e.g. defer unsub()) when done receiving.
 func (b *Broadcaster) Subscribe() (ch <-chan *event.Event, unsub func()) {
+	if b == nil {
+		closed := make(chan *event.Event)
+		close(closed)
+		return closed, func() {}
+	}
 	writable := make(chan *event.Event, subscriberChanBuf)
 	b.mu.Lock()
+	if b.subscribers == nil {
+		b.subscribers = make(map[chan *event.Event]struct{})
+	}
 	b.subscribers[writable] = struct{}{}
 	b.mu.Unlock()
 	return writable, func() { b.Unsubscribe(writable) }
@@ -33,6 +42,9 @@ func (b *Broadcaster) Subscribe() (ch <-chan *event.Event, unsub func()) {
 
 // Unsubscribe removes the subscriber and closes its channel
 func (b *Broadcaster) Unsubscribe(ch chan *event.Event) {
+	if b == nil || ch == nil {
+		return
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if _, ok := b.subscribers[ch]; ok {
@@ -43,6 +55,9 @@ func (b *Broadcaster) Unsubscribe(ch chan *event.Event) {
 
 // Send sends the event to all current subscribers (non-blocking; drops if channel full)
 func (b *Broadcaster) Send(ev *event.Event) {
+	if b == nil {
+		return
+	}
 	if ev == nil {
 		return
 	}
@@ -57,9 +72,27 @@ func (b *Broadcaster) Send(ev *event.Event) {
 	}
 }
 
-// Run reads from src and forwards to all subscribers. Call in a goroutine; stops when src is closed.
-func (b *Broadcaster) Run(src <-chan *event.Event) {
-	for ev := range src {
-		b.Send(ev)
+// Run reads from src and forwards to all subscribers. Call in a goroutine;
+// stops when ctx is canceled or src is closed.
+func (b *Broadcaster) Run(ctx context.Context, src <-chan *event.Event) {
+	if b == nil {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if src == nil {
+		return
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ev, ok := <-src:
+			if !ok {
+				return
+			}
+			b.Send(ev)
+		}
 	}
 }

@@ -3,6 +3,9 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -13,6 +16,8 @@ import (
 // EngineConfig represents monitoring engine configuration
 type EngineConfig struct {
 	Interval time.Duration // Collection interval
+	// ResourceInterval is refresh interval for images/networks/volumes.
+	ResourceInterval time.Duration
 
 	// Filters
 	ContainerNamePattern string // Regex pattern for container names
@@ -20,6 +25,9 @@ type EngineConfig struct {
 
 	// Thresholds
 	Thresholds ThresholdConfig
+
+	// EventHistoryMax is max in-memory events retained.
+	EventHistoryMax int
 }
 
 // Engine is the main monitoring engine
@@ -29,23 +37,39 @@ type Engine struct {
 	stateManager *StateManager
 	detector     *Detector
 	thresholdMon *ThresholdMonitor
+	history      *event.History
+	logger       *slog.Logger
+	resourceMu   sync.Mutex
+	lastResource time.Time
 
 	// Event channel for publishing events
 	eventChan chan *event.Event
 
 	// Control
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
-	mu      sync.RWMutex
-	running bool
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	mu         sync.RWMutex
+	running    bool
+	terminated bool
 }
 
 // NewEngine creates a new monitoring engine
 func NewEngine(config EngineConfig, dockerClient *docker.Client) (*Engine, error) {
+	if config.Interval <= 0 {
+		config.Interval = 5 * time.Second
+	}
+	if config.ResourceInterval <= 0 {
+		config.ResourceInterval = 15 * time.Second
+	}
+	if config.EventHistoryMax <= 0 {
+		config.EventHistoryMax = 1000
+	}
+
 	stateManager := NewStateManager()
 	detector := NewDetector(stateManager)
 	thresholdMon := NewThresholdMonitor(config.Thresholds)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -55,20 +79,59 @@ func NewEngine(config EngineConfig, dockerClient *docker.Client) (*Engine, error
 		stateManager: stateManager,
 		detector:     detector,
 		thresholdMon: thresholdMon,
+		history:      event.NewHistory(config.EventHistoryMax),
+		logger:       logger,
 		eventChan:    make(chan *event.Event, 100),
 		ctx:          ctx,
 		cancel:       cancel,
 		running:      false,
+		terminated:   false,
 	}, nil
 }
 
 // Start starts the monitoring engine
 func (e *Engine) Start() error {
+	if e == nil {
+		return fmt.Errorf("monitoring engine is nil")
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	if e.running {
 		return fmt.Errorf("monitoring engine is already running")
+	}
+	if e.terminated {
+		return fmt.Errorf("monitoring engine cannot be restarted after stop")
+	}
+	if e.dockerClient == nil {
+		return fmt.Errorf("docker client is nil")
+	}
+	if e.config.Interval <= 0 {
+		e.config.Interval = 5 * time.Second
+	}
+	if e.config.ResourceInterval <= 0 {
+		e.config.ResourceInterval = 15 * time.Second
+	}
+	if e.config.EventHistoryMax <= 0 {
+		e.config.EventHistoryMax = 1000
+	}
+	if e.ctx == nil || e.cancel == nil {
+		e.ctx, e.cancel = context.WithCancel(context.Background())
+	}
+	if e.eventChan == nil {
+		e.eventChan = make(chan *event.Event, 100)
+	}
+	if e.stateManager == nil {
+		e.stateManager = NewStateManager()
+	}
+	if e.detector == nil || e.detector.stateManager == nil || e.detector.stateManager != e.stateManager {
+		e.detector = NewDetector(e.stateManager)
+	}
+	if e.thresholdMon == nil {
+		e.thresholdMon = NewThresholdMonitor(e.config.Thresholds)
+	}
+	if e.history == nil {
+		e.history = event.NewHistory(e.config.EventHistoryMax)
 	}
 
 	e.running = true
@@ -80,17 +143,27 @@ func (e *Engine) Start() error {
 
 // Stop stops the monitoring engine
 func (e *Engine) Stop() {
+	if e == nil {
+		return
+	}
 	e.mu.Lock()
-	defer e.mu.Unlock()
 
 	if !e.running {
+		e.mu.Unlock()
 		return
 	}
 
 	e.running = false
-	e.cancel()
+	e.terminated = true
+	if e.cancel != nil {
+		e.cancel()
+	}
+	e.mu.Unlock()
+
 	e.wg.Wait()
-	close(e.eventChan)
+	if e.eventChan != nil {
+		close(e.eventChan)
+	}
 }
 
 // monitorLoop is the main monitoring loop
@@ -114,8 +187,15 @@ func (e *Engine) monitorLoop() {
 
 // collectAndDetect collects container information and detects events
 func (e *Engine) collectAndDetect() {
-	ctx, cancel := context.WithTimeout(e.ctx, 30*time.Second)
+	if e.dockerClient == nil {
+		if e.logger != nil {
+			e.logger.Error("docker client is nil; skipping collection")
+		}
+		return
+	}
+	ctx, cancel := context.WithTimeout(normalizeContext(e.ctx), 30*time.Second)
 	defer cancel()
+	now := time.Now()
 
 	opts := docker.ListContainersOptions{
 		All:          true,
@@ -125,7 +205,9 @@ func (e *Engine) collectAndDetect() {
 
 	containers, err := e.dockerClient.ListContainers(ctx, opts)
 	if err != nil {
-		fmt.Printf("Error listing containers: %v\n", err)
+		if e.logger != nil {
+			e.logger.Error("list containers failed", "error", err)
+		}
 		return
 	}
 
@@ -137,12 +219,31 @@ func (e *Engine) collectAndDetect() {
 		oldState, exists := e.stateManager.GetState(container.ID)
 
 		newState := &ContainerState{
-			ContainerID:   container.ID,
-			ContainerName: container.Name,
-			ImageName:     container.Image,
-			State:         container.State,
-			Status:        container.Status,
-			LastSeen:      time.Now(),
+			ContainerID:    container.ID,
+			ContainerName:  container.Name,
+			ImageName:      container.Image,
+			State:          container.State,
+			Status:         container.Status,
+			LastSeen:       now,
+			ComposeProject: container.Labels["com.docker.compose.project"],
+			ComposeService: container.Labels["com.docker.compose.service"],
+			NetworkNames:   append([]string(nil), container.NetworkNames...),
+		}
+
+		if exists && oldState != nil {
+			newState.StartedAt = oldState.StartedAt
+			newState.RestartCount = oldState.RestartCount
+			newState.VolumeMountCount = oldState.VolumeMountCount
+		}
+
+		if e.needsContainerDetails(exists, oldState, newState) {
+			e.fillContainerDetails(ctx, container.ID, newState)
+		}
+		if !newState.StartedAt.IsZero() {
+			newState.UptimeSeconds = int64(now.Sub(newState.StartedAt).Seconds())
+			if newState.UptimeSeconds < 0 {
+				newState.UptimeSeconds = 0
+			}
 		}
 
 		if container.State == "running" {
@@ -157,14 +258,13 @@ func (e *Engine) collectAndDetect() {
 			}
 		}
 
-		if exists {
+		if exists && oldState != nil {
 			newState.CPUThresholdCount = oldState.CPUThresholdCount
 			newState.MemoryThresholdCount = oldState.MemoryThresholdCount
 		}
 
 		// Detect state changes before update (detector uses GetState, which still has old state)
-		stateChanged := !exists && container.State == "running" ||
-			(exists && oldState.State != container.State)
+		stateChanged := didStateChange(exists, oldState, container.State)
 		if stateChanged {
 			events := e.detector.DetectStateChange(
 				container.ID,
@@ -173,11 +273,7 @@ func (e *Engine) collectAndDetect() {
 				container.State,
 			)
 			for _, evt := range events {
-				select {
-				case e.eventChan <- evt:
-				default:
-					fmt.Printf("Warning: event channel is full, dropping event\n")
-				}
+				e.publishEvent(evt)
 			}
 		}
 
@@ -193,11 +289,7 @@ func (e *Engine) collectAndDetect() {
 				newState,
 			)
 			for _, evt := range thresholdEvents {
-				select {
-				case e.eventChan <- evt:
-				default:
-					fmt.Printf("Warning: event channel is full, dropping event\n")
-				}
+				e.publishEvent(evt)
 			}
 		}
 	}
@@ -208,14 +300,274 @@ func (e *Engine) collectAndDetect() {
 			e.stateManager.RemoveState(containerID)
 		}
 	}
+
+	e.collectResources(ctx, now)
+}
+
+func didStateChange(exists bool, oldState *ContainerState, currentState string) bool {
+	if !exists || oldState == nil {
+		return currentState == "running"
+	}
+	return oldState.State != currentState
+}
+
+func normalizeContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 // GetEventChannel returns the event channel
 func (e *Engine) GetEventChannel() <-chan *event.Event {
+	if e == nil {
+		return nil
+	}
 	return e.eventChan
 }
 
 // GetStateManager returns the state manager
 func (e *Engine) GetStateManager() *StateManager {
+	if e == nil {
+		return nil
+	}
 	return e.stateManager
+}
+
+// SetLogger overrides engine logger.
+func (e *Engine) SetLogger(logger *slog.Logger) {
+	if e == nil {
+		return
+	}
+	if logger == nil {
+		return
+	}
+	e.logger = logger
+}
+
+// GetRecentEvents returns recent events from newest to oldest.
+func (e *Engine) GetRecentEvents(limit int) []*event.Event {
+	if e == nil {
+		return nil
+	}
+	return e.history.Recent(limit)
+}
+
+func (e *Engine) publishEvent(evt *event.Event) {
+	if evt == nil {
+		return
+	}
+	e.history.Add(evt)
+	select {
+	case e.eventChan <- evt:
+	default:
+		if e.logger != nil {
+			e.logger.Warn("event channel full; dropping event", "event_type", evt.Type, "container", evt.ContainerName)
+		}
+	}
+}
+
+func (e *Engine) needsContainerDetails(exists bool, oldState *ContainerState, newState *ContainerState) bool {
+	if !exists {
+		return true
+	}
+	if oldState == nil {
+		return true
+	}
+	if oldState.State != newState.State {
+		return true
+	}
+	if oldState.StartedAt.IsZero() {
+		return true
+	}
+	if oldState.VolumeMountCount == 0 {
+		return true
+	}
+	return false
+}
+
+func (e *Engine) fillContainerDetails(ctx context.Context, containerID string, state *ContainerState) {
+	detail, err := e.dockerClient.GetContainerDetails(ctx, containerID)
+	if err != nil {
+		if e.logger != nil {
+			e.logger.Debug("inspect container failed", "container_id", containerID, "error", err)
+		}
+		return
+	}
+
+	if t, err := time.Parse(time.RFC3339Nano, detail.StartedAt); err == nil {
+		state.StartedAt = t
+	}
+	state.RestartCount = detail.RestartCount
+
+	volumeCount := 0
+	for _, m := range detail.Mounts {
+		if m.Type == "volume" {
+			volumeCount++
+		}
+	}
+	state.VolumeMountCount = volumeCount
+
+	if detail.NetworkSettings != nil {
+		networkNames := make([]string, 0, len(detail.NetworkSettings.Networks))
+		for name := range detail.NetworkSettings.Networks {
+			networkNames = append(networkNames, name)
+		}
+		sort.Strings(networkNames)
+		state.NetworkNames = networkNames
+	}
+
+	if detail.Config != nil {
+		if project := detail.Config.Labels["com.docker.compose.project"]; project != "" {
+			state.ComposeProject = project
+		}
+		if service := detail.Config.Labels["com.docker.compose.service"]; service != "" {
+			state.ComposeService = service
+		}
+	}
+}
+
+func (e *Engine) collectResources(ctx context.Context, now time.Time) {
+	e.resourceMu.Lock()
+	defer e.resourceMu.Unlock()
+
+	if !e.lastResource.IsZero() && now.Sub(e.lastResource) < e.config.ResourceInterval {
+		return
+	}
+
+	images, err := e.dockerClient.ListImages(ctx)
+	if err != nil {
+		if e.logger != nil {
+			e.logger.Warn("list images failed", "error", err)
+		}
+	}
+	networks, err := e.dockerClient.ListNetworks(ctx)
+	if err != nil {
+		if e.logger != nil {
+			e.logger.Warn("list networks failed", "error", err)
+		}
+	}
+	volumes, err := e.dockerClient.ListVolumes(ctx)
+	if err != nil {
+		if e.logger != nil {
+			e.logger.Warn("list volumes failed", "error", err)
+		}
+	}
+
+	for i := range networks {
+		inspect, err := e.dockerClient.GetNetwork(ctx, networks[i].ID)
+		if err != nil {
+			continue
+		}
+		networks[i].ContainerCount = len(inspect.Containers)
+	}
+
+	for i := range volumes {
+		inspect, err := e.dockerClient.GetVolume(ctx, volumes[i].Name)
+		if err != nil {
+			continue
+		}
+		if inspect.UsageData != nil {
+			volumes[i].RefCount = inspect.UsageData.RefCount
+		}
+	}
+
+	states := e.stateManager.GetAllStates()
+	groups := buildComposeGroups(states)
+	e.stateManager.UpdateResources(ResourceState{
+		Images:   images,
+		Networks: networks,
+		Volumes:  volumes,
+		Groups:   groups,
+	})
+	e.lastResource = now
+}
+
+func buildComposeGroups(states map[string]*ContainerState) []ComposeGroup {
+	type groupKey struct {
+		project string
+		service string
+	}
+	type groupAcc struct {
+		group ComposeGroup
+		nets  map[string]struct{}
+	}
+
+	groups := map[groupKey]*groupAcc{}
+	for id, st := range states {
+		if st == nil {
+			continue
+		}
+		project := st.ComposeProject
+		service := st.ComposeService
+		if project == "" && service == "" {
+			for _, netName := range st.NetworkNames {
+				if isSystemNetwork(netName) {
+					continue
+				}
+				project = "network:" + netName
+				service = "(heuristic)"
+				break
+			}
+		}
+		if project == "" {
+			project = "(ungrouped)"
+		}
+		if service == "" {
+			service = "(service)"
+		}
+		key := groupKey{
+			project: project,
+			service: service,
+		}
+		acc, ok := groups[key]
+		if !ok {
+			acc = &groupAcc{
+				group: ComposeGroup{
+					Project:        project,
+					Service:        service,
+					ContainerIDs:   []string{},
+					ContainerNames: []string{},
+					NetworkNames:   []string{},
+				},
+				nets: map[string]struct{}{},
+			}
+			groups[key] = acc
+		}
+		acc.group.ContainerIDs = append(acc.group.ContainerIDs, id)
+		acc.group.ContainerNames = append(acc.group.ContainerNames, st.ContainerName)
+		for _, netName := range st.NetworkNames {
+			if netName == "" {
+				continue
+			}
+			acc.nets[netName] = struct{}{}
+		}
+	}
+
+	out := make([]ComposeGroup, 0, len(groups))
+	for _, acc := range groups {
+		for netName := range acc.nets {
+			acc.group.NetworkNames = append(acc.group.NetworkNames, netName)
+		}
+		sort.Strings(acc.group.ContainerIDs)
+		sort.Strings(acc.group.NetworkNames)
+		sort.Strings(acc.group.ContainerNames)
+		out = append(out, acc.group)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Project == out[j].Project {
+			return out[i].Service < out[j].Service
+		}
+		return out[i].Project < out[j].Project
+	})
+	return out
+}
+
+func isSystemNetwork(name string) bool {
+	switch name {
+	case "", "bridge", "host", "none":
+		return true
+	default:
+		return false
+	}
 }

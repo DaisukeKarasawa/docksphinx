@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -26,7 +27,11 @@ type ContainerStats struct {
 // GetContainerStats retrieves current statistics for a container
 // This is a snapshot, not a stream
 func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*ContainerStats, error) {
-	stats, err := c.apiClient.ContainerStats(ctx, containerID, false)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	stats, err := apiClient.ContainerStats(normalizeContext(ctx), containerID, false)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
@@ -42,8 +47,8 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	cpuPercent := calculateCPUPercent(&v)
 
 	// Memory usage
-	memoryUsage := int64(v.MemoryStats.Usage)
-	memoryLimit := int64(v.MemoryStats.Limit)
+	memoryUsage := clampUint64ToInt64(v.MemoryStats.Usage)
+	memoryLimit := clampUint64ToInt64(v.MemoryStats.Limit)
 	memoryPercent := 0.0
 	if memoryLimit > 0 {
 		memoryPercent = float64(memoryUsage) / float64(memoryLimit) * 100.0
@@ -53,8 +58,8 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 	var networkRx, networkTx int64
 	if v.Networks != nil {
 		for _, network := range v.Networks {
-			networkRx += int64(network.RxBytes)
-			networkTx += int64(network.TxBytes)
+			networkRx += clampUint64ToInt64(network.RxBytes)
+			networkTx += clampUint64ToInt64(network.TxBytes)
 		}
 	}
 
@@ -64,9 +69,9 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 		for _, entry := range v.BlkioStats.IoServiceBytesRecursive {
 			switch entry.Op {
 			case "Read":
-				blockRead += int64(entry.Value)
+				blockRead += clampUint64ToInt64(entry.Value)
 			case "Write":
-				blockWrite += int64(entry.Value)
+				blockWrite += clampUint64ToInt64(entry.Value)
 			}
 		}
 	}
@@ -83,6 +88,13 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*Co
 		BlockWrite:    blockWrite,
 		Timestamp:     v.Read,
 	}, nil
+}
+
+func clampUint64ToInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
 }
 
 // calculateCPUPercent calculates CPU usage percentage
@@ -136,8 +148,8 @@ func (c *Client) GetNetworkStats(ctx context.Context, containerID string) (int64
 
 // VolumeMount represents a volume mount in a container
 type VolumeMount struct {
-	Name   		  string
-	Source			string
+	Name        string
+	Source      string
 	Destination string
 	Driver      string
 }
@@ -156,8 +168,8 @@ func (c *Client) GetVolumeUsage(ctx context.Context, containerID string) ([]Volu
 	for _, mount := range container.Mounts {
 		if mount.Type == "volume" {
 			result = append(result, VolumeMount{
-				Name:  			 mount.Name,
-				Source: 		 mount.Source,
+				Name:        mount.Name,
+				Source:      mount.Source,
 				Destination: mount.Destination,
 				Driver:      mount.Driver,
 			})

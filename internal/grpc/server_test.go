@@ -1,0 +1,503 @@
+package grpc
+
+import (
+	"context"
+	"errors"
+	"net"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	pb "docksphinx/api/docksphinx/v1"
+	"docksphinx/internal/event"
+	"docksphinx/internal/monitor"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+)
+
+func TestServerSnapshotAndStreamInitial(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	engine.GetStateManager().UpdateState("c1", &monitor.ContainerState{
+		ContainerID:   "c1",
+		ContainerName: "web",
+		ImageName:     "nginx:latest",
+		State:         "running",
+		Status:        "Up",
+		LastSeen:      time.Now(),
+	})
+
+	server, err := NewServer(&ServerOptions{
+		Address:          "127.0.0.1:0",
+		EnableReflection: false,
+		RecentEventLimit: 10,
+	}, engine)
+	if err != nil {
+		t.Fatalf("new server failed: %v", err)
+	}
+	defer server.Stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.Start()
+	}()
+	defer func() {
+		select {
+		case <-errCh:
+		case <-time.After(100 * time.Millisecond):
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	client, err := NewClient(ctx, server.Address())
+	if err != nil {
+		t.Fatalf("new client failed: %v", err)
+	}
+	defer client.Close()
+
+	snapshot, err := client.GetSnapshot(ctx)
+	if err != nil {
+		t.Fatalf("GetSnapshot failed: %v", err)
+	}
+	if len(snapshot.GetContainers()) != 1 {
+		t.Fatalf("expected 1 container, got %d", len(snapshot.GetContainers()))
+	}
+
+	stream, err := client.Stream(ctx, true)
+	if err != nil {
+		t.Fatalf("Stream failed: %v", err)
+	}
+	update, err := stream.Recv()
+	if err != nil {
+		t.Fatalf("stream recv failed: %v", err)
+	}
+	if update.GetSnapshot() == nil {
+		t.Fatalf("expected initial snapshot payload, got %#v", update.GetPayload())
+	}
+}
+
+func TestNewServerRejectsWhitespaceAddress(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	_, err = NewServer(&ServerOptions{
+		Address:          "   ",
+		EnableReflection: false,
+		RecentEventLimit: 10,
+	}, engine)
+	if err == nil {
+		t.Fatal("expected NewServer to fail for whitespace-only address")
+	}
+	if got := err.Error(); got != "address cannot be empty" {
+		t.Fatalf("expected empty address error, got %q", got)
+	}
+}
+
+func TestNewServerTrimsAddressBeforeListen(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	srv, err := NewServer(&ServerOptions{
+		Address:          " 127.0.0.1:0 ",
+		EnableReflection: false,
+		RecentEventLimit: 10,
+	}, engine)
+	if err != nil {
+		t.Fatalf("expected NewServer to accept trimmed address: %v", err)
+	}
+	defer srv.Stop()
+
+	if addr := srv.Address(); !strings.HasPrefix(addr, "127.0.0.1:") {
+		t.Fatalf("expected listener to bind loopback address, got %q", addr)
+	}
+}
+
+func TestNewServerDoesNotMutateCallerOptions(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	opts := &ServerOptions{
+		Address:          " 127.0.0.1:0 ",
+		EnableReflection: false,
+		RecentEventLimit: 0,
+	}
+
+	srv, err := NewServer(opts, engine)
+	if err != nil {
+		t.Fatalf("expected NewServer to succeed: %v", err)
+	}
+	defer srv.Stop()
+
+	if opts.Address != " 127.0.0.1:0 " {
+		t.Fatalf("expected caller options address unchanged, got %q", opts.Address)
+	}
+	if opts.RecentEventLimit != 0 {
+		t.Fatalf("expected caller options recent limit unchanged, got %d", opts.RecentEventLimit)
+	}
+	if got := srv.recentEventLimit(); got != 50 {
+		t.Fatalf("expected server to apply default recent event limit, got %d", got)
+	}
+}
+
+func TestNewServerNilOptionsUsesDefaults(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	srv, err := NewServer(nil, engine)
+	if err != nil {
+		if strings.Contains(err.Error(), "address already in use") {
+			t.Skipf("default address busy in test environment, skipping: %v", err)
+		}
+		t.Fatalf("expected NewServer(nil, engine) to succeed, got: %v", err)
+	}
+	defer srv.Stop()
+
+	if got := srv.recentEventLimit(); got != 50 {
+		t.Fatalf("expected default recent event limit 50, got %d", got)
+	}
+	if addr := srv.Address(); !strings.HasPrefix(addr, "127.0.0.1:") {
+		t.Fatalf("expected default loopback listener, got %q", addr)
+	}
+}
+
+func TestServerStartReturnsErrorWhenUninitialized(t *testing.T) {
+	var nilServer *Server
+	if err := nilServer.Start(); err == nil {
+		t.Fatal("expected error for nil server start")
+	}
+
+	empty := &Server{}
+	if err := empty.Start(); err == nil {
+		t.Fatal("expected error for uninitialized server start")
+	}
+}
+
+func TestServerStopNilReceiverNoPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected no panic on nil server stop, got %v", r)
+		}
+	}()
+	var nilServer *Server
+	nilServer.Stop()
+}
+
+func TestServerStopCleansUpPartialInitializationState(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to create listener: %v", err)
+	}
+	addr := lis.Addr().String()
+
+	canceled := false
+	srv := &Server{
+		lis: lis,
+		bcastCancel: func() {
+			canceled = true
+		},
+	}
+
+	srv.Stop()
+
+	if !canceled {
+		t.Fatal("expected broadcaster cancel to be invoked")
+	}
+	if srv.bcastCancel != nil {
+		t.Fatal("expected bcastCancel to be cleared")
+	}
+	if srv.lis != nil {
+		t.Fatal("expected listener to be cleared after stop")
+	}
+	if got := srv.Address(); got != "" {
+		t.Fatalf("expected empty address after listener cleanup, got %q", got)
+	}
+
+	rebound, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("expected address to be reusable after stop, got error: %v", err)
+	}
+	_ = rebound.Close()
+}
+
+func TestServerGetSnapshotReturnsUnavailableWhenEngineMissing(t *testing.T) {
+	srv := &Server{
+		opts: &ServerOptions{RecentEventLimit: 10},
+	}
+	_, err := srv.GetSnapshot(context.Background(), &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable error, got %v", err)
+	}
+}
+
+func TestServerGetSnapshotReturnsUnavailableWhenReceiverNil(t *testing.T) {
+	var srv *Server
+	_, err := srv.GetSnapshot(context.Background(), &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for nil receiver, got %v", err)
+	}
+}
+
+func TestServerGetSnapshotReturnsContextErrorWhenCanceled(t *testing.T) {
+	srv := &Server{}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := srv.GetSnapshot(ctx, &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled error, got %v", err)
+	}
+}
+
+func TestServerGetSnapshotHandlesNilLikeContext(t *testing.T) {
+	srv := &Server{}
+	ctxMap := map[string]context.Context{}
+	_, err := srv.GetSnapshot(ctxMap["missing"], &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine with nil-like context, got %v", err)
+	}
+}
+
+func TestServerStreamReturnsInitialSnapshotSendError(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	wantErr := errors.New("send failed")
+	stream := &stubStreamServer{
+		ctx:       context.Background(),
+		sendErrAt: 1,
+		sendErr:   wantErr,
+	}
+
+	srv := &Server{
+		engine: engine,
+		opts: &ServerOptions{
+			RecentEventLimit: 10,
+		},
+		bcast: NewBroadcaster(),
+	}
+
+	err = srv.Stream(&pb.StreamRequest{IncludeInitialSnapshot: true}, stream)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected initial send error %v, got %v", wantErr, err)
+	}
+	if got := stream.SendCount(); got != 1 {
+		t.Fatalf("expected one send attempt, got %d", got)
+	}
+}
+
+func TestServerStreamSkipsNilEventPayloads(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stream := &stubStreamServer{ctx: ctx}
+	srv := &Server{
+		engine: engine,
+		opts: &ServerOptions{
+			RecentEventLimit: 10,
+		},
+		bcast: NewBroadcaster(),
+	}
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Stream(&pb.StreamRequest{IncludeInitialSnapshot: false}, stream)
+	}()
+
+	var sub chan *event.Event
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		srv.bcast.mu.RLock()
+		for ch := range srv.bcast.subscribers {
+			sub = ch
+			break
+		}
+		srv.bcast.mu.RUnlock()
+		if sub != nil {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if sub == nil {
+		t.Fatal("subscriber was not registered in time")
+	}
+
+	sub <- nil
+	sub <- &event.Event{
+		ID:            "ev-1",
+		Type:          "started",
+		ContainerID:   "cid-1",
+		ContainerName: "web",
+		Message:       "ok",
+		Timestamp:     time.Unix(1700000000, 0),
+	}
+
+	waitDeadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(waitDeadline) {
+		if stream.SendCount() >= 1 {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if got := stream.SendCount(); got != 1 {
+		t.Fatalf("expected exactly one non-nil event send, got %d", got)
+	}
+	sent := stream.Sent()
+	if len(sent) != 1 {
+		t.Fatalf("expected exactly one captured update, got %d", len(sent))
+	}
+	if got := sent[0].GetEvent().GetId(); got != "ev-1" {
+		t.Fatalf("expected sent event id ev-1, got %q", got)
+	}
+
+	cancel()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("expected nil error on context cancel shutdown, got %v", err)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("stream did not stop in time after cancel")
+	}
+}
+
+func TestServerStreamReturnsUnavailableWhenDependenciesMissing(t *testing.T) {
+	stream := &stubStreamServer{ctx: context.Background()}
+
+	engine, newErr := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if newErr != nil {
+		t.Fatalf("new engine failed: %v", newErr)
+	}
+	err := (&Server{engine: engine, bcast: NewBroadcaster()}).Stream(&pb.StreamRequest{}, nil)
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument for nil stream, got %v", err)
+	}
+
+	err = (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine, got %v", err)
+	}
+
+	err = (&Server{engine: engine}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing broadcaster, got %v", err)
+	}
+}
+
+func TestServerStreamReturnsContextErrorWhenAlreadyCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	stream := &stubStreamServer{ctx: ctx}
+	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled error, got %v", err)
+	}
+}
+
+func TestServerStreamHandlesNilStreamContext(t *testing.T) {
+	stream := &stubStreamServer{ctx: nil}
+	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine with nil stream context, got %v", err)
+	}
+}
+
+func TestServerStreamReturnsUnavailableWhenReceiverNil(t *testing.T) {
+	var srv *Server
+	stream := &stubStreamServer{ctx: context.Background()}
+	err := srv.Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for nil receiver, got %v", err)
+	}
+}
+
+type stubStreamServer struct {
+	ctx       context.Context
+	sendErrAt int
+	sendErr   error
+	mu        sync.Mutex
+	sendCount int
+	sent      []*pb.StreamUpdate
+}
+
+func (s *stubStreamServer) Send(update *pb.StreamUpdate) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sendCount++
+	if s.sendErrAt > 0 && s.sendCount == s.sendErrAt {
+		return s.sendErr
+	}
+	s.sent = append(s.sent, update)
+	return nil
+}
+
+func (s *stubStreamServer) SendCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.sendCount
+}
+
+func (s *stubStreamServer) Sent() []*pb.StreamUpdate {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]*pb.StreamUpdate(nil), s.sent...)
+}
+
+func (s *stubStreamServer) SetHeader(metadata.MD) error  { return nil }
+func (s *stubStreamServer) SendHeader(metadata.MD) error { return nil }
+func (s *stubStreamServer) SetTrailer(metadata.MD)       {}
+func (s *stubStreamServer) Context() context.Context     { return s.ctx }
+func (s *stubStreamServer) SendMsg(any) error            { return nil }
+func (s *stubStreamServer) RecvMsg(any) error            { return nil }

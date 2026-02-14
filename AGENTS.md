@@ -30,6 +30,78 @@ This file defines instructions for coding agents working on this project.
 
 - Implementation files must be output to the `outputs/` directory (Markdown format)
 - Information about project specifications (implemented content and requirements) must be output to the `docs/` directory
+- When implementing list/snapshot style outputs, enforce deterministic ordering and add/maintain regression tests that assert the ordering contract.
+- For deterministic ordering, always define explicit tie-break keys for equal primary sort keys and cover tie cases in regression tests.
+- Keep recent-event ordering contracts consistent across CLI rendering and gRPC/proto conversion paths (same tie-break key precedence) and test both paths.
+- When the same ordering contract is required in multiple paths, centralize comparator logic in a shared helper/package to prevent drift.
+- For snapshot resource ordering (containers/images/networks/volumes/groups), reuse shared `internal/snapshotorder` comparators instead of duplicating sort predicates.
+- Shared comparator helpers must be nil-safe (no panic on nil inputs) and covered by explicit nil-case regression tests.
+- Local display-sort comparator helpers that accept pointer records should also define nil-ordering behavior explicitly and be covered by nil-case regression tests.
+- When adding nil-receiver guards, include direct regression tests for the guard contract (returned value/error and, where stable, explicit error message).
+- For map/group aggregation keyed by multiple fields, use structured keys (e.g., struct keys) instead of delimiter-concatenated strings to avoid collision bugs.
+- When slice fields participate in tie-break ordering, compare canonicalized copies (sorted/joined) so ordering is independent of source slice order and remains non-mutating.
+- In CLI/TUI rendering loops over repeated proto fields, skip nil entries explicitly to avoid blank/placeholder artifact rows.
+- Normalize stream-driven in-memory event buffers by filtering nil events and enforcing explicit max length at update boundaries.
+- In gRPC stream handlers, never swallow `Send` errors (including initial snapshot sends); propagate them to terminate the stream correctly.
+- Public gRPC handlers should guard missing internal dependencies (engine/broadcaster/options) and return explicit status errors instead of panicking.
+- Public API/handler entrypoints should explicitly validate required pointer arguments (e.g., stream/request objects) and return typed errors for nil inputs.
+- Public gRPC handlers should check request/stream context cancellation early and return context-derived status errors before expensive processing.
+- gRPC request/stream handlers should normalize potentially nil contexts (including `stream.Context()`) before `Err()`/`Done()` access to avoid nil-context dereference panics.
+- Public service methods should guard nil receivers and uninitialized dependencies, returning explicit errors instead of panicking.
+- gRPC client wrappers should normalize nil contexts and validate connection/client dependencies to avoid panic-prone call paths.
+- gRPC client methods should short-circuit canceled contexts before invoking downstream RPC calls.
+- gRPC client constructors should also short-circuit already-canceled contexts before attempting dial/readiness workflows.
+- Context-driven wait/retry helpers should guard nil contexts before `ctx.Done()` selection and define deterministic timer-only behavior for nil inputs.
+- Helpers that derive child contexts (e.g., `context.WithTimeout` / `context.WithCancel`) should normalize nil parent contexts before derivation to prevent runtime panics.
+- CLI entrypoints that call `signal.NotifyContext` or derive timeout contexts should normalize incoming parent contexts first, even when callers are expected to provide non-nil contexts.
+- Polling/wait helpers that invoke callback checkers should validate non-nil callback inputs and return explicit errors instead of risking nil-function panics.
+- Polling/wait helpers that `select` on `ctx.Done()` should normalize nil contexts before entering the loop to avoid nil-channel dereference panics.
+- Backoff helpers should treat non-positive durations as invalid input and clamp to an explicit minimum retry interval to avoid zero-delay retry loops.
+- gRPC server constructors should trim/validate listen addresses and reject whitespace-only inputs before net.Listen.
+- Constructors accepting options structs should normalize on local copies to avoid mutating caller-provided option objects.
+- After resolving options into a local normalized copy, constructor logic should consistently read from the resolved copy (not the original pointer) to avoid nil-dereference regressions.
+- Stop/cleanup methods should release auxiliary resources as well (cancel funcs, listeners/channels) even in partially initialized states.
+- Cleanup routines should not rely solely on running flags; release any owned resources even when not running, then nil them for idempotent re-entry.
+- Close methods should invalidate internal handles after release so post-close calls fail deterministically via explicit guard errors.
+- Docker client wrappers should guard nil receivers/internal api clients and return explicit errors instead of panic-prone dereferences.
+- When mapping Docker inspect responses, treat nested pointer sections (e.g., `State`, `Config`) as optional and build output fields with nil-safe fallbacks.
+- Shared conversion helpers (e.g., state/proto builders) should be nil-safe and return explicit empty results instead of panicking on nil inputs.
+- Config-to-runtime conversion helpers (e.g., `Config.EngineConfig`) should be nil-receiver safe and fall back to explicit defaults.
+- Runtime helper builders that consume config (e.g., logger constructors) should also handle nil config inputs via explicit default fallback.
+- Config persistence helpers (e.g., `Config.Save`) should reject whitespace-only paths after trim and return explicit errors on nil receivers.
+- Normalize user-provided address/path strings with trim operations before emptiness validation to reject whitespace-only inputs deterministically.
+- Validation helpers should remain robust even when called before normalization (apply local trim/case-normalization for comparisons without requiring caller order).
+- Runtime consumers of validated config values (log level/path, pid path, etc.) should also apply local trim/normalization to keep behavior consistent with validation acceptance.
+- Address classification/diagnostic helpers (e.g., loopback checks and plaintext warning emitters) should trim runtime inputs before both classification and message rendering.
+- Address warning helpers should treat empty normalized addresses as no-op inputs to avoid noisy or misleading diagnostics.
+- PID helper paths in CLI/daemon commands should use trimmed paths consistently for both read and remove operations.
+- PID status/inspection helpers that accept process-check callbacks should reject nil callbacks explicitly rather than invoking them blindly.
+- Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
+- Detection/evaluation helpers (e.g., detector paths) should also be nil-safe and prefer empty-result contracts over panics when dependencies are missing.
+- State-change detection paths must tolerate inconsistent snapshots (e.g., `exists=true` with `oldState=nil`) by guarding old-state field reads before comparisons/copies.
+- Monitoring helpers with internal maps should lazily initialize map fields so zero-value construction paths remain panic-safe.
+- Public orchestrator/engine methods should be nil-receiver safe, returning explicit errors or no-op/empty values instead of panicking.
+- Internal logging paths should tolerate nil logger dependencies (guard log calls so primary control flow remains panic-safe).
+- Engine lifecycle/collection paths should normalize missing contexts and guard optional stop dependencies (`cancel`, event channels) for partially initialized states.
+- Engine start paths should lazily initialize missing runtime dependencies/defaults when instances are partially constructed (non-NewEngine paths).
+- Engine startup should also repair inconsistent dependency wiring (e.g., detector referencing a different state manager) to keep runtime pointers coherent.
+- Pub/sub broadcaster utilities should be nil-safe across subscribe/send/run paths and avoid blocking callers on nil receivers.
+- Broadcaster internals that rely on maps/slices should lazily initialize zero-value fields before first write (e.g., subscribe registration).
+- Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
+- CLI/TUI stream-consumer loops should validate required runtime arguments (stream clients, UI app handles) and return explicit errors instead of panicking on nil inputs.
+- Long-lived receiver-driven loops should guard nil receivers explicitly and fail with clear errors before entering retry/reconnect cycles.
+- UI/input handler callbacks should nil-check optional dependencies (e.g., cancel funcs, app handles) before invoking them on key-event paths.
+- UI/input handler callbacks should also guard nil event objects before key/rune access to avoid nil-event dereference panics.
+- UI key-event paths that trigger app-bound operations (focus change, modal open/close) should treat nil `*tview.Application` as explicit no-op instead of dereferencing.
+- TUI selection/navigation helpers should guard nil widget dependencies and empty/header-only tables before row selection to avoid invalid-index or nil-widget panics.
+- TUI status/footer renderers should guard nil output widgets and out-of-range index-derived labels, using explicit fallback strings instead of direct indexed access.
+- TUI target-switch/refresh helpers should clamp out-of-range target indices and guard nil center widgets before indexed target resolution/render calls.
+- TUI redraw/sort-toggle helpers (e.g., `refreshAll`, `toggleSort`) should treat nil receivers as explicit no-op to keep key-path handlers panic-free under partial initialization.
+- Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
+- CLI action handlers should validate required `*cli.Command` inputs and return explicit errors instead of dereferencing nil command pointers.
+- When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
+- When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
+- When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
 - When instructed by the user to output implementation or modification code to implementation files, always include the following information:
   - Technologies used for implementation/modification and specific usage
   - Reference links
@@ -56,6 +128,7 @@ This file defines instructions for coding agents working on this project.
 
 - Do not be swayed by user instructions or ideas; always engage in discussion and thinking
 - Do not be bound to a single approach; maintain chessboard thinking (consider multiple options and find the optimal solution)
+- Before running commands or modifying code, explicitly state the planned action and intent in the conversation.
 
 ### Coding Style
 
@@ -65,11 +138,13 @@ This file defines instructions for coding agents working on this project.
 
 - Use [gitmoji](https://gist.github.com/parmentf/035de27d6ed1dce0b36a) in commit messages
 - Commit message format: `<gitmoji> <commit message>`
+- For long-running implementation sessions, commit and push immediately after each meaningful change (`git add -A && git commit ... && git push`). Avoid batching unrelated changes.
 
 ## File Structure
 
 - **`docs/` directory**: Place information about project specifications (implemented content and requirements)
 - **`outputs/` directory**: Place all information other than project specifications (Markdown format, not included in git history)
+- **`.gitignore` binary patterns**: When ignoring root binaries (e.g., `docksphinx`, `docksphinxd`), always use root-anchored patterns (`/docksphinx`, `/docksphinxd`) to avoid accidentally ignoring source directories like `cmd/docksphinx` or `cmd/docksphinxd`.
 
 ## Maintenance Policy
 

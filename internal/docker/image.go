@@ -9,17 +9,20 @@ import (
 
 // Image represents a Docker image with its basic information
 type Image struct {
-	ID				  string
-	Repository  string
-	Tag 	 		  string
-	Size  		  int64
-	Created     int64
-	VirtualSize int64
+	ID         string
+	Repository string
+	Tag        string
+	Size       int64
+	Created    int64
 }
 
 // ListImages lists all Docker images including intermediate images.
 func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
-	images, err := c.apiClient.ImageList(ctx, image.ListOptions{
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	images, err := apiClient.ImageList(normalizeContext(ctx), image.ListOptions{
 		All: true, // Include intermediate images
 	})
 	if err != nil {
@@ -39,12 +42,11 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 		}
 
 		result = append(result, Image{
-			ID: 				 img.ID,
-			Repository:  repository,
-			Tag:   			 tag,
-			Size:        img.Size,
-			Created:     img.Created,
-			VirtualSize: img.VirtualSize,
+			ID:         img.ID,
+			Repository: repository,
+			Tag:        tag,
+			Size:       img.Size,
+			Created:    img.Created,
 		})
 	}
 
@@ -53,7 +55,11 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 
 // GetImage retrieves detailed information about a specific image
 func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectResponse, error) {
-	imageInspect, err := c.apiClient.ImageInspect(ctx, imageID)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	imageInspect, err := apiClient.ImageInspect(normalizeContext(ctx), imageID)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
@@ -67,7 +73,7 @@ func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectRe
 func splitImageTag(imageTag string) []string {
 	// Find the last '/' to separate registry from repository
 	lastSlash := strings.LastIndex(imageTag, "/")
-	
+
 	// If there's a '/', look for ':' after it (this is the tag separator)
 	// Otherwise, look for the last ':' in the entire string
 	var tagIndex int
@@ -81,12 +87,12 @@ func splitImageTag(imageTag string) []string {
 		// No '/', so the last ':' is the tag separator
 		tagIndex = strings.LastIndex(imageTag, ":")
 	}
-	
+
 	if tagIndex < 0 {
 		// No tag found, use "latest" as default
 		return []string{imageTag, "latest"}
 	}
-	
+
 	// Split at the tag separator
 	return []string{imageTag[:tagIndex], imageTag[tagIndex+1:]}
 }

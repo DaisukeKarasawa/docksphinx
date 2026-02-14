@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 
 	pb "docksphinx/api/docksphinx/v1"
@@ -17,83 +18,174 @@ import (
 // Server is the gRPC server for DocksphinxService
 type Server struct {
 	pb.UnimplementedDocksphinxServiceServer
-	lis    net.Listener
-	grpc   *grpc.Server
-	opts   *ServerOptions
-	engine *monitor.Engine
-	bcast  *Broadcaster
-	mu     sync.Mutex
+	lis         net.Listener
+	grpc        *grpc.Server
+	opts        *ServerOptions
+	engine      *monitor.Engine
+	bcast       *Broadcaster
+	bcastCancel context.CancelFunc
+	mu          sync.Mutex
 }
 
 // ServerOptions configures the gRPC server
 type ServerOptions struct {
-	Address string // e.g. "127.0.0.1:50051"
+	Address          string // e.g. "127.0.0.1:50051"
+	EnableReflection bool
+	RecentEventLimit int
 }
 
 // NewServer creates a new gRPC server (does not start listening).
 // Engine must already be started; its event channel is fanned out via Broadcaster.
 func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
-	if opts == nil {
-		opts = &ServerOptions{Address: "127.0.0.1:50051"}
+	if engine == nil {
+		return nil, fmt.Errorf("engine is nil")
 	}
-	lis, err := net.Listen("tcp", opts.Address)
+	resolved := ServerOptions{}
+	if opts == nil {
+		resolved = ServerOptions{Address: "127.0.0.1:50051", RecentEventLimit: 50}
+	} else {
+		resolved = *opts
+	}
+	resolved.Address = strings.TrimSpace(resolved.Address)
+	if resolved.Address == "" {
+		return nil, fmt.Errorf("address cannot be empty")
+	}
+	if resolved.RecentEventLimit <= 0 {
+		resolved.RecentEventLimit = 50
+	}
+	lis, err := net.Listen("tcp", resolved.Address)
 	if err != nil {
-		return nil, fmt.Errorf("listen %s: %w", opts.Address, err)
+		return nil, fmt.Errorf("listen %s: %w", resolved.Address, err)
 	}
 	s := grpc.NewServer()
 	bcast := NewBroadcaster()
-	srv := &Server{lis: lis, grpc: s, opts: opts, engine: engine, bcast: bcast}
+	bcastCtx, bcastCancel := context.WithCancel(context.Background())
+	srv := &Server{lis: lis, grpc: s, opts: &resolved, engine: engine, bcast: bcast, bcastCancel: bcastCancel}
 	pb.RegisterDocksphinxServiceServer(s, srv)
-	reflection.Register(s)
-	go bcast.Run(engine.GetEventChannel())
+	if resolved.EnableReflection {
+		reflection.Register(s)
+	}
+	go bcast.Run(bcastCtx, engine.GetEventChannel())
 	return srv, nil
 }
 
 // Start starts the gRPC server (blocking). Call from a goroutine.
 func (s *Server) Start() error {
+	if s == nil || s.grpc == nil || s.lis == nil {
+		return fmt.Errorf("server is not initialized")
+	}
 	return s.grpc.Serve(s.lis)
 }
 
 // Stop gracefully stops the gRPC server
 func (s *Server) Stop() {
+	if s == nil {
+		return
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.bcastCancel != nil {
+		s.bcastCancel()
+		s.bcastCancel = nil
+	}
 	if s.grpc != nil {
 		s.grpc.GracefulStop()
 		s.grpc = nil
 	}
+	if s.lis != nil {
+		_ = s.lis.Close()
+		s.lis = nil
+	}
+}
+
+// Address returns listening address.
+func (s *Server) Address() string {
+	if s == nil || s.lis == nil {
+		return ""
+	}
+	return s.lis.Addr().String()
 }
 
 // GetSnapshot implements DocksphinxService
 func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*pb.Snapshot, error) {
+	if s == nil {
+		return nil, status.Error(codes.Unavailable, "server not available")
+	}
+	ctx = normalizeContext(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
+	}
+	if s.engine == nil {
+		return nil, status.Error(codes.Unavailable, "engine not available")
+	}
 	sm := s.engine.GetStateManager()
 	if sm == nil {
 		return nil, status.Error(codes.Unavailable, "state not available")
 	}
-	return StateToSnapshot(sm), nil
+	snapshot := StateToSnapshot(sm)
+	snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.recentEventLimit()))
+	return snapshot, nil
 }
 
 // Stream implements DocksphinxService
 func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_StreamServer) error {
+	if s == nil {
+		return status.Error(codes.Unavailable, "server not available")
+	}
+	if stream == nil {
+		return status.Error(codes.InvalidArgument, "stream is nil")
+	}
+	streamCtx := normalizeContext(stream.Context())
+	if err := streamCtx.Err(); err != nil {
+		return status.FromContextError(err).Err()
+	}
+	if s.engine == nil {
+		return status.Error(codes.Unavailable, "engine not available")
+	}
+	if s.bcast == nil {
+		return status.Error(codes.Unavailable, "broadcaster not available")
+	}
 	if req != nil && req.IncludeInitialSnapshot {
 		sm := s.engine.GetStateManager()
 		if sm != nil {
-			_ = stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: StateToSnapshot(sm)}})
+			snapshot := StateToSnapshot(sm)
+			snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.recentEventLimit()))
+			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: snapshot}}); err != nil {
+				return err
+			}
 		}
 	}
 	sub, unsub := s.bcast.Subscribe()
 	defer unsub()
 	for {
 		select {
-		case <-stream.Context().Done():
+		case <-streamCtx.Done():
 			return nil
 		case ev, ok := <-sub:
 			if !ok {
 				return nil
 			}
-			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Event{Event: EventToProto(ev)}}); err != nil {
+			protoEv := EventToProto(ev)
+			if protoEv == nil {
+				continue
+			}
+			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Event{Event: protoEv}}); err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func (s *Server) recentEventLimit() int {
+	if s == nil || s.opts == nil || s.opts.RecentEventLimit <= 0 {
+		return 50
+	}
+	return s.opts.RecentEventLimit
+}
+
+func normalizeContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }

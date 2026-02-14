@@ -1,4 +1,4 @@
-.PHONY: build clean test proto generate install help
+.PHONY: build clean test test-race proto generate install deps security quality help dev
 
 # 変数定義
 BINARY_DOCKSPHINX=./bin/docksphinx
@@ -23,6 +23,9 @@ help:
 	@echo " make generate  - コード生成を実行"
 	@echo " make install   - バイナリをインストール"
 	@echo " make deps      - 依存関係を更新"
+	@echo " make test-race - race detector 付きでテスト"
+	@echo " make security  - staticcheck / gosec / govulncheck を実行"
+	@echo " make quality   - test / race / security をまとめて実行"
 
 # バイナリのビルド
 build: proto
@@ -44,6 +47,10 @@ clean:
 test:
 	@echo "Running tests..."
 	go test -v ./...
+
+test-race:
+	@echo "Running race tests..."
+	go test -race ./...
 
 # Protocol BuffersからGoコードを生成
 proto:
@@ -69,6 +76,36 @@ deps:
 	go mod tidy
 	@echo "Dependencies updated"
 
+security: build
+	@echo "Running staticcheck..."
+	@command -v staticcheck >/dev/null 2>&1 || { echo "Installing staticcheck..."; go install honnef.co/go/tools/cmd/staticcheck@latest; }
+	"$(shell go env GOPATH)/bin/staticcheck" ./...
+	@echo "Running gosec..."
+	@command -v gosec >/dev/null 2>&1 || { echo "Installing gosec..."; go install github.com/securego/gosec/v2/cmd/gosec@latest; }
+	"$(shell go env GOPATH)/bin/gosec" -exclude-dir=api ./...
+	@command -v govulncheck >/dev/null 2>&1 || { echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
+	@echo "Running govulncheck in binary mode..."
+	@"$(shell go env GOPATH)/bin/govulncheck" -mode=binary $(BINARY_DOCKSPHINX)
+	@"$(shell go env GOPATH)/bin/govulncheck" -mode=binary $(BINARY_DOCKSPHINXD)
+	@echo "Running govulncheck..."
+	@out=$$(mktemp); \
+	if "$(shell go env GOPATH)/bin/govulncheck" ./... >$$out 2>&1; then \
+		cat $$out; \
+	else \
+		cat $$out; \
+		if rg -q "internal error:" $$out; then \
+			echo "WARNING: govulncheck internal error detected. See docs/security-check-summary.md"; \
+		else \
+			echo "ERROR: govulncheck failed with non-internal error"; \
+			rm -f $$out; \
+			exit 1; \
+		fi; \
+	fi; \
+	rm -f $$out
+
+quality: test test-race security
+	@echo "Quality gates complete"
+
 # インストール（GOPATH/binにインストール）
 install: build
 	@echo "Installing binaries..."
@@ -79,4 +116,4 @@ install: build
 # 開発用: ホットリロード（air等を使用する場合）
 dev:
 	@echo "Starting development mode..."
-	# TODO: air等のホットリロードツールを設定
+	@echo "No built-in hot reload target. Use your preferred tool (e.g. air) with docksphinx commands."

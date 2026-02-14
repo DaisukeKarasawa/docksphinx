@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package docksphinx.v1;
+
+option go_package = "docksphinx/api/docksphinx/v1";
+
+message ContainerInfo {
+  string container_id = 1;
+  string container_name = 2;
+  string image_name = 3;
+  string state = 4;
+  string status = 5;
+  int64 last_seen_unix = 6;
+  int64 started_at_unix = 7;
+  int64 uptime_seconds = 8;
+  string compose_project = 9;
+  string compose_service = 10;
+  int32 restart_count = 11;
+  int32 volume_mount_count = 12;
+}
+
+message ContainerMetrics {
+  string container_id = 1;
+  double cpu_percent = 2;
+  int64 memory_usage = 3;
+  int64 memory_limit = 4;
+  double memory_percent = 5;
+  int64 network_rx = 6;
+  int64 network_tx = 7;
+}
+
+message ImageInfo {
+  string image_id = 1;
+  string repository = 2;
+  string tag = 3;
+  int64 size = 4;
+  int64 created_unix = 5;
+}
+
+message NetworkInfo {
+  string network_id = 1;
+  string name = 2;
+  string driver = 3;
+  string scope = 4;
+  bool internal = 5;
+  int32 container_count = 6;
+}
+
+message VolumeInfo {
+  string name = 1;
+  string driver = 2;
+  string mountpoint = 3;
+  int32 ref_count = 4;
+  string usage_note = 5;
+}
+
+message ComposeGroup {
+  string project = 1;
+  string service = 2;
+  repeated string container_ids = 3;
+  repeated string container_names = 4;
+  repeated string network_names = 5;
+}
+
+message Event {
+  string id = 1;
+  string type = 2;
+  int64 timestamp_unix = 3;
+  string container_id = 4;
+  string container_name = 5;
+  string image_name = 6;
+  string message = 7;
+  map<string, string> data = 8;
+}
+
+message Snapshot {
+  repeated ContainerInfo containers = 1;
+  map<string, ContainerMetrics> metrics = 2;
+  repeated ImageInfo images = 3;
+  repeated NetworkInfo networks = 4;
+  repeated VolumeInfo volumes = 5;
+  repeated ComposeGroup groups = 6;
+  repeated Event recent_events = 7;
+  int64 at_unix = 8;
+}
+
+message StreamUpdate {
+  oneof payload {
+    Snapshot snapshot = 1;
+    Event event = 2;
+  }
+}
+
+message GetSnapshotRequest {}
+
+message StreamRequest {
+  bool include_initial_snapshot = 1;
+}
+
+service DocksphinxService {
+  rpc GetSnapshot(GetSnapshotRequest) returns (Snapshot);
+  rpc Stream(StreamRequest) returns (stream StreamUpdate);
+}

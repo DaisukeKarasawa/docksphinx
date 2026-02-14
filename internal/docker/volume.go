@@ -8,15 +8,21 @@ import (
 
 // Volume represents a Docker volume with its basic information
 type Volume struct {
-	Name 			 string
+	Name       string
 	Driver     string
 	Mountpoint string
-	Labels 		 map[string]string
+	Labels     map[string]string
+	RefCount   int64
+	UsageNote  string
 }
 
 // ListVolumes lists all Docker volumes
 func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
-	volumes, err := c.apiClient.VolumeList(ctx, volume.ListOptions{})
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	volumes, err := apiClient.VolumeList(normalizeContext(ctx), volume.ListOptions{})
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
@@ -28,6 +34,7 @@ func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 			Driver:     vol.Driver,
 			Mountpoint: vol.Mountpoint,
 			Labels:     vol.Labels,
+			UsageNote:  "metadata-only (size unavailable via Docker API)",
 		})
 	}
 
@@ -36,7 +43,11 @@ func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 
 // GetVolume retrieves detailed information about a specific volume
 func (c *Client) GetVolume(ctx context.Context, volumeName string) (*volume.Volume, error) {
-	vol, err := c.apiClient.VolumeInspect(ctx, volumeName)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	vol, err := apiClient.VolumeInspect(normalizeContext(ctx), volumeName)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}

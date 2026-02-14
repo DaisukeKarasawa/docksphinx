@@ -1,0 +1,533 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"syscall"
+)
+
+func TestWaitForProcessExitSuccessOnESRCH(t *testing.T) {
+	pid := 1234
+	calls := 0
+	checker := func(_ int) error {
+		calls++
+		if calls < 3 {
+			return nil
+		}
+		return syscall.ESRCH
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+
+	if err := waitForProcessExit(ctx, pid, 10*time.Millisecond, checker); err != nil {
+		t.Fatalf("expected success, got error: %v", err)
+	}
+}
+
+func TestRunCommandsRejectNilCommand(t *testing.T) {
+	t.Run("runStart", func(t *testing.T) {
+		err := runStart(context.Background(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil command")
+		}
+		if !strings.Contains(err.Error(), "command is nil") {
+			t.Fatalf("expected nil command error message, got: %v", err)
+		}
+	})
+
+	t.Run("runStop", func(t *testing.T) {
+		err := runStop(context.Background(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil command")
+		}
+		if !strings.Contains(err.Error(), "command is nil") {
+			t.Fatalf("expected nil command error message, got: %v", err)
+		}
+	})
+
+	t.Run("runStatus", func(t *testing.T) {
+		err := runStatus(context.Background(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil command")
+		}
+		if !strings.Contains(err.Error(), "command is nil") {
+			t.Fatalf("expected nil command error message, got: %v", err)
+		}
+	})
+}
+
+func TestCheckGRPCHealthHandlesNilParentContext(t *testing.T) {
+	ctxMap := map[string]context.Context{}
+	parent := ctxMap["missing"]
+
+	err := checkGRPCHealth(parent, "   ", 10*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected dial error for empty address")
+	}
+	if !strings.Contains(err.Error(), "dial daemon:") {
+		t.Fatalf("expected wrapped dial error, got: %v", err)
+	}
+}
+
+func TestNormalizeParentContext(t *testing.T) {
+	t.Run("nil-like context normalizes to background", func(t *testing.T) {
+		ctxMap := map[string]context.Context{}
+		got := normalizeParentContext(ctxMap["missing"])
+		if got == nil {
+			t.Fatal("expected non-nil normalized context")
+		}
+		if err := got.Err(); err != nil {
+			t.Fatalf("expected active background context, got err=%v", err)
+		}
+	})
+
+	t.Run("non-nil context is preserved", func(t *testing.T) {
+		orig, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		got := normalizeParentContext(orig)
+		if got != orig {
+			t.Fatal("expected original non-nil context to be preserved")
+		}
+	})
+}
+
+func TestWaitForProcessExitTimeout(t *testing.T) {
+	pid := 2345
+	checker := func(_ int) error { return nil }
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, checker)
+	if err == nil {
+		t.Fatal("expected timeout error")
+	}
+	if !strings.Contains(err.Error(), "did not stop") {
+		t.Fatalf("expected timeout message, got: %v", err)
+	}
+}
+
+func TestWaitForProcessExitPermissionDenied(t *testing.T) {
+	pid := 3456
+	checker := func(_ int) error { return syscall.EPERM }
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, checker)
+	if err == nil {
+		t.Fatal("expected permission denied error")
+	}
+}
+
+func TestWaitForProcessExitUnexpectedCheckerError(t *testing.T) {
+	pid := 4567
+	checker := func(_ int) error { return errors.New("checker boom") }
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, checker)
+	if err == nil {
+		t.Fatal("expected checker error to be returned")
+	}
+	if !strings.Contains(err.Error(), "failed to check process") {
+		t.Fatalf("expected wrapped checker error, got: %v", err)
+	}
+}
+
+func TestWaitForProcessExitImmediateContextCancel(t *testing.T) {
+	pid := 5678
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, func(_ int) error { return nil })
+	if err == nil {
+		t.Fatal("expected error when context is already canceled")
+	}
+	if !strings.Contains(err.Error(), "canceled") {
+		t.Fatalf("expected canceled message, got: %v", err)
+	}
+}
+
+func TestWaitForProcessExitNilChecker(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := waitForProcessExit(ctx, 6789, 10*time.Millisecond, nil)
+	if err == nil {
+		t.Fatal("expected explicit error when checker is nil")
+	}
+	if !strings.Contains(err.Error(), "process checker is nil") {
+		t.Fatalf("expected nil-checker error message, got: %v", err)
+	}
+}
+
+func TestWaitForProcessExitHandlesNilParentContext(t *testing.T) {
+	ctxMap := map[string]context.Context{}
+	parent := ctxMap["missing"]
+
+	err := waitForProcessExit(parent, 7777, time.Millisecond, func(_ int) error {
+		return syscall.ESRCH
+	})
+	if err != nil {
+		t.Fatalf("expected success with nil-like parent context normalization, got: %v", err)
+	}
+}
+
+func TestRemovePIDFileIfExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(path, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	if err := removePIDFileIfExists(path); err != nil {
+		t.Fatalf("expected pid file removal success, got: %v", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected pid file to be removed, stat err=%v", err)
+	}
+}
+
+func TestRemovePIDFileIfExistsNoOpCases(t *testing.T) {
+	if err := removePIDFileIfExists(""); err != nil {
+		t.Fatalf("expected empty path no-op success, got: %v", err)
+	}
+
+	missing := filepath.Join(t.TempDir(), "missing.pid")
+	if err := removePIDFileIfExists(missing); err != nil {
+		t.Fatalf("expected missing file no-op success, got: %v", err)
+	}
+}
+
+func TestRemovePIDFileIfExistsTrimsPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(path, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	if err := removePIDFileIfExists("  " + path + "  "); err != nil {
+		t.Fatalf("expected trimmed path removal success, got: %v", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected pid file to be removed via trimmed path, stat err=%v", err)
+	}
+}
+
+func TestDescribePIDStatus(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	status, stale, err := describePIDStatus(pidPath, func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected alive process to not be stale")
+	}
+	if !strings.Contains(status, "(alive)") {
+		t.Fatalf("expected alive status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(pidPath, func(_ int) error { return syscall.ESRCH })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !stale {
+		t.Fatal("expected stale=true for ESRCH")
+	}
+	if !strings.Contains(status, "(stale)") {
+		t.Fatalf("expected stale status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(filepath.Join(dir, "missing.pid"), func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected stale=false for missing pid")
+	}
+	if status != "pid: not found" {
+		t.Fatalf("expected not found status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(pidPath, func(_ int) error { return syscall.EPERM })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected stale=false for EPERM")
+	}
+	if !strings.Contains(status, "(permission denied)") {
+		t.Fatalf("expected permission denied status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(pidPath, func(_ int) error { return errors.New("boom") })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected stale=false for unknown checker error")
+	}
+	if !strings.Contains(status, "(unknown: boom)") {
+		t.Fatalf("expected unknown status, got %q", status)
+	}
+}
+
+func TestDescribePIDStatusInvalidPIDReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("not-a-number\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, err := describePIDStatus(pidPath, func(_ int) error { return nil })
+	if err == nil {
+		t.Fatal("expected invalid pid to return error")
+	}
+	if !strings.Contains(err.Error(), "invalid pid") {
+		t.Fatalf("expected invalid pid error, got: %v", err)
+	}
+}
+
+func TestDescribePIDStatusNilCheckerReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, err := describePIDStatus(pidPath, nil)
+	if err == nil {
+		t.Fatal("expected explicit error for nil checker")
+	}
+	if !strings.Contains(err.Error(), "pid checker is nil") {
+		t.Fatalf("expected nil checker error, got: %v", err)
+	}
+}
+
+func TestInspectPID(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	pid, running, stale, err := inspectPID(pidPath, func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pid != 123 || !running || stale {
+		t.Fatalf("unexpected inspect result: pid=%d running=%t stale=%t", pid, running, stale)
+	}
+
+	pid, running, stale, err = inspectPID(pidPath, func(_ int) error { return syscall.ESRCH })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pid != 123 || running || !stale {
+		t.Fatalf("unexpected inspect stale result: pid=%d running=%t stale=%t", pid, running, stale)
+	}
+
+	pid, running, stale, err = inspectPID(filepath.Join(dir, "missing.pid"), func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pid != 0 || running || stale {
+		t.Fatalf("expected missing pid file to be treated as not running, got pid=%d running=%t stale=%t", pid, running, stale)
+	}
+
+	_, _, _, err = inspectPID(pidPath, func(_ int) error { return syscall.EPERM })
+	if err == nil {
+		t.Fatal("expected permission denied error")
+	}
+	_, _, _, err = inspectPID(pidPath, func(_ int) error { return errors.New("boom") })
+	if err == nil {
+		t.Fatal("expected unknown checker error")
+	}
+}
+
+func TestInspectPIDNilCheckerReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, _, err := inspectPID(pidPath, nil)
+	if err == nil {
+		t.Fatal("expected explicit error for nil checker")
+	}
+	if !strings.Contains(err.Error(), "pid checker is nil") {
+		t.Fatalf("expected nil checker error, got: %v", err)
+	}
+}
+
+func TestInspectPIDInvalidPIDFileReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("invalid\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, _, err := inspectPID(pidPath, func(_ int) error { return nil })
+	if err == nil {
+		t.Fatal("expected invalid pid file to return error")
+	}
+	if !strings.Contains(err.Error(), "invalid pid") {
+		t.Fatalf("expected invalid pid error, got: %v", err)
+	}
+}
+
+func TestMarkAlreadyReported(t *testing.T) {
+	t.Run("wraps original error", func(t *testing.T) {
+		orig := errors.New("boom")
+		err := markAlreadyReported(orig)
+		if err == nil {
+			t.Fatal("expected non-nil error")
+		}
+		if !errors.Is(err, ErrAlreadyReported) {
+			t.Fatalf("expected ErrAlreadyReported wrapper, got: %v", err)
+		}
+		if !errors.Is(err, orig) {
+			t.Fatalf("expected original error to be preserved, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), "boom") {
+			t.Fatalf("expected wrapped original message, got: %v", err)
+		}
+	})
+
+	t.Run("nil input still returns sentinel", func(t *testing.T) {
+		err := markAlreadyReported(nil)
+		if err == nil {
+			t.Fatal("expected non-nil sentinel error")
+		}
+		if !errors.Is(err, ErrAlreadyReported) {
+			t.Fatalf("expected ErrAlreadyReported for nil input, got: %v", err)
+		}
+	})
+}
+
+func TestReadPID(t *testing.T) {
+	t.Run("valid pid file", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("4321\n"), 0o600); err != nil {
+			t.Fatalf("failed to write pid file: %v", err)
+		}
+
+		pid, err := readPID(pidPath)
+		if err != nil {
+			t.Fatalf("expected valid pid, got error: %v", err)
+		}
+		if pid != 4321 {
+			t.Fatalf("expected pid 4321, got %d", pid)
+		}
+	})
+
+	t.Run("trimmed path is accepted", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("2468\n"), 0o600); err != nil {
+			t.Fatalf("failed to write pid file: %v", err)
+		}
+
+		pid, err := readPID("  " + pidPath + "  ")
+		if err != nil {
+			t.Fatalf("expected trimmed path to be accepted, got error: %v", err)
+		}
+		if pid != 2468 {
+			t.Fatalf("expected pid 2468, got %d", pid)
+		}
+	})
+
+	t.Run("missing pid file returns sentinel", func(t *testing.T) {
+		pidPath := filepath.Join(t.TempDir(), "missing.pid")
+		_, err := readPID(pidPath)
+		if err == nil {
+			t.Fatal("expected missing pid file error")
+		}
+		if !errors.Is(err, ErrPIDFileNotFound) {
+			t.Fatalf("expected ErrPIDFileNotFound, got: %v", err)
+		}
+	})
+
+	t.Run("invalid pid file returns parse error", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("abc\n"), 0o600); err != nil {
+			t.Fatalf("failed to write invalid pid file: %v", err)
+		}
+
+		_, err := readPID(pidPath)
+		if err == nil {
+			t.Fatal("expected invalid pid error")
+		}
+		if !strings.Contains(err.Error(), "invalid pid") {
+			t.Fatalf("expected invalid pid message, got: %v", err)
+		}
+	})
+}
+
+func TestResolveStopPID(t *testing.T) {
+	t.Run("valid pid", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("777\n"), 0o600); err != nil {
+			t.Fatalf("failed to write pid file: %v", err)
+		}
+
+		pid, alreadyStopped, err := resolveStopPID(pidPath)
+		if err != nil {
+			t.Fatalf("expected success, got: %v", err)
+		}
+		if alreadyStopped {
+			t.Fatal("expected alreadyStopped=false for valid pid")
+		}
+		if pid != 777 {
+			t.Fatalf("expected pid 777, got %d", pid)
+		}
+	})
+
+	t.Run("missing pid file means already stopped", func(t *testing.T) {
+		pidPath := filepath.Join(t.TempDir(), "missing.pid")
+		pid, alreadyStopped, err := resolveStopPID(pidPath)
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if !alreadyStopped {
+			t.Fatal("expected alreadyStopped=true for missing pid file")
+		}
+		if pid != 0 {
+			t.Fatalf("expected pid 0 when already stopped, got %d", pid)
+		}
+	})
+
+	t.Run("invalid pid returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("invalid\n"), 0o600); err != nil {
+			t.Fatalf("failed to write invalid pid file: %v", err)
+		}
+
+		_, _, err := resolveStopPID(pidPath)
+		if err == nil {
+			t.Fatal("expected invalid pid error")
+		}
+		if !strings.Contains(err.Error(), "invalid pid") {
+			t.Fatalf("expected invalid pid message, got: %v", err)
+		}
+	})
+}

@@ -1,0 +1,160 @@
+package monitor
+
+import (
+	"reflect"
+	"testing"
+)
+
+func TestBuildComposeGroupsUsesComposeLabels(t *testing.T) {
+	states := map[string]*ContainerState{
+		"id1": {
+			ContainerID:    "id1",
+			ContainerName:  "web-1",
+			ComposeProject: "shop",
+			ComposeService: "web",
+			NetworkNames:   []string{"shop_default"},
+		},
+		"id2": {
+			ContainerID:    "id2",
+			ContainerName:  "web-2",
+			ComposeProject: "shop",
+			ComposeService: "web",
+			NetworkNames:   []string{"shop_default"},
+		},
+	}
+
+	groups := buildComposeGroups(states)
+	if len(groups) != 1 {
+		t.Fatalf("expected 1 group, got %d", len(groups))
+	}
+	g := groups[0]
+	if g.Project != "shop" || g.Service != "web" {
+		t.Fatalf("unexpected group key: %s/%s", g.Project, g.Service)
+	}
+	if len(g.ContainerIDs) != 2 {
+		t.Fatalf("expected 2 container ids, got %d", len(g.ContainerIDs))
+	}
+	if !reflect.DeepEqual(g.ContainerIDs, []string{"id1", "id2"}) {
+		t.Fatalf("expected sorted container ids [id1 id2], got %#v", g.ContainerIDs)
+	}
+	if len(g.NetworkNames) != 1 || g.NetworkNames[0] != "shop_default" {
+		t.Fatalf("unexpected network names: %#v", g.NetworkNames)
+	}
+}
+
+func TestBuildComposeGroupsFallsBackToNonSystemNetwork(t *testing.T) {
+	states := map[string]*ContainerState{
+		"id1": {
+			ContainerID:   "id1",
+			ContainerName: "api-1",
+			NetworkNames:  []string{"bridge", "custom_net"},
+		},
+	}
+
+	groups := buildComposeGroups(states)
+	if len(groups) != 1 {
+		t.Fatalf("expected 1 group, got %d", len(groups))
+	}
+	g := groups[0]
+	if g.Project != "network:custom_net" {
+		t.Fatalf("expected network fallback project, got %s", g.Project)
+	}
+	if g.Service != "(heuristic)" {
+		t.Fatalf("expected heuristic service, got %s", g.Service)
+	}
+}
+
+func TestBuildComposeGroupsKeepsUngroupedWhenOnlySystemNetworks(t *testing.T) {
+	states := map[string]*ContainerState{
+		"id1": {
+			ContainerID:   "id1",
+			ContainerName: "job-1",
+			NetworkNames:  []string{"bridge", "host", "none"},
+		},
+	}
+
+	groups := buildComposeGroups(states)
+	if len(groups) != 1 {
+		t.Fatalf("expected 1 group, got %d", len(groups))
+	}
+	g := groups[0]
+	if g.Project != "(ungrouped)" {
+		t.Fatalf("expected ungrouped project, got %s", g.Project)
+	}
+	if g.Service != "(service)" {
+		t.Fatalf("expected default service, got %s", g.Service)
+	}
+}
+
+func TestBuildComposeGroupsDoesNotMutateInputStateNetworks(t *testing.T) {
+	states := map[string]*ContainerState{
+		"id1": {
+			ContainerID:   "id1",
+			ContainerName: "web-1",
+			NetworkNames:  []string{"z-net", "a-net", "m-net"},
+		},
+	}
+
+	before := append([]string(nil), states["id1"].NetworkNames...)
+	_ = buildComposeGroups(states)
+
+	after := states["id1"].NetworkNames
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("expected input state networks unchanged, before=%#v after=%#v", before, after)
+	}
+}
+
+func TestBuildComposeGroupsProjectServiceDelimiterCollisionSafety(t *testing.T) {
+	states := map[string]*ContainerState{
+		"id1": {
+			ContainerID:    "id1",
+			ContainerName:  "svc-1",
+			ComposeProject: "a|b",
+			ComposeService: "c",
+			NetworkNames:   []string{"n1"},
+		},
+		"id2": {
+			ContainerID:    "id2",
+			ContainerName:  "svc-2",
+			ComposeProject: "a",
+			ComposeService: "b|c",
+			NetworkNames:   []string{"n2"},
+		},
+	}
+
+	groups := buildComposeGroups(states)
+	if len(groups) != 2 {
+		t.Fatalf("expected 2 groups without key-collision merge, got %d: %#v", len(groups), groups)
+	}
+
+	type key struct {
+		project string
+		service string
+	}
+	got := map[key]ComposeGroup{}
+	for _, g := range groups {
+		got[key{project: g.Project, service: g.Service}] = g
+	}
+
+	g1, ok := got[key{project: "a|b", service: "c"}]
+	if !ok {
+		t.Fatalf("expected group for project=a|b service=c, got %#v", groups)
+	}
+	if !reflect.DeepEqual(g1.ContainerIDs, []string{"id1"}) {
+		t.Fatalf("expected first group to contain only id1, got %#v", g1.ContainerIDs)
+	}
+	if !reflect.DeepEqual(g1.NetworkNames, []string{"n1"}) {
+		t.Fatalf("expected first group networks [n1], got %#v", g1.NetworkNames)
+	}
+
+	g2, ok := got[key{project: "a", service: "b|c"}]
+	if !ok {
+		t.Fatalf("expected group for project=a service=b|c, got %#v", groups)
+	}
+	if !reflect.DeepEqual(g2.ContainerIDs, []string{"id2"}) {
+		t.Fatalf("expected second group to contain only id2, got %#v", g2.ContainerIDs)
+	}
+	if !reflect.DeepEqual(g2.NetworkNames, []string{"n2"}) {
+		t.Fatalf("expected second group networks [n2], got %#v", g2.NetworkNames)
+	}
+}
