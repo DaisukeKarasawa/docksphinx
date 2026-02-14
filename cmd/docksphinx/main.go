@@ -19,6 +19,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 func main() {
@@ -393,7 +394,7 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 	sorted := make([]*pb.Event, 0, len(events))
 	for _, ev := range events {
 		if ev != nil {
-			sorted = append(sorted, ev)
+			sorted = append(sorted, proto.Clone(ev).(*pb.Event))
 		}
 	}
 	if len(sorted) == 0 {

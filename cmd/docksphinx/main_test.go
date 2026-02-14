@@ -151,6 +151,25 @@ func TestSelectRecentEvents(t *testing.T) {
 	if got := selectRecentEvents(allNil, 5); got != nil {
 		t.Fatalf("expected nil when all events are nil, got %#v", got)
 	}
+
+	aliasInput := []*pb.Event{
+		{Id: "orig", TimestampUnix: 1, Data: map[string]string{"k": "v"}},
+	}
+	aliasGot := selectRecentEvents(aliasInput, 1)
+	if len(aliasGot) != 1 {
+		t.Fatalf("expected one selected event, got len=%d", len(aliasGot))
+	}
+	if aliasGot[0] == aliasInput[0] {
+		t.Fatalf("expected selected event to be cloned, but pointers are identical")
+	}
+	aliasGot[0].Id = "mutated"
+	aliasGot[0].Data["k"] = "changed"
+	if aliasInput[0].GetId() != "orig" {
+		t.Fatalf("expected source event id unchanged, got %q", aliasInput[0].GetId())
+	}
+	if aliasInput[0].GetData()["k"] != "v" {
+		t.Fatalf("expected source event data unchanged, got %#v", aliasInput[0].GetData())
+	}
 }
 
 func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
