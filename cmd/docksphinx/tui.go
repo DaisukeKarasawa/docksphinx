@@ -758,16 +758,26 @@ func (m *tuiModel) renderRight() {
 }
 
 func (m *tuiModel) renderStatus(message string) {
+	if m == nil || m.bottom == nil {
+		return
+	}
 	state := "LIVE"
 	if m.paused {
 		state = "PAUSED"
 	}
-	sortName := map[sortMode]string{
+	sortName, ok := map[sortMode]string{
 		sortCPU:    "CPU",
 		sortMemory: "MEM",
 		sortUptime: "UPTIME",
 		sortName:   "NAME",
 	}[m.sortMode]
+	if !ok {
+		sortName = "UNKNOWN"
+	}
+	targetLabel := "unknown"
+	if m.targetIdx >= 0 && m.targetIdx < len(targetOrder) {
+		targetLabel = targetOrder[m.targetIdx]
+	}
 
 	if message == "" {
 		message = "Tab/←→:panel  j/k:move  /:search  s:sort  p:pause  q:quit"
@@ -775,7 +785,7 @@ func (m *tuiModel) renderStatus(message string) {
 	m.bottom.SetText(fmt.Sprintf(
 		"[yellow]State:[white] %s  [yellow]Target:[white] %s  [yellow]Sort:[white] %s  [yellow]Filter:[white] %s  [yellow]Info:[white] %s",
 		state,
-		targetOrder[m.targetIdx],
+		targetLabel,
 		sortName,
 		m.filter,
 		message,

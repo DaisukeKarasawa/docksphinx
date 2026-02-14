@@ -656,6 +656,49 @@ func TestCaptureInputMoveKeysHandleEmptyCenterTable(t *testing.T) {
 	}
 }
 
+func TestRenderStatusNilSafety(t *testing.T) {
+	t.Run("nil receiver no panic", func(t *testing.T) {
+		var m *tuiModel
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected nil receiver renderStatus to be safe, got panic %v", r)
+			}
+		}()
+		m.renderStatus("")
+	})
+
+	t.Run("zero-value model no panic", func(t *testing.T) {
+		m := &tuiModel{}
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected zero-value renderStatus to be safe, got panic %v", r)
+			}
+		}()
+		m.renderStatus("status")
+	})
+
+	t.Run("nil bottom widget no panic", func(t *testing.T) {
+		m := newTUIModel()
+		m.bottom = nil
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected nil bottom renderStatus to be safe, got panic %v", r)
+			}
+		}()
+		m.renderStatus("status")
+	})
+
+	t.Run("out-of-range target index uses fallback label", func(t *testing.T) {
+		m := newTUIModel()
+		m.targetIdx = len(targetOrder)
+		m.renderStatus("status")
+		got := m.bottom.GetText(false)
+		if !strings.Contains(got, "Target:[white] unknown") {
+			t.Fatalf("expected fallback unknown target label, got %q", got)
+		}
+	})
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 
