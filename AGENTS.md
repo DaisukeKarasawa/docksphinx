@@ -46,6 +46,7 @@ This file defines instructions for coding agents working on this project.
 - Public gRPC handlers should check request/stream context cancellation early and return context-derived status errors before expensive processing.
 - Public service methods should guard nil receivers and uninitialized dependencies, returning explicit errors instead of panicking.
 - gRPC client wrappers should normalize nil contexts and validate connection/client dependencies to avoid panic-prone call paths.
+- gRPC client methods should short-circuit canceled contexts before invoking downstream RPC calls.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
 - When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
