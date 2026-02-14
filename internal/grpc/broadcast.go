@@ -32,6 +32,9 @@ func (b *Broadcaster) Subscribe() (ch <-chan *event.Event, unsub func()) {
 	}
 	writable := make(chan *event.Event, subscriberChanBuf)
 	b.mu.Lock()
+	if b.subscribers == nil {
+		b.subscribers = make(map[chan *event.Event]struct{})
+	}
 	b.subscribers[writable] = struct{}{}
 	b.mu.Unlock()
 	return writable, func() { b.Unsubscribe(writable) }

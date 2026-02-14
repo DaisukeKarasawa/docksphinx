@@ -128,3 +128,28 @@ func TestBroadcasterRunReturnsWhenSourceIsNil(t *testing.T) {
 		t.Fatal("expected run with nil source channel to return immediately")
 	}
 }
+
+func TestBroadcasterSubscribeInitializesNilSubscriberMap(t *testing.T) {
+	b := &Broadcaster{} // zero-value path: subscribers map is nil
+
+	ch, unsub := b.Subscribe()
+	if ch == nil {
+		t.Fatal("expected non-nil subscription channel")
+	}
+	b.mu.RLock()
+	subCount := len(b.subscribers)
+	b.mu.RUnlock()
+	if subCount != 1 {
+		t.Fatalf("expected one subscriber after subscribe, got %d", subCount)
+	}
+
+	unsub()
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Fatal("expected subscriber channel to be closed after unsubscribe")
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("unsubscribe did not close subscriber channel")
+	}
+}
