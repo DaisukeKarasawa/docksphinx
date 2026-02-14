@@ -1056,3 +1056,31 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Data` に `[2][]string`（配列内に参照型要素）を含むケースでも入力・返却値ミューテーションが履歴へ波及しないことを確認。
+
+---
+
+## 2026-02-14 (event history nil-safety contract test pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` に `TestHistoryNilSafetyContracts` を追加し、以下を固定:
+  - `(*History)(nil).Add(...)` は panic せず no-op
+  - `(*History)(nil).Recent(...)` は `nil` を返す
+  - `History.Add(nil)` は履歴を汚染しない
