@@ -663,6 +663,10 @@ func TestPrintSnapshotToUsesDeterministicTieBreakers(t *testing.T) {
 			{ContainerId: "zzzzzzzzzzzz1111", ContainerName: "dup", State: "running", ImageName: "img:z"},
 			{ContainerId: "aaaaaaaaaaaa1111", ContainerName: "dup", State: "running", ImageName: "img:a"},
 		},
+		Groups: []*pb.ComposeGroup{
+			{Project: "dup", Service: "svc", ContainerIds: []string{"z", "a"}, NetworkNames: []string{"n2", "n1"}},
+			{Project: "dup", Service: "svc", ContainerIds: []string{"a"}, NetworkNames: []string{"n2", "n1"}},
+		},
 		Networks: []*pb.NetworkInfo{
 			{NetworkId: "n2", Name: "dupnet", Driver: "zb", Scope: "local", ContainerCount: 1},
 			{NetworkId: "n1", Name: "dupnet", Driver: "aa", Scope: "local", ContainerCount: 2},
@@ -694,6 +698,7 @@ func TestPrintSnapshotToUsesDeterministicTieBreakers(t *testing.T) {
 	}
 
 	mustAppearBefore("aaaaaaaaaaaa\tdup\t", "zzzzzzzzzzzz\tdup\t")
+	mustAppearBefore("dup/svc\tcontainers=1\tnetworks=n1,n2", "dup/svc\tcontainers=2\tnetworks=n1,n2")
 	mustAppearBefore("dupnet\tdriver=aa", "dupnet\tdriver=zb")
 	mustAppearBefore("dupvol\tdriver=aa", "dupvol\tdriver=zb")
 	mustAppearBefore("same:latest\tsize=1\tcreated=", "same:latest\tsize=2\tcreated=")
