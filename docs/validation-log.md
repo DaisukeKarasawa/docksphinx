@@ -3539,3 +3539,36 @@ make quality
 - `cmd/docksphinx/tui_test.go` に以下を追加し、nil app 注入時でも panic せず入力が処理される契約を回帰固定:
   - `TestCaptureInputTabHandlesNilApp`
   - `TestCaptureInputSearchHandlesNilApp`
+
+---
+
+## 2026-02-14 (TUI moveSelection nil/empty-table boundary hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./cmd/docksphinx -run "TestMoveSelectionNilSafety|TestCaptureInputMoveKeysHandleEmptyCenterTable"
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./cmd/docksphinx -run "TestMoveSelectionNilSafety|TestCaptureInputMoveKeysHandleEmptyCenterTable"`: PASS（修正前は nil-pointer panic を再現）
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.tuiModel.moveSelection` に以下の防御ガードを追加:
+  - `nil receiver` / `nil left` / `nil center` の no-op return
+  - center table `rowCount<=1` 時の no-op selection 処理（負値行選択を回避）
+- `cmd/docksphinx.tuiModel.renderRight` に部分初期化ガード（`nil right` / `nil center` / `targetIdx` 範囲外）を追加し、move key 経路での二次 panic 余地を除去。
+- `cmd/docksphinx/tui_test.go` に以下を追加し、境界契約を回帰固定:
+  - `TestMoveSelectionNilSafety`
+  - `TestCaptureInputMoveKeysHandleEmptyCenterTable`
