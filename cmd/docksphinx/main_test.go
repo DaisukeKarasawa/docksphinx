@@ -564,6 +564,14 @@ func TestPrintSnapshotToSortsResourceSections(t *testing.T) {
 func TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields(t *testing.T) {
 	snapshot := &pb.Snapshot{
 		AtUnix: time.Now().Unix(),
+		Containers: []*pb.ContainerInfo{
+			{ContainerId: "id-b", ContainerName: "z-web", State: "running", ImageName: "z:latest"},
+			{ContainerId: "id-a", ContainerName: "a-web", State: "running", ImageName: "a:latest"},
+		},
+		RecentEvents: []*pb.Event{
+			{Id: "ev-b", TimestampUnix: 100, ContainerName: "z-web", Message: "older", Data: map[string]string{"k": "v"}},
+			{Id: "ev-a", TimestampUnix: 200, ContainerName: "a-web", Message: "newer", Data: map[string]string{"k": "v"}},
+		},
 		Groups: []*pb.ComposeGroup{
 			{Project: "zeta", Service: "api", NetworkNames: []string{"net_b", "net_a"}},
 			{Project: "alpha", Service: "web", NetworkNames: []string{"net_z", "net_x"}},
@@ -586,6 +594,8 @@ func TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields(t *testing.T) {
 		snapshot.Groups[0].GetProject() + "/" + snapshot.Groups[0].GetService(),
 		snapshot.Groups[1].GetProject() + "/" + snapshot.Groups[1].GetService(),
 	}
+	beforeContainersOrder := []string{snapshot.Containers[0].GetContainerName(), snapshot.Containers[1].GetContainerName()}
+	beforeRecentOrder := []string{snapshot.RecentEvents[0].GetId(), snapshot.RecentEvents[1].GetId()}
 	beforeGroupNets := append([]string(nil), snapshot.Groups[0].GetNetworkNames()...)
 	beforeNetworksOrder := []string{snapshot.Networks[0].GetName(), snapshot.Networks[1].GetName()}
 	beforeVolumesOrder := []string{snapshot.Volumes[0].GetName(), snapshot.Volumes[1].GetName()}
@@ -601,6 +611,8 @@ func TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields(t *testing.T) {
 		snapshot.Groups[0].GetProject() + "/" + snapshot.Groups[0].GetService(),
 		snapshot.Groups[1].GetProject() + "/" + snapshot.Groups[1].GetService(),
 	}
+	afterContainersOrder := []string{snapshot.Containers[0].GetContainerName(), snapshot.Containers[1].GetContainerName()}
+	afterRecentOrder := []string{snapshot.RecentEvents[0].GetId(), snapshot.RecentEvents[1].GetId()}
 	afterGroupNets := snapshot.Groups[0].GetNetworkNames()
 	afterNetworksOrder := []string{snapshot.Networks[0].GetName(), snapshot.Networks[1].GetName()}
 	afterVolumesOrder := []string{snapshot.Volumes[0].GetName(), snapshot.Volumes[1].GetName()}
@@ -611,6 +623,12 @@ func TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields(t *testing.T) {
 
 	if !reflect.DeepEqual(beforeGroupOrder, afterGroupOrder) {
 		t.Fatalf("expected group order unchanged, before=%v after=%v", beforeGroupOrder, afterGroupOrder)
+	}
+	if !reflect.DeepEqual(beforeContainersOrder, afterContainersOrder) {
+		t.Fatalf("expected containers order unchanged, before=%v after=%v", beforeContainersOrder, afterContainersOrder)
+	}
+	if !reflect.DeepEqual(beforeRecentOrder, afterRecentOrder) {
+		t.Fatalf("expected recent-events order unchanged, before=%v after=%v", beforeRecentOrder, afterRecentOrder)
 	}
 	if !reflect.DeepEqual(beforeGroupNets, afterGroupNets) {
 		t.Fatalf("expected group network order unchanged, before=%v after=%v", beforeGroupNets, afterGroupNets)
