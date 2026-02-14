@@ -106,6 +106,33 @@ func (e *Engine) Start() error {
 	if e.dockerClient == nil {
 		return fmt.Errorf("docker client is nil")
 	}
+	if e.config.Interval <= 0 {
+		e.config.Interval = 5 * time.Second
+	}
+	if e.config.ResourceInterval <= 0 {
+		e.config.ResourceInterval = 15 * time.Second
+	}
+	if e.config.EventHistoryMax <= 0 {
+		e.config.EventHistoryMax = 1000
+	}
+	if e.ctx == nil || e.cancel == nil {
+		e.ctx, e.cancel = context.WithCancel(context.Background())
+	}
+	if e.eventChan == nil {
+		e.eventChan = make(chan *event.Event, 100)
+	}
+	if e.stateManager == nil {
+		e.stateManager = NewStateManager()
+	}
+	if e.detector == nil || e.detector.stateManager == nil {
+		e.detector = NewDetector(e.stateManager)
+	}
+	if e.thresholdMon == nil {
+		e.thresholdMon = NewThresholdMonitor(e.config.Thresholds)
+	}
+	if e.history == nil {
+		e.history = event.NewHistory(e.config.EventHistoryMax)
+	}
 
 	e.running = true
 	e.wg.Add(1)

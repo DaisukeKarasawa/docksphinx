@@ -491,3 +491,52 @@ func TestEngineStopHandlesNilCancelAndEventChannel(t *testing.T) {
 		t.Fatal("expected terminated=true after Stop")
 	}
 }
+
+func TestEngineStartInitializesMissingRuntimeDependencies(t *testing.T) {
+	engine := &Engine{
+		config: EngineConfig{
+			Interval:         0,
+			ResourceInterval: 0,
+			EventHistoryMax:  0,
+			Thresholds:       DefaultThresholdConfig(),
+		},
+		dockerClient: &docker.Client{},
+		// runtime dependencies intentionally nil to verify lazy initialization in Start
+		ctx:       nil,
+		cancel:    nil,
+		eventChan: nil,
+	}
+
+	if err := engine.Start(); err != nil {
+		t.Fatalf("expected Start to initialize missing runtime dependencies: %v", err)
+	}
+	defer engine.Stop()
+
+	if engine.ctx == nil || engine.cancel == nil {
+		t.Fatalf("expected context and cancel to be initialized, got ctx=%#v cancel=%#v", engine.ctx, engine.cancel)
+	}
+	if engine.eventChan == nil {
+		t.Fatal("expected event channel to be initialized")
+	}
+	if engine.stateManager == nil {
+		t.Fatal("expected state manager to be initialized")
+	}
+	if engine.detector == nil || engine.detector.stateManager == nil {
+		t.Fatalf("expected detector to be initialized with state manager, got %#v", engine.detector)
+	}
+	if engine.thresholdMon == nil {
+		t.Fatal("expected threshold monitor to be initialized")
+	}
+	if engine.history == nil {
+		t.Fatal("expected event history to be initialized")
+	}
+	if engine.config.Interval <= 0 {
+		t.Fatalf("expected interval to be defaulted, got %v", engine.config.Interval)
+	}
+	if engine.config.ResourceInterval <= 0 {
+		t.Fatalf("expected resource interval to be defaulted, got %v", engine.config.ResourceInterval)
+	}
+	if engine.config.EventHistoryMax <= 0 {
+		t.Fatalf("expected event history max to be defaulted, got %d", engine.config.EventHistoryMax)
+	}
+}
