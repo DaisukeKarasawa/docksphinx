@@ -395,3 +395,24 @@ func TestFormatDateOrNA(t *testing.T) {
 		}
 	})
 }
+
+func TestPrintSnapshotToImageCreatedMissingRendersNA(t *testing.T) {
+	snapshot := &pb.Snapshot{
+		AtUnix: time.Now().Unix(),
+		Images: []*pb.ImageInfo{
+			{
+				Repository:  "busybox",
+				Tag:         "latest",
+				Size:        123,
+				CreatedUnix: 0,
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	printSnapshotTo(snapshot, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "busybox:latest\tsize=123\tcreated=N/A") {
+		t.Fatalf("expected created=N/A output, got:\n%s", out)
+	}
+}
