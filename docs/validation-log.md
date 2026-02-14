@@ -110,3 +110,10 @@ make quality
   - `gosec -exclude-dir=api`: PASS (Issues: 0)
   - `govulncheck -mode=binary`: PASS (`docksphinx`, `docksphinxd` ともに No vulnerabilities found)
   - `govulncheck ./...`: internal error（既知、warning表示）
+
+### Additional security hardening
+
+- `grpc.allow_non_loopback=false`（既定）時に、`grpc.address` が loopback 以外なら設定バリデーションで拒否することを追加。
+- `internal/config` テストで以下を確認:
+  - 既定では `0.0.0.0:50051` を拒否
+  - `allow_non_loopback=true` では許可
