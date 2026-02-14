@@ -45,4 +45,5 @@
 - launchd運用: `docs/macos-launchd-checklist.md`
 - セキュリティ基準: `docs/security-baseline-checklist.md`
 - 最小回帰テスト: `docs/minimal-regression-suite.md`
+- 定期運用: `docs/maintenance-routine.md`
 - 成果物一覧: `docs/delivery-manifest.md`
