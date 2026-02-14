@@ -32,6 +32,7 @@ This file defines instructions for coding agents working on this project.
 - Information about project specifications (implemented content and requirements) must be output to the `docs/` directory
 - When implementing list/snapshot style outputs, enforce deterministic ordering and add/maintain regression tests that assert the ordering contract.
 - For deterministic ordering, always define explicit tie-break keys for equal primary sort keys and cover tie cases in regression tests.
+- Keep recent-event ordering contracts consistent across CLI rendering and gRPC/proto conversion paths (same tie-break key precedence) and test both paths.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
 - When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
