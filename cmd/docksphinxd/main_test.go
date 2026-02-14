@@ -155,4 +155,26 @@ func TestDescribePIDStatus(t *testing.T) {
 	if status != "pid: not found" {
 		t.Fatalf("expected not found status, got %q", status)
 	}
+
+	status, stale, err = describePIDStatus(pidPath, func(_ int) error { return syscall.EPERM })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected stale=false for EPERM")
+	}
+	if !strings.Contains(status, "(permission denied)") {
+		t.Fatalf("expected permission denied status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(pidPath, func(_ int) error { return errors.New("boom") })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected stale=false for unknown checker error")
+	}
+	if !strings.Contains(status, "(unknown)") {
+		t.Fatalf("expected unknown status, got %q", status)
+	}
 }
