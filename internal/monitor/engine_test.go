@@ -243,6 +243,47 @@ func TestThresholdMonitor(t *testing.T) {
 	}
 }
 
+func TestThresholdMonitorNilSafetyContracts(t *testing.T) {
+	var tm *ThresholdMonitor
+	state := &ContainerState{}
+	if events := tm.CheckThresholds("c1", "name", "image", 95, 95, state); len(events) != 0 {
+		t.Fatalf("expected nil monitor to return empty events, got %#v", events)
+	}
+	if state.CPUThresholdCount != 0 || state.MemoryThresholdCount != 0 {
+		t.Fatalf("expected nil monitor not to mutate counters, state=%#v", state)
+	}
+
+	monitor := NewThresholdMonitor(DefaultThresholdConfig())
+	if events := monitor.CheckThresholds("c1", "name", "image", 95, 95, nil); len(events) != 0 {
+		t.Fatalf("expected nil state to return empty events, got %#v", events)
+	}
+
+	zeroValue := &ThresholdMonitor{
+		config: ThresholdConfig{
+			CPU: CPUThresholdConfig{
+				Warning:          70,
+				Critical:         90,
+				ConsecutiveCount: 1,
+			},
+			Memory: MemoryThresholdConfig{
+				Warning:          80,
+				Critical:         95,
+				ConsecutiveCount: 1,
+			},
+			CooldownSeconds: 30,
+		},
+		// lastEmit intentionally nil to verify lazy init path
+	}
+	s := &ContainerState{}
+	events := zeroValue.CheckThresholds("cid", "cname", "img", 95, 96, s)
+	if len(events) != 2 {
+		t.Fatalf("expected zero-value monitor to emit 2 events without panic, got %d", len(events))
+	}
+	if zeroValue.lastEmit == nil || len(zeroValue.lastEmit) != 2 {
+		t.Fatalf("expected lastEmit map to be initialized and populated, got %#v", zeroValue.lastEmit)
+	}
+}
+
 func TestEngineIntegration(t *testing.T) {
 	dockerClient, err := docker.NewClient()
 	if err != nil {

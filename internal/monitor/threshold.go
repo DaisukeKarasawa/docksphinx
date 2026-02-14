@@ -67,6 +67,9 @@ func (tm *ThresholdMonitor) CheckThresholds(
 	cpuPercent, memoryPercent float64,
 	state *ContainerState,
 ) []*event.Event {
+	if tm == nil || state == nil {
+		return nil
+	}
 	var events []*event.Event
 
 	// Check CPU threshold
@@ -143,8 +146,14 @@ func (tm *ThresholdMonitor) CheckThresholds(
 }
 
 func (tm *ThresholdMonitor) shouldEmit(containerID string, typ event.EventType, level string) bool {
+	if tm == nil {
+		return false
+	}
 	if tm.config.CooldownSeconds <= 0 {
 		return true
+	}
+	if tm.lastEmit == nil {
+		tm.lastEmit = make(map[string]time.Time)
 	}
 	key := fmt.Sprintf("%s|%s|%s", containerID, typ, level)
 	now := time.Now()
