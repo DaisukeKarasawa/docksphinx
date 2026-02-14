@@ -65,6 +65,7 @@ This file defines instructions for coding agents working on this project.
 - Engine lifecycle/collection paths should normalize missing contexts and guard optional stop dependencies (`cancel`, event channels) for partially initialized states.
 - Engine start paths should lazily initialize missing runtime dependencies/defaults when instances are partially constructed (non-NewEngine paths).
 - Pub/sub broadcaster utilities should be nil-safe across subscribe/send/run paths and avoid blocking callers on nil receivers.
+- Broadcaster internals that rely on maps/slices should lazily initialize zero-value fields before first write (e.g., subscribe registration).
 - Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
