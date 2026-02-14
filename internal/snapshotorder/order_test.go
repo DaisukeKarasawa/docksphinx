@@ -111,6 +111,71 @@ func TestLessImageInfo(t *testing.T) {
 	}
 }
 
+func TestLessContainerInfoNilSafety(t *testing.T) {
+	item := &pb.ContainerInfo{ContainerName: "a", ContainerId: "id-a"}
+	if !LessContainerInfo(item, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessContainerInfo(nil, item) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessContainerInfo(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
+func TestLessComposeGroupNilSafety(t *testing.T) {
+	item := &pb.ComposeGroup{Project: "a", Service: "svc"}
+	if !LessComposeGroup(item, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessComposeGroup(nil, item) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessComposeGroup(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
+func TestLessNetworkInfoNilSafety(t *testing.T) {
+	item := &pb.NetworkInfo{Name: "a", NetworkId: "n1"}
+	if !LessNetworkInfo(item, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessNetworkInfo(nil, item) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessNetworkInfo(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
+func TestLessVolumeInfoNilSafety(t *testing.T) {
+	item := &pb.VolumeInfo{Name: "a"}
+	if !LessVolumeInfo(item, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessVolumeInfo(nil, item) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessVolumeInfo(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
+func TestLessImageInfoNilSafety(t *testing.T) {
+	item := &pb.ImageInfo{Repository: "a", Tag: "latest", ImageId: "img-a"}
+	if !LessImageInfo(item, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessImageInfo(nil, item) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessImageInfo(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
 func join(parts []string) string {
 	out := ""
 	for i, p := range parts {

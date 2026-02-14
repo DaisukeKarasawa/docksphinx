@@ -7,6 +7,9 @@ import (
 )
 
 func LessContainerInfo(a, b *pb.ContainerInfo) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	if a.GetContainerName() == b.GetContainerName() {
 		return a.GetContainerId() < b.GetContainerId()
 	}
@@ -14,6 +17,9 @@ func LessContainerInfo(a, b *pb.ContainerInfo) bool {
 }
 
 func LessComposeGroup(a, b *pb.ComposeGroup) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	if a.GetProject() != b.GetProject() {
 		return a.GetProject() < b.GetProject()
 	}
@@ -29,6 +35,9 @@ func LessComposeGroup(a, b *pb.ComposeGroup) bool {
 }
 
 func LessNetworkInfo(a, b *pb.NetworkInfo) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	if a.GetName() != b.GetName() {
 		return a.GetName() < b.GetName()
 	}
@@ -42,6 +51,9 @@ func LessNetworkInfo(a, b *pb.NetworkInfo) bool {
 }
 
 func LessVolumeInfo(a, b *pb.VolumeInfo) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	if a.GetName() != b.GetName() {
 		return a.GetName() < b.GetName()
 	}
@@ -58,6 +70,9 @@ func LessVolumeInfo(a, b *pb.VolumeInfo) bool {
 }
 
 func LessImageInfo(a, b *pb.ImageInfo) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	if a.GetRepository() != b.GetRepository() {
 		return a.GetRepository() < b.GetRepository()
 	}
