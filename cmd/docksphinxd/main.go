@@ -232,6 +232,9 @@ func waitForProcessExit(
 	interval time.Duration,
 	checker func(int) error,
 ) error {
+	if checker == nil {
+		return fmt.Errorf("process checker is nil")
+	}
 	if interval <= 0 {
 		interval = 100 * time.Millisecond
 	}

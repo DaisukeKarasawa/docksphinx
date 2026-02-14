@@ -90,6 +90,19 @@ func TestWaitForProcessExitImmediateContextCancel(t *testing.T) {
 	}
 }
 
+func TestWaitForProcessExitNilChecker(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := waitForProcessExit(ctx, 6789, 10*time.Millisecond, nil)
+	if err == nil {
+		t.Fatal("expected explicit error when checker is nil")
+	}
+	if !strings.Contains(err.Error(), "process checker is nil") {
+		t.Fatalf("expected nil-checker error message, got: %v", err)
+	}
+}
+
 func TestRemovePIDFileIfExists(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "docksphinxd.pid")
