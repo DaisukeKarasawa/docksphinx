@@ -299,6 +299,17 @@ make quality
   - `govulncheck -mode=binary`: PASS
   - `govulncheck ./...`: known internal error (warning)
 
+### Manual terminal E2E: snapshot error guidance
+
+```bash
+./bin/docksphinx snapshot --addr 127.0.0.1:65535
+```
+
+観測結果（抜粋）:
+- `Error: connect daemon (127.0.0.1:65535): wait for grpc readiness 127.0.0.1:65535: context deadline exceeded. start daemon with \`docksphinxd start\``
+
+判定: PASS（接続失敗時に起動ガイダンスを表示）
+
 ### Additional security hardening
 
 - `grpc.allow_non_loopback=false`（既定）時に、`grpc.address` が loopback 以外なら設定バリデーションで拒否することを追加。
