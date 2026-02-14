@@ -94,6 +94,7 @@ This file defines instructions for coding agents working on this project.
 - UI/input handler callbacks should also guard nil event objects before key/rune access to avoid nil-event dereference panics.
 - UI key-event paths that trigger app-bound operations (focus change, modal open/close) should treat nil `*tview.Application` as explicit no-op instead of dereferencing.
 - TUI selection/navigation helpers should guard nil widget dependencies and empty/header-only tables before row selection to avoid invalid-index or nil-widget panics.
+- TUI status/footer renderers should guard nil output widgets and out-of-range index-derived labels, using explicit fallback strings instead of direct indexed access.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
 - CLI action handlers should validate required `*cli.Command` inputs and return explicit errors instead of dereferencing nil command pointers.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
