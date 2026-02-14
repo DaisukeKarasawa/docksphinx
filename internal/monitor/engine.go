@@ -46,11 +46,12 @@ type Engine struct {
 	eventChan chan *event.Event
 
 	// Control
-	ctx     context.Context
-	cancel  context.CancelFunc
-	wg      sync.WaitGroup
-	mu      sync.RWMutex
-	running bool
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	mu         sync.RWMutex
+	running    bool
+	terminated bool
 }
 
 // NewEngine creates a new monitoring engine
@@ -84,6 +85,7 @@ func NewEngine(config EngineConfig, dockerClient *docker.Client) (*Engine, error
 		ctx:          ctx,
 		cancel:       cancel,
 		running:      false,
+		terminated:   false,
 	}, nil
 }
 
@@ -94,6 +96,9 @@ func (e *Engine) Start() error {
 
 	if e.running {
 		return fmt.Errorf("monitoring engine is already running")
+	}
+	if e.terminated {
+		return fmt.Errorf("monitoring engine cannot be restarted after stop")
 	}
 	if e.dockerClient == nil {
 		return fmt.Errorf("docker client is nil")
@@ -116,6 +121,7 @@ func (e *Engine) Stop() {
 	}
 
 	e.running = false
+	e.terminated = true
 	e.cancel()
 	e.mu.Unlock()
 

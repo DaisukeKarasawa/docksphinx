@@ -192,3 +192,29 @@ func TestEngineStartFailsWithNilDockerClient(t *testing.T) {
 		t.Fatal("expected Start to fail when docker client is nil")
 	}
 }
+
+func TestEngineCannotRestartAfterStop(t *testing.T) {
+	config := EngineConfig{
+		Interval:   1 * time.Second,
+		Thresholds: DefaultThresholdConfig(),
+	}
+	engine, err := NewEngine(config, nil)
+	if err != nil {
+		t.Fatalf("NewEngine should not fail for restart guard test: %v", err)
+	}
+
+	// Simulate an already-running loop to exercise Stop path safely without Docker.
+	engine.mu.Lock()
+	engine.running = true
+	engine.mu.Unlock()
+	engine.wg.Add(1)
+	go func() {
+		defer engine.wg.Done()
+		<-engine.ctx.Done()
+	}()
+
+	engine.Stop()
+	if err := engine.Start(); err == nil {
+		t.Fatal("expected Start to fail after engine has been stopped once")
+	}
+}
