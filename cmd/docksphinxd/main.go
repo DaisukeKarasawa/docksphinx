@@ -17,6 +17,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+var ErrPIDFileNotFound = errors.New("pid file not found")
+
 func main() {
 	configFlag := &cli.StringFlag{
 		Name:  "config",
@@ -161,7 +163,7 @@ func readPID(path string) (int, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return 0, fmt.Errorf("pid file not found: %s", path)
+			return 0, fmt.Errorf("%w: %s", ErrPIDFileNotFound, path)
 		}
 		return 0, err
 	}
@@ -258,7 +260,10 @@ func describePIDStatus(pidFile string, checker func(int) error) (status string, 
 func inspectPID(pidFile string, checker func(int) error) (pid int, running bool, stale bool, err error) {
 	pid, err = readPID(pidFile)
 	if err != nil {
-		return 0, false, false, nil
+		if errors.Is(err, ErrPIDFileNotFound) {
+			return 0, false, false, nil
+		}
+		return 0, false, false, err
 	}
 
 	checkErr := checker(pid)

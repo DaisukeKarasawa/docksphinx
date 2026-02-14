@@ -219,3 +219,19 @@ func TestInspectPID(t *testing.T) {
 		t.Fatal("expected unknown checker error")
 	}
 }
+
+func TestInspectPIDInvalidPIDFileReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("invalid\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, _, err := inspectPID(pidPath, func(_ int) error { return nil })
+	if err == nil {
+		t.Fatal("expected invalid pid file to return error")
+	}
+	if !strings.Contains(err.Error(), "invalid pid") {
+		t.Fatalf("expected invalid pid error, got: %v", err)
+	}
+}
