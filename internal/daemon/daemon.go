@@ -96,6 +96,16 @@ func New(cfg *config.Config) (*Daemon, error) {
 
 // Run starts monitor + grpc and blocks until context is canceled.
 func (d *Daemon) Run(ctx context.Context) error {
+	if d == nil {
+		return fmt.Errorf("daemon is nil")
+	}
+	if d.cfg == nil || d.engine == nil || d.grpcServer == nil || d.dockerClient == nil {
+		return fmt.Errorf("daemon is not initialized")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	d.mu.Lock()
 	if d.running {
 		d.mu.Unlock()
@@ -104,9 +114,13 @@ func (d *Daemon) Run(ctx context.Context) error {
 	d.running = true
 	d.mu.Unlock()
 
-	d.logger.Info("starting docksphinxd", "grpc_address", d.cfg.GRPC.Address)
+	if d.logger != nil {
+		d.logger.Info("starting docksphinxd", "grpc_address", d.cfg.GRPC.Address)
+	}
 	if err := d.writePID(); err != nil {
-		d.logger.Warn("failed to write pid file", "path", d.cfg.Daemon.PIDFile, "error", err)
+		if d.logger != nil {
+			d.logger.Warn("failed to write pid file", "path", d.cfg.Daemon.PIDFile, "error", err)
+		}
 	}
 
 	if err := d.engine.Start(); err != nil {
@@ -121,21 +135,31 @@ func (d *Daemon) Run(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		d.logger.Info("context canceled, stopping daemon")
+		if d.logger != nil {
+			d.logger.Info("context canceled, stopping daemon")
+		}
 		d.cleanup()
 		return nil
 	case err := <-serverErrCh:
-		d.logger.Error("grpc server exited", "error", err)
+		if d.logger != nil {
+			d.logger.Error("grpc server exited", "error", err)
+		}
 		d.cleanup()
 		return err
 	}
 }
 
 func (d *Daemon) Stop() {
+	if d == nil {
+		return
+	}
 	d.cleanup()
 }
 
 func (d *Daemon) cleanup() {
+	if d == nil {
+		return
+	}
 	d.mu.Lock()
 	if !d.running {
 		d.mu.Unlock()
@@ -144,16 +168,24 @@ func (d *Daemon) cleanup() {
 	d.running = false
 	d.mu.Unlock()
 
-	d.grpcServer.Stop()
-	d.engine.Stop()
-	if err := d.dockerClient.Close(); err != nil {
-		d.logger.Warn("docker client close failed", "error", err)
+	if d.grpcServer != nil {
+		d.grpcServer.Stop()
+	}
+	if d.engine != nil {
+		d.engine.Stop()
+	}
+	if d.dockerClient != nil {
+		if err := d.dockerClient.Close(); err != nil && d.logger != nil {
+			d.logger.Warn("docker client close failed", "error", err)
+		}
 	}
 	if err := d.removePID(); err != nil {
-		d.logger.Warn("failed to remove pid file", "path", d.cfg.Daemon.PIDFile, "error", err)
+		if d.logger != nil {
+			d.logger.Warn("failed to remove pid file", "path", d.cfg.Daemon.PIDFile, "error", err)
+		}
 	}
 	if d.logSink != nil {
-		if err := d.logSink.Close(); err != nil {
+		if err := d.logSink.Close(); err != nil && d.logger != nil {
 			d.logger.Warn("log sink close failed", "error", err)
 		}
 	}
@@ -188,6 +220,9 @@ func newLogger(cfg *config.Config) (*slog.Logger, io.Closer, error) {
 }
 
 func (d *Daemon) writePID() error {
+	if d == nil || d.cfg == nil {
+		return nil
+	}
 	path := d.cfg.Daemon.PIDFile
 	if path == "" {
 		return nil
@@ -199,6 +234,9 @@ func (d *Daemon) writePID() error {
 }
 
 func (d *Daemon) removePID() error {
+	if d == nil || d.cfg == nil {
+		return nil
+	}
 	path := d.cfg.Daemon.PIDFile
 	if path == "" {
 		return nil
