@@ -167,6 +167,12 @@ func (m *tuiModel) captureInput(app *tview.Application, cancel context.CancelFun
 		case tcell.KeyLeft:
 			m.cycleFocus(app, false)
 			return nil
+		case tcell.KeyUp:
+			m.moveSelection(-1)
+			return nil
+		case tcell.KeyDown:
+			m.moveSelection(1)
+			return nil
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'q':
