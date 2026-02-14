@@ -1631,3 +1631,36 @@ make quality
 - `cmd/docksphinx.selectRecentEvents` の比較関数を `lessRecentEvent` へ集約し、`timestamp desc` / `id asc` に加えて  
   `container_name` → `type` → `message` → `container_id` → `image_name` の tie-break を追加。
 - `TestSelectRecentEvents` を拡張し、`timestamp` と `id` が同値（空）なケースでも追加 tie-break 連鎖により順序が固定されることを確認。
+
+---
+
+## 2026-02-14 (grpc events conversion deterministic ordering pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.EventsToProto` を copy-on-sort 化し、入力 slice を破壊せずに deterministic order で proto へ変換:
+  - `timestamp desc`
+  - `id asc`
+  - `container_name asc`
+  - `type asc`
+  - `message asc`
+  - `container_id asc`
+  - `image_name asc`
+- `TestEventsToProtoSortsDeterministicallyWithoutMutatingInput` を追加し、同 timestamp/id 衝突ケースでの順序固定と input non-mutation を確認。
