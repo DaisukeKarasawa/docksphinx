@@ -2231,3 +2231,29 @@ make quality
 
 - `internal/grpc.StateToSnapshot` に `sm==nil` ガードを追加し、`nil` 入力時に panic せず空 `Snapshot`（`AtUnix` と空 metrics map を含む）を返すよう修正。
 - `TestStateToSnapshotNilStateManagerReturnsEmptySnapshot` を追加し、`nil` 入力時の non-nil 返却・空リソース・`AtUnix` 設定・metrics map 初期化を回帰固定。
+
+---
+
+## 2026-02-14 (grpc client whitespace-address validation hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.NewClient` のアドレス入力を `strings.TrimSpace` で正規化し、空白のみ入力を `address cannot be empty` として明示拒否。
+- `TestNewClientRejectsWhitespaceAddress` を追加し、空白-only アドレスが安定して拒否されることを回帰固定。
