@@ -777,3 +777,28 @@ make quality
   - `Add` 後に呼び出し側 `Event` を変更しても履歴が汚染されない
   - `Recent` の返却値を変更しても履歴本体が汚染されない
   - `maxSize` による上限保持と newest-first 返却順
+
+---
+
+## 2026-02-14 (recent-events nil filtering regression assertion pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx` の `TestSelectRecentEvents` に、`nil` イベントを含む入力でも `nil` を除去しつつ順序を維持して返却するケースを追加。
