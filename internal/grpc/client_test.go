@@ -2,11 +2,13 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	pb "docksphinx/api/docksphinx/v1"
 	ggrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -120,5 +122,36 @@ func TestClientMethodsReturnContextErrorBeforeRPCWhenCanceled(t *testing.T) {
 	}
 	if stub.streamCalls != 0 {
 		t.Fatalf("expected no downstream Stream call when context canceled, got %d", stub.streamCalls)
+	}
+}
+
+func TestNewClientReturnsContextErrorWhenCanceledBeforeDial(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := NewClient(ctx, "127.0.0.1:50051")
+	if status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled status from NewClient, got %v", err)
+	}
+}
+
+func TestWaitUntilReadyReturnsContextErrorWhenCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	conn, err := ggrpc.NewClient(
+		"127.0.0.1:1",
+		ggrpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		t.Fatalf("failed to create grpc client connection: %v", err)
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	err = waitUntilReady(ctx, conn)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled from waitUntilReady, got %v", err)
 	}
 }

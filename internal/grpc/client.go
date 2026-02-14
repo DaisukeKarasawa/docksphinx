@@ -28,6 +28,9 @@ func NewClient(ctx context.Context, address string) (*Client, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
+	}
 
 	dialCtx, cancel := context.WithTimeout(ctx, defaultDialTimeout)
 	defer cancel()
