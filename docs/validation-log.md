@@ -2533,3 +2533,32 @@ make quality
   - `TestSaveRejectsWhitespacePath`: `Save("   ")` は `save path is empty` を返す
   - `TestSaveNilConfigReturnsExplicitError`: `(*Config)(nil).Save(...)` は `config is nil` を返す
 - 既存実装の境界契約（path trim 後の空判定 / nil receiver 明示エラー）を回帰固定。
+
+---
+
+## 2026-02-14 (config-validate normalization-resilience hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/config.Validate` で `log.level` / `log.file` / `daemon.pid_file` をローカルに trim（`log.level` は lower化）して判定し、呼び出し順（normalize先行の有無）に依存しない検証へ強化。
+- `config_test.go` に以下を追加:
+  - `TestValidateAcceptsTrimmedCaseInsensitiveLogLevel`
+  - `TestValidateAcceptsTrimmedAbsolutePaths`
+- `Validate` 単独呼び出しでも前後空白や大文字混在入力を安定的に扱えることを回帰固定。
