@@ -2116,3 +2116,35 @@ make quality
 - 追加テスト:
   - `TestServerGetSnapshotReturnsContextErrorWhenCanceled`
   - `TestServerStreamReturnsContextErrorWhenAlreadyCanceled`
+
+---
+
+## 2026-02-14 (grpc server nil-receiver and uninitialized-start hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.Start` で未初期化状態（`s==nil` / `grpc==nil` / `lis==nil`）を明示検出し、`Serve` 呼び出し前にエラーを返すよう修正。
+- `internal/grpc.Server.Stop` で `s==nil` を no-op として扱い、nil receiver 呼び出しでも panic しないよう修正。
+- `internal/grpc.Server.GetSnapshot` / `Stream` で `s==nil` を `codes.Unavailable` として返し、nil receiver 呼び出し時 panic を防止。
+- 追加テスト:
+  - `TestServerStartReturnsErrorWhenUninitialized`
+  - `TestServerStopNilReceiverNoPanic`
+  - `TestServerGetSnapshotReturnsUnavailableWhenReceiverNil`
+  - `TestServerStreamReturnsUnavailableWhenReceiverNil`
