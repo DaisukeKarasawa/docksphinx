@@ -33,6 +33,7 @@ internal error 以外の失敗は `make security` をエラー終了します。
 ```bash
 ./bin/docksphinxd status --config ./configs/docksphinx.yaml.example
 ```
+`status` は stale PID を検知した場合、PID ファイルを自動で掃除します。
 
 停止:
 ```bash
