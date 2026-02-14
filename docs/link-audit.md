@@ -44,6 +44,9 @@ README の「主要ドキュメント」節にある以下リンク:
 - `docs/macos-launchd-checklist.md`
 - `docs/security-baseline-checklist.md`
 - `docs/minimal-regression-suite.md`
+- `docs/acceptance-signoff-template.md`
+- `docs/review-sequence.md`
+- `docs/navigation-map.md`
 
 ---
 
