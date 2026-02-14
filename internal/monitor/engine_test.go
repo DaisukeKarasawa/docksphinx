@@ -18,6 +18,7 @@ func TestStateManager(t *testing.T) {
 		State:         "running",
 		Status:        "Up 1 hour",
 		LastSeen:      time.Now(),
+		NetworkNames:  []string{"net-a"},
 	}
 
 	changed := sm.UpdateState("test-container", state)
@@ -39,6 +40,21 @@ func TestStateManager(t *testing.T) {
 	}
 	if again.ContainerName != "test" {
 		t.Fatalf("Expected cloned state read to keep original value, got '%s'", again.ContainerName)
+	}
+	retrieved.NetworkNames[0] = "net-mutated"
+	again2, exists := sm.GetState("test-container")
+	if !exists {
+		t.Error("Expected state to exist")
+	}
+	if again2.NetworkNames[0] != "net-a" {
+		t.Fatalf("Expected cloned state network names to keep original value, got '%s'", again2.NetworkNames[0])
+	}
+
+	all := sm.GetAllStates()
+	delete(all, "test-container")
+	allAfterDelete := sm.GetAllStates()
+	if _, ok := allAfterDelete["test-container"]; !ok {
+		t.Fatal("Expected deleting from returned map not to affect internal state")
 	}
 
 	state2 := &ContainerState{
@@ -97,6 +113,8 @@ func TestStateManager(t *testing.T) {
 	// mutate returned copy and ensure manager state is isolated
 	resources.Images[0].ID = "mutated"
 	resources.Groups[0].ContainerIDs[0] = "mutated"
+	resources.Groups[0].ContainerNames[0] = "mutated-name"
+	resources.Groups[0].NetworkNames[0] = "mutated-net"
 
 	resources2 := sm.GetResources()
 	if resources2.Images[0].ID != "img1" {
@@ -104,6 +122,12 @@ func TestStateManager(t *testing.T) {
 	}
 	if resources2.Groups[0].ContainerIDs[0] != "c1" {
 		t.Fatalf("Expected internal groups to remain unchanged, got %s", resources2.Groups[0].ContainerIDs[0])
+	}
+	if resources2.Groups[0].ContainerNames[0] != "web" {
+		t.Fatalf("Expected internal group container names to remain unchanged, got %s", resources2.Groups[0].ContainerNames[0])
+	}
+	if resources2.Groups[0].NetworkNames[0] != "net1" {
+		t.Fatalf("Expected internal group network names to remain unchanged, got %s", resources2.Groups[0].NetworkNames[0])
 	}
 }
 
