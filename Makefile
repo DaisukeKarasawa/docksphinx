@@ -1,4 +1,4 @@
-.PHONY: build clean test proto generate install help
+.PHONY: build clean test test-race proto generate install deps security help
 
 # 変数定義
 BINARY_DOCKSPHINX=./bin/docksphinx
@@ -23,6 +23,8 @@ help:
 	@echo " make generate  - コード生成を実行"
 	@echo " make install   - バイナリをインストール"
 	@echo " make deps      - 依存関係を更新"
+	@echo " make test-race - race detector 付きでテスト"
+	@echo " make security  - staticcheck / gosec / govulncheck を実行"
 
 # バイナリのビルド
 build: proto
@@ -44,6 +46,10 @@ clean:
 test:
 	@echo "Running tests..."
 	go test -v ./...
+
+test-race:
+	@echo "Running race tests..."
+	go test -race ./...
 
 # Protocol BuffersからGoコードを生成
 proto:
@@ -68,6 +74,20 @@ deps:
 	go get -u ./...
 	go mod tidy
 	@echo "Dependencies updated"
+
+security:
+	@echo "Running staticcheck..."
+	@command -v staticcheck >/dev/null 2>&1 || { echo "Installing staticcheck..."; go install honnef.co/go/tools/cmd/staticcheck@latest; }
+	"$(shell go env GOPATH)/bin/staticcheck" ./...
+	@echo "Running gosec..."
+	@command -v gosec >/dev/null 2>&1 || { echo "Installing gosec..."; go install github.com/securego/gosec/v2/cmd/gosec@latest; }
+	"$(shell go env GOPATH)/bin/gosec" -exclude-dir=api ./...
+	@echo "Running govulncheck..."
+	@command -v govulncheck >/dev/null 2>&1 || { echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
+	@"$(shell go env GOPATH)/bin/govulncheck" ./... || { \
+		echo "WARNING: govulncheck failed (tool/environment issue possible). See docs/security-check-summary.md"; \
+		exit 1; \
+	}
 
 # インストール（GOPATH/binにインストール）
 install: build
