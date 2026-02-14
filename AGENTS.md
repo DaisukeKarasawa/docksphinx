@@ -24,6 +24,13 @@ This file defines instructions for coding agents working on this project.
 
 **Important**: All information other than project specifications (implemented content and requirements) must be output to the `outputs/` directory.
 
+### Handling Missing Required Input Files
+
+- If a task references required input files that do not exist in the repository, do not stop.
+- Reconstruct the missing input artifact in `outputs/` based on verifiable repository facts and requirement documents.
+- Clearly mark reconstructed assumptions and source evidence.
+- Continue downstream deliverables using the reconstructed artifact as the baseline.
+
 ## Development Policy
 
 ### Code Modification and Implementation Rules
@@ -103,3 +110,11 @@ Consider updating AGENTS.md in the following situations:
 - When directory structure or package management files are changed
 - **After receiving user feedback**: When a user provides feedback about documentation quality, process improvements, or policy gaps, immediately update AGENTS.md to incorporate the feedback
 - **After completing significant work**: Review and update AGENTS.md after completing major tasks to capture any new insights or patterns
+
+### Documentation Navigation Integrity
+
+- When adding or renaming files under `docs/`, always update both:
+  - `README.md` (major document links)
+  - `docs/index.md` (category index)
+- After updating documentation links, refresh `docs/link-audit.md` so the audit target list matches README.
+- Treat navigation consistency (`README` ↔ `docs/index.md` ↔ `docs/link-audit.md`) as a required completion check.
