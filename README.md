@@ -46,6 +46,7 @@ internal error 以外の失敗は `make security` をエラー終了します。
 ```bash
 ./bin/docksphinx snapshot --config ./configs/docksphinx.yaml.example
 ```
+コンテナ一覧に加えて、直近イベント（最新10件）を表示します。
 
 ストリーム:
 ```bash
