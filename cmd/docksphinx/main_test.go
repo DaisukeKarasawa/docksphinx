@@ -313,6 +313,24 @@ func TestShouldReconnectTail(t *testing.T) {
 	}
 }
 
+func TestWaitOrDone(t *testing.T) {
+	t.Run("already canceled context returns context error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		err := waitOrDone(ctx, 50*time.Millisecond)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected context canceled error, got: %v", err)
+		}
+	})
+
+	t.Run("active context returns nil on timer", func(t *testing.T) {
+		if err := waitOrDone(context.Background(), 0); err != nil {
+			t.Fatalf("expected nil error for active context timer completion, got: %v", err)
+		}
+	})
+}
+
 func TestLogTailRetry(t *testing.T) {
 	t.Run("writes expected format", func(t *testing.T) {
 		var buf bytes.Buffer

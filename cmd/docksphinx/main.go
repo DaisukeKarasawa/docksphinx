@@ -432,6 +432,10 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 func waitOrDone(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
+	if ctx == nil {
+		<-timer.C
+		return nil
+	}
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
