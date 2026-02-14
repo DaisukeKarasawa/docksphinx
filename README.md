@@ -38,6 +38,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - セキュリティベースラインチェックリスト: `docs/security-baseline-checklist.md`
 - 最小回帰テストセット: `docs/minimal-regression-suite.md`
 - 受け入れサインオフテンプレート: `docs/acceptance-signoff-template.md`
+- レビューシーケンス: `docs/review-sequence.md`
 
 ## 補足
 
