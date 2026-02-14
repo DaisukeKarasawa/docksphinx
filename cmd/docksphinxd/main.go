@@ -95,26 +95,13 @@ func runStop(_ context.Context, cmd *cli.Command) error {
 
 	waitCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-waitCtx.Done():
-			return fmt.Errorf("process %d did not stop within 5s", pid)
-		case <-ticker.C:
-			if err := syscall.Kill(pid, 0); err != nil {
-				if errors.Is(err, syscall.ESRCH) {
-					fmt.Printf("Process %d stopped\n", pid)
-					return nil
-				}
-				if errors.Is(err, syscall.EPERM) {
-					return fmt.Errorf("permission denied while checking process %d", pid)
-				}
-				return fmt.Errorf("failed to check process %d: %w", pid, err)
-			}
-		}
+	if err := waitForProcessExit(waitCtx, pid, 100*time.Millisecond, func(targetPID int) error {
+		return syscall.Kill(targetPID, 0)
+	}); err != nil {
+		return err
 	}
+	fmt.Printf("Process %d stopped\n", pid)
+	return nil
 }
 
 func runStatus(ctx context.Context, cmd *cli.Command) error {
@@ -178,4 +165,36 @@ func checkGRPCHealth(parent context.Context, address string, timeout time.Durati
 		return fmt.Errorf("health rpc failed: %w", err)
 	}
 	return nil
+}
+
+func waitForProcessExit(
+	ctx context.Context,
+	pid int,
+	interval time.Duration,
+	checker func(int) error,
+) error {
+	if interval <= 0 {
+		interval = 100 * time.Millisecond
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("process %d did not stop within timeout", pid)
+		case <-ticker.C:
+			err := checker(pid)
+			if err == nil {
+				continue
+			}
+			if errors.Is(err, syscall.ESRCH) {
+				return nil
+			}
+			if errors.Is(err, syscall.EPERM) {
+				return fmt.Errorf("permission denied while checking process %d", pid)
+			}
+			return fmt.Errorf("failed to check process %d: %w", pid, err)
+		}
+	}
 }
