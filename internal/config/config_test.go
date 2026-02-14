@@ -226,6 +226,18 @@ func TestSaveNilConfigReturnsExplicitError(t *testing.T) {
 	}
 }
 
+func TestValidateNilConfigReturnsExplicitError(t *testing.T) {
+	var cfg *Config
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected Validate on nil config to fail")
+	}
+	if got := err.Error(); got != "config is nil" {
+		t.Fatalf("expected nil config error, got %q", got)
+	}
+}
+
 func TestValidateAcceptsTrimmedCaseInsensitiveLogLevel(t *testing.T) {
 	cfg := Default()
 	cfg.Log.Level = "  INFO  "
