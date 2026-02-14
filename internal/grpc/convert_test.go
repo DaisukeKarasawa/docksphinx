@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	pb "docksphinx/api/docksphinx/v1"
 	"docksphinx/internal/docker"
+	"docksphinx/internal/event"
 	"docksphinx/internal/monitor"
 )
 
@@ -127,5 +129,65 @@ func TestStateToSnapshotSortsComposeGroupsAndFields(t *testing.T) {
 	}
 	if !reflect.DeepEqual(second.GetNetworkNames(), []string{"net-a", "net-b"}) {
 		t.Fatalf("unexpected sorted network names for second group: %#v", second.GetNetworkNames())
+	}
+}
+
+func TestEventsToProtoSkipsNilAndConvertsFields(t *testing.T) {
+	ts := time.Unix(1700000000, 0)
+	events := []*event.Event{
+		nil,
+		{
+			ID:            "ev-1",
+			Type:          event.EventTypeCPUThreshold,
+			Timestamp:     ts,
+			ContainerID:   "c1",
+			ContainerName: "web",
+			ImageName:     "nginx:latest",
+			Message:       "cpu high",
+			Data: map[string]interface{}{
+				"threshold": 80,
+				"actual":    92.5,
+				"note":      "critical",
+			},
+		},
+		nil,
+	}
+
+	got := EventsToProto(events)
+	if len(got) != 1 {
+		t.Fatalf("expected nil events to be skipped, got len=%d", len(got))
+	}
+
+	ev := got[0]
+	if ev.GetId() != "ev-1" {
+		t.Fatalf("unexpected id: %q", ev.GetId())
+	}
+	if ev.GetType() != string(event.EventTypeCPUThreshold) {
+		t.Fatalf("unexpected type: %q", ev.GetType())
+	}
+	if ev.GetTimestampUnix() != ts.Unix() {
+		t.Fatalf("unexpected timestamp: %d", ev.GetTimestampUnix())
+	}
+	if ev.GetContainerId() != "c1" || ev.GetContainerName() != "web" || ev.GetImageName() != "nginx:latest" {
+		t.Fatalf("unexpected container/image fields: %#v", ev)
+	}
+	if ev.GetMessage() != "cpu high" {
+		t.Fatalf("unexpected message: %q", ev.GetMessage())
+	}
+	wantData := map[string]string{
+		"threshold": "80",
+		"actual":    "92.5",
+		"note":      "critical",
+	}
+	if !reflect.DeepEqual(ev.GetData(), wantData) {
+		t.Fatalf("unexpected data conversion:\n got=%#v\nwant=%#v", ev.GetData(), wantData)
+	}
+}
+
+func TestEventToProtoNil(t *testing.T) {
+	var in *event.Event
+	var out *pb.Event = EventToProto(in)
+	if out != nil {
+		t.Fatalf("expected nil for nil input, got %#v", out)
 	}
 }
