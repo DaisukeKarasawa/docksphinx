@@ -26,6 +26,13 @@ This project's basic policy is to output documents as requirements definition fi
 
 **Important**: All information other than project specifications (implemented content and requirements) must be output to the `outputs/` directory.
 
+### Handling Missing Required Input Files
+
+- If a task references required input files that do not exist in the repository, do not stop.
+- Reconstruct the missing input artifact in `outputs/` based on verifiable repository facts and requirement documents.
+- Clearly mark reconstructed assumptions and source evidence.
+- Continue downstream deliverables using the reconstructed artifact as the baseline.
+
 ## Development Policy
 
 ### Code Modification and Implementation Rules
