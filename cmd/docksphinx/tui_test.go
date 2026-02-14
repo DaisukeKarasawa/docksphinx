@@ -3,6 +3,7 @@ package main
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
 )
@@ -77,5 +78,33 @@ func TestFilteredContainerRowsForDetailSortAndNonMutating(t *testing.T) {
 	}
 	if !reflect.DeepEqual(after, before) {
 		t.Fatalf("expected source snapshot container order unchanged, before=%v after=%v", before, after)
+	}
+}
+
+func TestFormatDateTimeOrNA(t *testing.T) {
+	if got := formatDateTimeOrNA(0); got != "N/A" {
+		t.Fatalf("expected N/A for missing timestamp, got %q", got)
+	}
+	unix := time.Date(2026, 2, 14, 10, 30, 0, 0, time.UTC).Unix()
+	if got := formatDateTimeOrNA(unix); got != "2026-02-14 10:30" {
+		t.Fatalf("expected formatted datetime, got %q", got)
+	}
+}
+
+func TestRenderImagesShowsNAForMissingCreatedTimestamp(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Images: []*pb.ImageInfo{
+			{Repository: "busybox", Tag: "latest", Size: 123, CreatedUnix: 0},
+		},
+	}
+
+	m.renderImages()
+	cell := m.center.GetCell(1, 3)
+	if cell == nil {
+		t.Fatal("expected created column cell to exist")
+	}
+	if got := cell.Text; got != "N/A" {
+		t.Fatalf("expected created column to render N/A, got %q", got)
 	}
 }

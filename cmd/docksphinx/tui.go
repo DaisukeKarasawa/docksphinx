@@ -500,7 +500,7 @@ func (m *tuiModel) renderImages() {
 			img.GetRepository(),
 			img.GetTag(),
 			fmt.Sprintf("%d", img.GetSize()),
-			time.Unix(img.GetCreatedUnix(), 0).Format("2006-01-02 15:04"),
+			formatDateTimeOrNA(img.GetCreatedUnix()),
 		}
 		for col, v := range values {
 			m.center.SetCell(row, col, tview.NewTableCell(v))
@@ -769,4 +769,11 @@ func formatInt64OrNA(value int64, ok bool) string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%d", value)
+}
+
+func formatDateTimeOrNA(unix int64) string {
+	if unix <= 0 {
+		return "N/A"
+	}
+	return time.Unix(unix, 0).Format("2006-01-02 15:04")
 }
