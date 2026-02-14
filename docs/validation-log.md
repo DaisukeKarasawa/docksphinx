@@ -2310,3 +2310,30 @@ make quality
 
 - `internal/monitor.Detector.DetectStateChange` に `nil receiver` / `nil stateManager` ガードを追加し、panic せず empty events を返すよう修正。
 - `TestDetectorNilSafetyContracts` を追加し、上記 no-op 契約を回帰固定。
+
+---
+
+## 2026-02-14 (threshold-monitor nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.ThresholdMonitor.CheckThresholds` に `tm==nil` / `state==nil` ガードを追加し、panic せず empty events を返すよう修正。
+- `shouldEmit` に `tm.lastEmit` の遅延初期化を追加し、zero-value monitor でも cooldown 分岐で panic しないよう修正。
+- `TestThresholdMonitorNilSafetyContracts` を追加し、nil monitor・nil state・zero-value monitor（`lastEmit=nil`）の契約を回帰固定。
