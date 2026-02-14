@@ -192,6 +192,9 @@ func (d *Daemon) cleanup() {
 }
 
 func newLogger(cfg *config.Config) (*slog.Logger, io.Closer, error) {
+	if cfg == nil {
+		cfg = config.Default()
+	}
 	level := slog.LevelInfo
 	logLevel := strings.ToLower(strings.TrimSpace(cfg.Log.Level))
 	logFile := strings.TrimSpace(cfg.Log.File)

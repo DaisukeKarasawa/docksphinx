@@ -79,6 +79,19 @@ func TestNewLoggerUsesTrimmedCaseInsensitiveLevel(t *testing.T) {
 	}
 }
 
+func TestNewLoggerNilConfigUsesDefaults(t *testing.T) {
+	logger, sink, err := newLogger(nil)
+	if err != nil {
+		t.Fatalf("expected newLogger(nil) to use defaults, got error: %v", err)
+	}
+	if sink != nil {
+		t.Fatalf("expected default logger sink to be nil (stdout), got %#v", sink)
+	}
+	if !logger.Handler().Enabled(context.Background(), slog.LevelInfo) {
+		t.Fatal("expected default logger to enable info level")
+	}
+}
+
 func TestNewLoggerTrimsLogFilePath(t *testing.T) {
 	cfg := config.Default()
 	cfg.Log.Level = "info"
