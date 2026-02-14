@@ -31,6 +31,38 @@ func TestWaitForProcessExitSuccessOnESRCH(t *testing.T) {
 	}
 }
 
+func TestRunCommandsRejectNilCommand(t *testing.T) {
+	t.Run("runStart", func(t *testing.T) {
+		err := runStart(context.Background(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil command")
+		}
+		if !strings.Contains(err.Error(), "command is nil") {
+			t.Fatalf("expected nil command error message, got: %v", err)
+		}
+	})
+
+	t.Run("runStop", func(t *testing.T) {
+		err := runStop(context.Background(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil command")
+		}
+		if !strings.Contains(err.Error(), "command is nil") {
+			t.Fatalf("expected nil command error message, got: %v", err)
+		}
+	})
+
+	t.Run("runStatus", func(t *testing.T) {
+		err := runStatus(context.Background(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil command")
+		}
+		if !strings.Contains(err.Error(), "command is nil") {
+			t.Fatalf("expected nil command error message, got: %v", err)
+		}
+	})
+}
+
 func TestWaitForProcessExitTimeout(t *testing.T) {
 	pid := 2345
 	checker := func(_ int) error { return nil }

@@ -60,6 +60,9 @@ func main() {
 }
 
 func runStart(parent context.Context, cmd *cli.Command) error {
+	if cmd == nil {
+		return fmt.Errorf("command is nil")
+	}
 	cfg, cfgPath, err := config.Load(cmd.String("config"))
 	if err != nil {
 		return err
@@ -96,6 +99,9 @@ func runStart(parent context.Context, cmd *cli.Command) error {
 }
 
 func runStop(parent context.Context, cmd *cli.Command) error {
+	if cmd == nil {
+		return fmt.Errorf("command is nil")
+	}
 	cfg, _, err := config.Load(cmd.String("config"))
 	if err != nil {
 		return err
@@ -148,6 +154,9 @@ func resolveStopPID(pidFile string) (pid int, alreadyStopped bool, err error) {
 }
 
 func runStatus(ctx context.Context, cmd *cli.Command) error {
+	if cmd == nil {
+		return fmt.Errorf("command is nil")
+	}
 	cfg, _, err := config.Load(cmd.String("config"))
 	if err != nil {
 		return err
