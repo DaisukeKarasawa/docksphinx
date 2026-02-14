@@ -2002,3 +2002,32 @@ make quality
 - 追加テスト:
   - `TestCompactEventsFiltersNilAndAppliesLimit`
   - `TestLastEventTypeSkipsNilEntries`
+
+---
+
+## 2026-02-14 (grpc stream initial-send error propagation hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.Stream` で `IncludeInitialSnapshot=true` 時の初回 `stream.Send(snapshot)` 失敗を握りつぶさず、そのまま呼び出し元へ返すよう修正。
+- イベント配信ループで `EventToProto(ev)==nil` を防御的にスキップし、`nil` payload の送信を抑止。
+- 追加テスト:
+  - `TestServerStreamReturnsInitialSnapshotSendError`
+  - `TestServerStreamSkipsNilEventPayloads`
