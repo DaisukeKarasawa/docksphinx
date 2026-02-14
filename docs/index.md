@@ -11,6 +11,7 @@
 - `implementation-handoff-runbook.md`
 - `handover-checklist.md`
 - `contribution-workflow.md`
+- `incident-playbook.md`
 - `patch-application-procedure.md`
 - `command-reference.md`
 
