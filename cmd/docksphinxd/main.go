@@ -215,6 +215,9 @@ func readPID(path string) (int, error) {
 }
 
 func checkGRPCHealth(parent context.Context, address string, timeout time.Duration) error {
+	if parent == nil {
+		parent = context.Background()
+	}
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}

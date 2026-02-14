@@ -63,6 +63,19 @@ func TestRunCommandsRejectNilCommand(t *testing.T) {
 	})
 }
 
+func TestCheckGRPCHealthHandlesNilParentContext(t *testing.T) {
+	ctxMap := map[string]context.Context{}
+	parent := ctxMap["missing"]
+
+	err := checkGRPCHealth(parent, "   ", 10*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected dial error for empty address")
+	}
+	if !strings.Contains(err.Error(), "dial daemon:") {
+		t.Fatalf("expected wrapped dial error, got: %v", err)
+	}
+}
+
 func TestWaitForProcessExitTimeout(t *testing.T) {
 	pid := 2345
 	checker := func(_ int) error { return nil }
