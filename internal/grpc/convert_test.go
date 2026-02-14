@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -67,5 +68,64 @@ func TestStateToSnapshotClampsLargeValues(t *testing.T) {
 	}
 	if len(snapshot.GetVolumes()) != 1 || snapshot.GetVolumes()[0].GetRefCount() != math.MaxInt32 {
 		t.Fatalf("expected volume ref_count clamp to MaxInt32, got %#v", snapshot.GetVolumes())
+	}
+}
+
+func TestStateToSnapshotSortsComposeGroupsAndFields(t *testing.T) {
+	sm := monitor.NewStateManager()
+	sm.UpdateResources(monitor.ResourceState{
+		Groups: []monitor.ComposeGroup{
+			{
+				Project:        "zeta",
+				Service:        "api",
+				ContainerIDs:   []string{"cid-2", "cid-1"},
+				ContainerNames: []string{"web-2", "web-1"},
+				NetworkNames:   []string{"net-b", "net-a"},
+			},
+			{
+				Project:        "alpha",
+				Service:        "worker",
+				ContainerIDs:   []string{"cid-4", "cid-3"},
+				ContainerNames: []string{"job-2", "job-1"},
+				NetworkNames:   []string{"net-d", "net-c"},
+			},
+		},
+	})
+
+	snapshot := StateToSnapshot(sm)
+	if snapshot == nil {
+		t.Fatal("expected snapshot")
+	}
+	if len(snapshot.GetGroups()) != 2 {
+		t.Fatalf("expected 2 groups, got %d", len(snapshot.GetGroups()))
+	}
+
+	first := snapshot.GetGroups()[0]
+	second := snapshot.GetGroups()[1]
+	if first.GetProject() != "alpha" || first.GetService() != "worker" {
+		t.Fatalf("expected first group alpha/worker, got %s/%s", first.GetProject(), first.GetService())
+	}
+	if second.GetProject() != "zeta" || second.GetService() != "api" {
+		t.Fatalf("expected second group zeta/api, got %s/%s", second.GetProject(), second.GetService())
+	}
+
+	if !reflect.DeepEqual(first.GetContainerIds(), []string{"cid-3", "cid-4"}) {
+		t.Fatalf("unexpected sorted container ids for first group: %#v", first.GetContainerIds())
+	}
+	if !reflect.DeepEqual(first.GetContainerNames(), []string{"job-1", "job-2"}) {
+		t.Fatalf("unexpected sorted container names for first group: %#v", first.GetContainerNames())
+	}
+	if !reflect.DeepEqual(first.GetNetworkNames(), []string{"net-c", "net-d"}) {
+		t.Fatalf("unexpected sorted network names for first group: %#v", first.GetNetworkNames())
+	}
+
+	if !reflect.DeepEqual(second.GetContainerIds(), []string{"cid-1", "cid-2"}) {
+		t.Fatalf("unexpected sorted container ids for second group: %#v", second.GetContainerIds())
+	}
+	if !reflect.DeepEqual(second.GetContainerNames(), []string{"web-1", "web-2"}) {
+		t.Fatalf("unexpected sorted container names for second group: %#v", second.GetContainerNames())
+	}
+	if !reflect.DeepEqual(second.GetNetworkNames(), []string{"net-a", "net-b"}) {
+		t.Fatalf("unexpected sorted network names for second group: %#v", second.GetNetworkNames())
 	}
 }

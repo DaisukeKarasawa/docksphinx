@@ -131,14 +131,26 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 
 	groups := make([]*pb.ComposeGroup, 0, len(resources.Groups))
 	for _, g := range resources.Groups {
+		containerIDs := append([]string(nil), g.ContainerIDs...)
+		containerNames := append([]string(nil), g.ContainerNames...)
+		networkNames := append([]string(nil), g.NetworkNames...)
+		sort.Strings(containerIDs)
+		sort.Strings(containerNames)
+		sort.Strings(networkNames)
 		groups = append(groups, &pb.ComposeGroup{
 			Project:        g.Project,
 			Service:        g.Service,
-			ContainerIds:   append([]string(nil), g.ContainerIDs...),
-			ContainerNames: append([]string(nil), g.ContainerNames...),
-			NetworkNames:   append([]string(nil), g.NetworkNames...),
+			ContainerIds:   containerIDs,
+			ContainerNames: containerNames,
+			NetworkNames:   networkNames,
 		})
 	}
+	sort.Slice(groups, func(i, j int) bool {
+		if groups[i].GetProject() == groups[j].GetProject() {
+			return groups[i].GetService() < groups[j].GetService()
+		}
+		return groups[i].GetProject() < groups[j].GetProject()
+	})
 
 	return &pb.Snapshot{
 		Containers: containers,
