@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"net"
 	"strings"
 	"sync"
 	"testing"
@@ -187,6 +188,43 @@ func TestServerStopNilReceiverNoPanic(t *testing.T) {
 	}()
 	var nilServer *Server
 	nilServer.Stop()
+}
+
+func TestServerStopCleansUpPartialInitializationState(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to create listener: %v", err)
+	}
+	addr := lis.Addr().String()
+
+	canceled := false
+	srv := &Server{
+		lis: lis,
+		bcastCancel: func() {
+			canceled = true
+		},
+	}
+
+	srv.Stop()
+
+	if !canceled {
+		t.Fatal("expected broadcaster cancel to be invoked")
+	}
+	if srv.bcastCancel != nil {
+		t.Fatal("expected bcastCancel to be cleared")
+	}
+	if srv.lis != nil {
+		t.Fatal("expected listener to be cleared after stop")
+	}
+	if got := srv.Address(); got != "" {
+		t.Fatalf("expected empty address after listener cleanup, got %q", got)
+	}
+
+	rebound, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("expected address to be reusable after stop, got error: %v", err)
+	}
+	_ = rebound.Close()
 }
 
 func TestServerGetSnapshotReturnsUnavailableWhenEngineMissing(t *testing.T) {

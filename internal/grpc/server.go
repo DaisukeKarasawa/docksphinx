@@ -84,12 +84,17 @@ func (s *Server) Stop() {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.bcastCancel != nil {
+		s.bcastCancel()
+		s.bcastCancel = nil
+	}
 	if s.grpc != nil {
-		if s.bcastCancel != nil {
-			s.bcastCancel()
-		}
 		s.grpc.GracefulStop()
 		s.grpc = nil
+	}
+	if s.lis != nil {
+		_ = s.lis.Close()
+		s.lis = nil
 	}
 }
 
