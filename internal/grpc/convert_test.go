@@ -211,6 +211,68 @@ func TestStateToSnapshotSortsResourcesWithoutMutatingSource(t *testing.T) {
 	}
 }
 
+func TestStateToSnapshotUsesDeterministicTieBreakers(t *testing.T) {
+	sm := monitor.NewStateManager()
+	now := time.Now()
+
+	sm.UpdateState("id-z", &monitor.ContainerState{
+		ContainerID:   "id-z",
+		ContainerName: "dup",
+		ImageName:     "z:latest",
+		State:         "running",
+		Status:        "Up",
+		LastSeen:      now,
+	})
+	sm.UpdateState("id-a", &monitor.ContainerState{
+		ContainerID:   "id-a",
+		ContainerName: "dup",
+		ImageName:     "a:latest",
+		State:         "running",
+		Status:        "Up",
+		LastSeen:      now,
+	})
+
+	sm.UpdateResources(monitor.ResourceState{
+		Images: []docker.Image{
+			{ID: "img-b", Repository: "same", Tag: "latest", Size: 2, Created: 2},
+			{ID: "img-a", Repository: "same", Tag: "latest", Size: 1, Created: 1},
+		},
+		Networks: []docker.Network{
+			{ID: "n2", Name: "dupnet", Driver: "aa", Scope: "local", ContainerCount: 1},
+			{ID: "n1", Name: "dupnet", Driver: "aa", Scope: "local", ContainerCount: 2},
+		},
+		Volumes: []docker.Volume{
+			{Name: "dupvol", Driver: "aa", Mountpoint: "/same", RefCount: 2, UsageNote: "same"},
+			{Name: "dupvol", Driver: "aa", Mountpoint: "/same", RefCount: 1, UsageNote: "same"},
+		},
+		Groups: []monitor.ComposeGroup{
+			{Project: "dup", Service: "svc", ContainerIDs: []string{"z", "a"}, NetworkNames: []string{"n2", "n1"}},
+			{Project: "dup", Service: "svc", ContainerIDs: []string{"b", "a"}, NetworkNames: []string{"n2", "n1"}},
+		},
+	})
+
+	snapshot := StateToSnapshot(sm)
+	if snapshot == nil {
+		t.Fatal("expected snapshot")
+	}
+
+	if got := snapshot.GetContainers(); len(got) != 2 || got[0].GetContainerId() != "id-a" || got[1].GetContainerId() != "id-z" {
+		t.Fatalf("expected tie-break by container id [id-a id-z], got %#v", got)
+	}
+	if got := snapshot.GetImages(); len(got) != 2 || got[0].GetImageId() != "img-a" || got[1].GetImageId() != "img-b" {
+		t.Fatalf("expected tie-break by image id [img-a img-b], got %#v", got)
+	}
+	if got := snapshot.GetNetworks(); len(got) != 2 || got[0].GetNetworkId() != "n1" || got[1].GetNetworkId() != "n2" {
+		t.Fatalf("expected tie-break by network id [n1 n2], got %#v", got)
+	}
+	if got := snapshot.GetVolumes(); len(got) != 2 || got[0].GetRefCount() != 1 || got[1].GetRefCount() != 2 {
+		t.Fatalf("expected tie-break by ref_count [1 2], got %#v", got)
+	}
+	if got := snapshot.GetGroups(); len(got) != 2 || !reflect.DeepEqual(got[0].GetContainerIds(), []string{"a", "b"}) || !reflect.DeepEqual(got[1].GetContainerIds(), []string{"a", "z"}) {
+		t.Fatalf("expected tie-break by group container ids [[a b] [a z]], got %#v", got)
+	}
+}
+
 func TestEventsToProtoSkipsNilAndConvertsFields(t *testing.T) {
 	ts := time.Unix(1700000000, 0)
 	events := []*event.Event{

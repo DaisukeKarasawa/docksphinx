@@ -655,3 +655,46 @@ func TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields(t *testing.T) {
 		t.Fatalf("expected images order unchanged, before=%v after=%v", beforeImagesOrder, afterImagesOrder)
 	}
 }
+
+func TestPrintSnapshotToUsesDeterministicTieBreakers(t *testing.T) {
+	snapshot := &pb.Snapshot{
+		AtUnix: time.Now().Unix(),
+		Containers: []*pb.ContainerInfo{
+			{ContainerId: "zzzzzzzzzzzz1111", ContainerName: "dup", State: "running", ImageName: "img:z"},
+			{ContainerId: "aaaaaaaaaaaa1111", ContainerName: "dup", State: "running", ImageName: "img:a"},
+		},
+		Networks: []*pb.NetworkInfo{
+			{NetworkId: "n2", Name: "dupnet", Driver: "zb", Scope: "local", ContainerCount: 1},
+			{NetworkId: "n1", Name: "dupnet", Driver: "aa", Scope: "local", ContainerCount: 2},
+		},
+		Volumes: []*pb.VolumeInfo{
+			{Name: "dupvol", Driver: "zb", Mountpoint: "/z", RefCount: 1, UsageNote: "metadata-only"},
+			{Name: "dupvol", Driver: "aa", Mountpoint: "/a", RefCount: 2, UsageNote: "metadata-only"},
+		},
+		Images: []*pb.ImageInfo{
+			{ImageId: "img-b", Repository: "same", Tag: "latest", Size: 2, CreatedUnix: 2},
+			{ImageId: "img-a", Repository: "same", Tag: "latest", Size: 1, CreatedUnix: 1},
+		},
+	}
+
+	var buf bytes.Buffer
+	printSnapshotTo(snapshot, &buf)
+	out := buf.String()
+
+	mustAppearBefore := func(first, second string) {
+		t.Helper()
+		i := strings.Index(out, first)
+		j := strings.Index(out, second)
+		if i == -1 || j == -1 {
+			t.Fatalf("missing expected markers %q or %q in output:\n%s", first, second, out)
+		}
+		if i >= j {
+			t.Fatalf("expected %q to appear before %q in output:\n%s", first, second, out)
+		}
+	}
+
+	mustAppearBefore("aaaaaaaaaaaa\tdup\t", "zzzzzzzzzzzz\tdup\t")
+	mustAppearBefore("dupnet\tdriver=aa", "dupnet\tdriver=zb")
+	mustAppearBefore("dupvol\tdriver=aa", "dupvol\tdriver=zb")
+	mustAppearBefore("same:latest\tsize=1\tcreated=", "same:latest\tsize=2\tcreated=")
+}
