@@ -2479,3 +2479,29 @@ make quality
   - `ctx=nil` を `context.Background()` へ正規化
 - `Stop`/`cleanup`/`writePID`/`removePID` に nil-safe ガードを追加し、部分初期化状態や nil receiver でも panic を回避。
 - `internal/daemon/daemon_test.go` を新規追加し、nil receiver / 未初期化 / 部分初期化 cleanup の契約を回帰固定。
+
+---
+
+## 2026-02-14 (config-engine nil-receiver fallback hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/config.Config.EngineConfig` に nil receiver ガードを追加し、`(*Config)(nil)` でも panic せず default config の変換結果へフォールバック。
+- `TestEngineConfigNilReceiverUsesDefaults` を追加し、interval/resource_interval/thresholds が default 相当になることを回帰固定。
