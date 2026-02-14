@@ -1213,3 +1213,28 @@ make quality
 ### Focused regression assertion
 
 - `cmd/docksphinx` の `TestSelectRecentEvents` を拡張し、入力スライス順序が関数呼び出し後も変化しない（non-mutating）こと、および全要素 `nil` 入力で `nil` が返ることを確認。
+
+---
+
+## 2026-02-14 (event history independent clone instance pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Recent()` の連続呼び出しで返却される `*Event` と `*structuredPayload` が同一ポインタ再利用ではなく、毎回独立 clone であることを確認。
