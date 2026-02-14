@@ -103,6 +103,9 @@ func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*
 
 // Stream implements DocksphinxService
 func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_StreamServer) error {
+	if stream == nil {
+		return status.Error(codes.InvalidArgument, "stream is nil")
+	}
 	if s.engine == nil {
 		return status.Error(codes.Unavailable, "engine not available")
 	}

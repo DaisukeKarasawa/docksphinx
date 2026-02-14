@@ -216,11 +216,6 @@ func TestServerStreamSkipsNilEventPayloads(t *testing.T) {
 func TestServerStreamReturnsUnavailableWhenDependenciesMissing(t *testing.T) {
 	stream := &stubStreamServer{ctx: context.Background()}
 
-	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
-	if status.Code(err) != codes.Unavailable {
-		t.Fatalf("expected unavailable for missing engine, got %v", err)
-	}
-
 	engine, newErr := monitor.NewEngine(monitor.EngineConfig{
 		Interval:         time.Second,
 		ResourceInterval: 5 * time.Second,
@@ -229,6 +224,16 @@ func TestServerStreamReturnsUnavailableWhenDependenciesMissing(t *testing.T) {
 	if newErr != nil {
 		t.Fatalf("new engine failed: %v", newErr)
 	}
+	err := (&Server{engine: engine, bcast: NewBroadcaster()}).Stream(&pb.StreamRequest{}, nil)
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected invalid argument for nil stream, got %v", err)
+	}
+
+	err = (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine, got %v", err)
+	}
+
 	err = (&Server{engine: engine}).Stream(&pb.StreamRequest{}, stream)
 	if status.Code(err) != codes.Unavailable {
 		t.Fatalf("expected unavailable for missing broadcaster, got %v", err)
