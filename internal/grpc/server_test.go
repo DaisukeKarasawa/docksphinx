@@ -10,7 +10,9 @@ import (
 	pb "docksphinx/api/docksphinx/v1"
 	"docksphinx/internal/event"
 	"docksphinx/internal/monitor"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func TestServerSnapshotAndStreamInitial(t *testing.T) {
@@ -80,6 +82,16 @@ func TestServerSnapshotAndStreamInitial(t *testing.T) {
 	}
 	if update.GetSnapshot() == nil {
 		t.Fatalf("expected initial snapshot payload, got %#v", update.GetPayload())
+	}
+}
+
+func TestServerGetSnapshotReturnsUnavailableWhenEngineMissing(t *testing.T) {
+	srv := &Server{
+		opts: &ServerOptions{RecentEventLimit: 10},
+	}
+	_, err := srv.GetSnapshot(context.Background(), &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable error, got %v", err)
 	}
 }
 
@@ -198,6 +210,28 @@ func TestServerStreamSkipsNilEventPayloads(t *testing.T) {
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("stream did not stop in time after cancel")
+	}
+}
+
+func TestServerStreamReturnsUnavailableWhenDependenciesMissing(t *testing.T) {
+	stream := &stubStreamServer{ctx: context.Background()}
+
+	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine, got %v", err)
+	}
+
+	engine, newErr := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if newErr != nil {
+		t.Fatalf("new engine failed: %v", newErr)
+	}
+	err = (&Server{engine: engine}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing broadcaster, got %v", err)
 	}
 }
 

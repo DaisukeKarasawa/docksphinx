@@ -89,22 +89,31 @@ func (s *Server) Address() string {
 
 // GetSnapshot implements DocksphinxService
 func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*pb.Snapshot, error) {
+	if s.engine == nil {
+		return nil, status.Error(codes.Unavailable, "engine not available")
+	}
 	sm := s.engine.GetStateManager()
 	if sm == nil {
 		return nil, status.Error(codes.Unavailable, "state not available")
 	}
 	snapshot := StateToSnapshot(sm)
-	snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.opts.RecentEventLimit))
+	snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.recentEventLimit()))
 	return snapshot, nil
 }
 
 // Stream implements DocksphinxService
 func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_StreamServer) error {
+	if s.engine == nil {
+		return status.Error(codes.Unavailable, "engine not available")
+	}
+	if s.bcast == nil {
+		return status.Error(codes.Unavailable, "broadcaster not available")
+	}
 	if req != nil && req.IncludeInitialSnapshot {
 		sm := s.engine.GetStateManager()
 		if sm != nil {
 			snapshot := StateToSnapshot(sm)
-			snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.opts.RecentEventLimit))
+			snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.recentEventLimit()))
 			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: snapshot}}); err != nil {
 				return err
 			}
@@ -129,4 +138,11 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 			}
 		}
 	}
+}
+
+func (s *Server) recentEventLimit() int {
+	if s == nil || s.opts == nil || s.opts.RecentEventLimit <= 0 {
+		return 50
+	}
+	return s.opts.RecentEventLimit
 }
