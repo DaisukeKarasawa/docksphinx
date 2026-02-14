@@ -2644,3 +2644,32 @@ make quality
 
 - `config_test.go` に `TestValidateNilConfigReturnsExplicitError` を追加し、`(*Config)(nil).Validate()` が `config is nil` を返す境界契約を回帰固定。
 - 既存実装の nil receiver ガードを「挙動だけでなく明示メッセージ」までテストで固定。
+
+---
+
+## 2026-02-14 (grpc client constructor early-cancel hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.NewClient` で `ctx.Err()` をダイヤル前に評価し、キャンセル済み context では `status.FromContextError` を即時返却するよう修正。
+- `client_test.go` に以下を追加:
+  - `TestNewClientReturnsContextErrorWhenCanceledBeforeDial`
+  - `TestWaitUntilReadyReturnsContextErrorWhenCanceled`
+- gRPC client 生成経路でも「不要な下流処理前に context-cancel short-circuit」契約を回帰固定。
