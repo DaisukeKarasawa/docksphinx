@@ -92,6 +92,7 @@ This file defines instructions for coding agents working on this project.
 - Long-lived receiver-driven loops should guard nil receivers explicitly and fail with clear errors before entering retry/reconnect cycles.
 - UI/input handler callbacks should nil-check optional dependencies (e.g., cancel funcs, app handles) before invoking them on key-event paths.
 - UI/input handler callbacks should also guard nil event objects before key/rune access to avoid nil-event dereference panics.
+- UI key-event paths that trigger app-bound operations (focus change, modal open/close) should treat nil `*tview.Application` as explicit no-op instead of dereferencing.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
 - CLI action handlers should validate required `*cli.Command` inputs and return explicit errors instead of dereferencing nil command pointers.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
