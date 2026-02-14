@@ -556,6 +556,17 @@ func TestCaptureInputQuitHandlesNilDependencies(t *testing.T) {
 	}
 }
 
+func TestCaptureInputHandlesNilEvent(t *testing.T) {
+	m := newTUIModel()
+	handler := m.captureInput(tview.NewApplication(), func() {})
+	if handler == nil {
+		t.Fatal("expected non-nil input handler")
+	}
+	if got := handler(nil); got != nil {
+		t.Fatalf("expected nil event input to return nil, got %#v", got)
+	}
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 

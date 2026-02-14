@@ -201,6 +201,9 @@ func (m *tuiModel) layout(app *tview.Application) tview.Primitive {
 
 func (m *tuiModel) captureInput(app *tview.Application, cancel context.CancelFunc) func(event *tcell.EventKey) *tcell.EventKey {
 	return func(event *tcell.EventKey) *tcell.EventKey {
+		if event == nil {
+			return nil
+		}
 		switch event.Key() {
 		case tcell.KeyTAB:
 			m.cycleFocus(app, true)
