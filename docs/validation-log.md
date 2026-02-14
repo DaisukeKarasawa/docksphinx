@@ -1885,3 +1885,32 @@ make quality
   - `TestLessNetworkInfoNilSafety`
   - `TestLessVolumeInfoNilSafety`
   - `TestLessImageInfoNilSafety`
+
+---
+
+## 2026-02-14 (compose-group key collision hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.buildComposeGroups` の集約キーを `project + "|" + service` 文字列連結から `struct{project, service}` へ変更し、区切り文字を含む値での衝突マージを排除。
+- `TestBuildComposeGroupsProjectServiceDelimiterCollisionSafety` を追加し、
+  - `project="a|b", service="c"`
+  - `project="a", service="b|c"`
+  の2組が誤って1グループに融合しないことを確認。
