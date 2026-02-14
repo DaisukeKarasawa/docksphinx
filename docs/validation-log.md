@@ -596,6 +596,17 @@ make quality
   - `govulncheck -mode=binary`: PASS
   - `govulncheck ./...`: known internal error (warning)
 
+### Manual terminal E2E: uppercase localhost should not emit plaintext warning
+
+```bash
+./bin/docksphinx snapshot --addr LOCALHOST:65535
+```
+
+観測結果（抜粋）:
+- `Error: connect daemon (LOCALHOST:65535): wait for grpc readiness LOCALHOST:65535: context deadline exceeded. start daemon with \`docksphinxd start\``
+
+判定: PASS（`WARNING: connecting ... over plaintext` が出力されない）
+
 ### Additional security hardening
 
 - `grpc.allow_non_loopback=false`（既定）時に、`grpc.address` が loopback 以外なら設定バリデーションで拒否することを追加。
