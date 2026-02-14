@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"syscall"
 	"testing"
@@ -558,4 +559,69 @@ func TestPrintSnapshotToSortsResourceSections(t *testing.T) {
 	mustAppearBefore("avol\tdriver=", "zvol\tdriver=")
 	mustAppearBefore("arepo:latest\tsize=", "zrepo:latest\tsize=")
 	mustAppearBefore("net_x,net_z", "net_a,net_b")
+}
+
+func TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields(t *testing.T) {
+	snapshot := &pb.Snapshot{
+		AtUnix: time.Now().Unix(),
+		Groups: []*pb.ComposeGroup{
+			{Project: "zeta", Service: "api", NetworkNames: []string{"net_b", "net_a"}},
+			{Project: "alpha", Service: "web", NetworkNames: []string{"net_z", "net_x"}},
+		},
+		Networks: []*pb.NetworkInfo{
+			{Name: "znet", Driver: "bridge", Scope: "local", ContainerCount: 1},
+			{Name: "anet", Driver: "bridge", Scope: "local", ContainerCount: 2},
+		},
+		Volumes: []*pb.VolumeInfo{
+			{Name: "zvol", Driver: "local", RefCount: 1, UsageNote: "metadata-only"},
+			{Name: "avol", Driver: "local", RefCount: 2, UsageNote: "metadata-only"},
+		},
+		Images: []*pb.ImageInfo{
+			{Repository: "zrepo", Tag: "latest", Size: 2, CreatedUnix: 1},
+			{Repository: "arepo", Tag: "latest", Size: 1, CreatedUnix: 1},
+		},
+	}
+
+	beforeGroupOrder := []string{
+		snapshot.Groups[0].GetProject() + "/" + snapshot.Groups[0].GetService(),
+		snapshot.Groups[1].GetProject() + "/" + snapshot.Groups[1].GetService(),
+	}
+	beforeGroupNets := append([]string(nil), snapshot.Groups[0].GetNetworkNames()...)
+	beforeNetworksOrder := []string{snapshot.Networks[0].GetName(), snapshot.Networks[1].GetName()}
+	beforeVolumesOrder := []string{snapshot.Volumes[0].GetName(), snapshot.Volumes[1].GetName()}
+	beforeImagesOrder := []string{
+		snapshot.Images[0].GetRepository() + ":" + snapshot.Images[0].GetTag(),
+		snapshot.Images[1].GetRepository() + ":" + snapshot.Images[1].GetTag(),
+	}
+
+	var buf bytes.Buffer
+	printSnapshotTo(snapshot, &buf)
+
+	afterGroupOrder := []string{
+		snapshot.Groups[0].GetProject() + "/" + snapshot.Groups[0].GetService(),
+		snapshot.Groups[1].GetProject() + "/" + snapshot.Groups[1].GetService(),
+	}
+	afterGroupNets := snapshot.Groups[0].GetNetworkNames()
+	afterNetworksOrder := []string{snapshot.Networks[0].GetName(), snapshot.Networks[1].GetName()}
+	afterVolumesOrder := []string{snapshot.Volumes[0].GetName(), snapshot.Volumes[1].GetName()}
+	afterImagesOrder := []string{
+		snapshot.Images[0].GetRepository() + ":" + snapshot.Images[0].GetTag(),
+		snapshot.Images[1].GetRepository() + ":" + snapshot.Images[1].GetTag(),
+	}
+
+	if !reflect.DeepEqual(beforeGroupOrder, afterGroupOrder) {
+		t.Fatalf("expected group order unchanged, before=%v after=%v", beforeGroupOrder, afterGroupOrder)
+	}
+	if !reflect.DeepEqual(beforeGroupNets, afterGroupNets) {
+		t.Fatalf("expected group network order unchanged, before=%v after=%v", beforeGroupNets, afterGroupNets)
+	}
+	if !reflect.DeepEqual(beforeNetworksOrder, afterNetworksOrder) {
+		t.Fatalf("expected networks order unchanged, before=%v after=%v", beforeNetworksOrder, afterNetworksOrder)
+	}
+	if !reflect.DeepEqual(beforeVolumesOrder, afterVolumesOrder) {
+		t.Fatalf("expected volumes order unchanged, before=%v after=%v", beforeVolumesOrder, afterVolumesOrder)
+	}
+	if !reflect.DeepEqual(beforeImagesOrder, afterImagesOrder) {
+		t.Fatalf("expected images order unchanged, before=%v after=%v", beforeImagesOrder, afterImagesOrder)
+	}
 }
