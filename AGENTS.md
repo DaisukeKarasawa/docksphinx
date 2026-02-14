@@ -80,6 +80,7 @@ This file defines instructions for coding agents working on this project.
 - Pub/sub broadcaster utilities should be nil-safe across subscribe/send/run paths and avoid blocking callers on nil receivers.
 - Broadcaster internals that rely on maps/slices should lazily initialize zero-value fields before first write (e.g., subscribe registration).
 - Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
+- CLI/TUI stream-consumer loops should validate required runtime arguments (stream clients, UI app handles) and return explicit errors instead of panicking on nil inputs.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
