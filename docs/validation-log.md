@@ -1826,3 +1826,31 @@ make quality
 - `cmd/docksphinx/tui.go` の `renderContainers` と `filteredContainerRowsForDetail` で重複していた sort predicate を `lessContainerForMode` + `lessContainerNameID` に集約。
 - CPU/MEM/Uptime/Name の tie-break 契約（同値時 `container_name` → `container_id`）を単一実装へ統一し、表示/詳細でのドリフト余地を排除。
 - 既存の TUI ソート回帰テスト群（`TestFilteredContainerRowsForDetail*`）が通過することを確認し、挙動不変を検証。
+
+---
+
+## 2026-02-14 (shared event comparator nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/eventorder.LessPB` と `LessInternal` に nil-safe guard を追加し、比較時に `nil` が混在しても panic しないようにした（`non-nil < nil`）。
+- 追加テスト:
+  - `TestLessPBNilSafety`
+  - `TestLessInternalNilSafety`
