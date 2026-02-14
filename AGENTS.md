@@ -50,6 +50,7 @@ This file defines instructions for coding agents working on this project.
 - gRPC client methods should short-circuit canceled contexts before invoking downstream RPC calls.
 - gRPC client constructors should also short-circuit already-canceled contexts before attempting dial/readiness workflows.
 - Context-driven wait/retry helpers should guard nil contexts before `ctx.Done()` selection and define deterministic timer-only behavior for nil inputs.
+- Polling/wait helpers that invoke callback checkers should validate non-nil callback inputs and return explicit errors instead of risking nil-function panics.
 - gRPC server constructors should trim/validate listen addresses and reject whitespace-only inputs before net.Listen.
 - Constructors accepting options structs should normalize on local copies to avoid mutating caller-provided option objects.
 - Stop/cleanup methods should release auxiliary resources as well (cancel funcs, listeners/channels) even in partially initialized states.
