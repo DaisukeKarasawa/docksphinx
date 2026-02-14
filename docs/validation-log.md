@@ -1762,3 +1762,40 @@ make quality
 - 追加テスト:
   - `internal/eventorder.TestLessPBAndLessInternalProduceSameOrder`
   - `internal/eventorder.TestLessInternalUsesSecondLevelTimestampBeforeID`
+
+---
+
+## 2026-02-14 (snapshot resource comparator centralization pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/snapshotorder` パッケージを新設し、以下の比較ロジックを共通化:
+  - `LessContainerInfo`
+  - `LessComposeGroup`
+  - `LessNetworkInfo`
+  - `LessVolumeInfo`
+  - `LessImageInfo`
+- `cmd/docksphinx/main.go`、`cmd/docksphinx/tui.go`、`internal/grpc/convert.go` の snapshot リソースソートを共通 comparator 利用に置換。
+- 追加テスト:
+  - `internal/snapshotorder.TestLessContainerInfo`
+  - `internal/snapshotorder.TestLessComposeGroup`
+  - `internal/snapshotorder.TestLessNetworkInfo`
+  - `internal/snapshotorder.TestLessVolumeInfo`
+  - `internal/snapshotorder.TestLessImageInfo`
