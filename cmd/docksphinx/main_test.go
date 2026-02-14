@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"syscall"
 	"testing"
@@ -229,6 +230,82 @@ func TestWrapDaemonError(t *testing.T) {
 		msg := err.Error()
 		if !strings.Contains(msg, "check daemon status") {
 			t.Fatalf("expected status hint in message, got: %s", msg)
+		}
+	})
+}
+
+func TestIsLoopback(t *testing.T) {
+	tests := []struct {
+		addr string
+		want bool
+	}{
+		{addr: "127.0.0.1:50051", want: true},
+		{addr: "localhost:50051", want: true},
+		{addr: "[::1]:50051", want: true},
+		{addr: "0.0.0.0:50051", want: false},
+		{addr: "192.168.1.10:50051", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.addr, func(t *testing.T) {
+			got := isLoopback(tt.addr)
+			if got != tt.want {
+				t.Fatalf("isLoopback(%q)=%t, want %t", tt.addr, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWarnInsecure(t *testing.T) {
+	t.Run("loopback does not warn", func(t *testing.T) {
+		orig := os.Stderr
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("pipe setup failed: %v", err)
+		}
+		os.Stderr = w
+		warnInsecure("127.0.0.1:50051", false)
+		_ = w.Close()
+		os.Stderr = orig
+
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		if got := buf.String(); got != "" {
+			t.Fatalf("expected no warning, got: %q", got)
+		}
+	})
+
+	t.Run("non-loopback warns unless insecure flag set", func(t *testing.T) {
+		orig := os.Stderr
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("pipe setup failed: %v", err)
+		}
+		os.Stderr = w
+		warnInsecure("10.0.0.5:50051", false)
+		_ = w.Close()
+		os.Stderr = orig
+
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		got := buf.String()
+		if !strings.Contains(got, "WARNING: connecting to 10.0.0.5:50051 over plaintext") {
+			t.Fatalf("expected warning message, got: %q", got)
+		}
+
+		r2, w2, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("second pipe setup failed: %v", err)
+		}
+		os.Stderr = w2
+		warnInsecure("10.0.0.5:50051", true)
+		_ = w2.Close()
+		os.Stderr = orig
+
+		var buf2 bytes.Buffer
+		_, _ = io.Copy(&buf2, r2)
+		if got2 := buf2.String(); got2 != "" {
+			t.Fatalf("expected no warning when insecure=true, got: %q", got2)
 		}
 	})
 }
