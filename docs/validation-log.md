@@ -3427,3 +3427,29 @@ make quality
 
 - `internal/grpc.NewServer` の reflection 判定を `opts.EnableReflection` 参照から `resolved.EnableReflection` 参照へ修正し、`opts==nil` 経路での nil dereference panic を解消。
 - `internal/grpc/server_test.go` に `TestNewServerNilOptionsUsesDefaults` を追加し、`NewServer(nil, engine)` が panic せず既定 `RecentEventLimit=50` を適用する契約を回帰固定（既定ポート競合時は環境依存で skip）。
+
+---
+
+## 2026-02-14 (TUI quit-key nil-dependency hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.captureInput` の `q` 分岐で `cancel` / `app` を nil ガードして呼び出すよう変更し、nil dependency 注入時の終了キー経路 panic を防止。
+- `cmd/docksphinx/tui_test.go` に `TestCaptureInputQuitHandlesNilDependencies` を追加し、`captureInput(nil, nil)` でも `q` キー処理が panic せずイベントを処理完了（`nil` 返却）する契約を回帰固定。
