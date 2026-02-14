@@ -263,6 +263,24 @@ make quality
   - `govulncheck -mode=binary`: PASS
   - `govulncheck ./...`: known internal error (warning)
 
+---
+
+## 2026-02-14 (CLI plaintext warning boundary test pass)
+
+### Unified gate run
+
+```bash
+make quality
+```
+
+結果:
+- `make test`: PASS
+- `make test-race`: PASS
+- `make security`: PASS
+  - `gosec`: PASS (Issues: 0)
+  - `govulncheck -mode=binary`: PASS
+  - `govulncheck ./...`: known internal error (warning)
+
 ### Additional security hardening
 
 - `grpc.allow_non_loopback=false`（既定）時に、`grpc.address` が loopback 以外なら設定バリデーションで拒否することを追加。
