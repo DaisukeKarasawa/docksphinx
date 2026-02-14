@@ -194,20 +194,21 @@ func printSnapshot(snapshot *pb.Snapshot) {
 	})
 	for _, c := range containers {
 		m := snapshot.GetMetrics()[c.GetContainerId()]
-		cpu := 0.0
-		mem := 0.0
+		cpu := "N/A"
+		mem := "N/A"
 		if m != nil {
-			cpu = m.GetCpuPercent()
-			mem = m.GetMemoryPercent()
+			cpu = fmt.Sprintf("%.2f", m.GetCpuPercent())
+			mem = fmt.Sprintf("%.2f", m.GetMemoryPercent())
 		}
+		uptime := formatUptimeOrNA(c)
 		fmt.Printf(
-			"%s\t%s\t%s\t%.2f\t%.2f\t%d\t%s\n",
+			"%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			shortContainerID(c.GetContainerId()),
 			trimContainerName(c.GetContainerName()),
 			c.GetState(),
 			cpu,
 			mem,
-			c.GetUptimeSeconds(),
+			uptime,
 			c.GetImageName(),
 		)
 	}
@@ -235,6 +236,16 @@ func shortContainerID(id string) string {
 
 func trimContainerName(name string) string {
 	return strings.TrimPrefix(name, "/")
+}
+
+func formatUptimeOrNA(c *pb.ContainerInfo) string {
+	if c == nil {
+		return "N/A"
+	}
+	if c.GetStartedAtUnix() <= 0 && c.GetUptimeSeconds() <= 0 {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", c.GetUptimeSeconds())
 }
 
 func waitOrDone(ctx context.Context, d time.Duration) error {
