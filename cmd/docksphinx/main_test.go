@@ -5,11 +5,15 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestFormatUptimeOrNA(t *testing.T) {
@@ -189,5 +193,42 @@ func TestLogTailRetry(t *testing.T) {
 
 	t.Run("nil writer is no-op", func(t *testing.T) {
 		logTailRetry(nil, "subscribe", errors.New("boom"), 500*time.Millisecond)
+	})
+}
+
+func TestWrapDaemonError(t *testing.T) {
+	t.Run("connection refused suggests daemon start", func(t *testing.T) {
+		refused := &net.OpError{Err: syscall.ECONNREFUSED}
+		err := wrapDaemonError("connect", "127.0.0.1:50051", refused)
+		if err == nil {
+			t.Fatal("expected wrapped error")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "start daemon with `docksphinxd start`") {
+			t.Fatalf("expected start hint in message, got: %s", msg)
+		}
+	})
+
+	t.Run("deadline exceeded suggests daemon start", func(t *testing.T) {
+		err := wrapDaemonError("snapshot", "127.0.0.1:50051", context.DeadlineExceeded)
+		if err == nil {
+			t.Fatal("expected wrapped error")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "start daemon with `docksphinxd start`") {
+			t.Fatalf("expected start hint in message, got: %s", msg)
+		}
+	})
+
+	t.Run("grpc unavailable suggests status check", func(t *testing.T) {
+		stErr := status.Error(codes.Unavailable, "transport is closing")
+		err := wrapDaemonError("tail", "127.0.0.1:50051", stErr)
+		if err == nil {
+			t.Fatal("expected wrapped error")
+		}
+		msg := err.Error()
+		if !strings.Contains(msg, "check daemon status") {
+			t.Fatalf("expected status hint in message, got: %s", msg)
+		}
 	})
 }
