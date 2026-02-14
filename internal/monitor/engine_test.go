@@ -32,6 +32,14 @@ func TestStateManager(t *testing.T) {
 	if retrieved.ContainerName != "test" {
 		t.Errorf("Expected container name 'test', got '%s'", retrieved.ContainerName)
 	}
+	retrieved.ContainerName = "mutated"
+	again, exists := sm.GetState("test-container")
+	if !exists {
+		t.Error("Expected state to exist")
+	}
+	if again.ContainerName != "test" {
+		t.Fatalf("Expected cloned state read to keep original value, got '%s'", again.ContainerName)
+	}
 
 	state2 := &ContainerState{
 		ContainerID:   "test-container",

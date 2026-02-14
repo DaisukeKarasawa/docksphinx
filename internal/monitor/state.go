@@ -89,7 +89,10 @@ func (sm *StateManager) GetState(containerID string) (*ContainerState, bool) {
 	defer sm.mu.RUnlock()
 
 	state, exists := sm.states[containerID]
-	return state, exists
+	if !exists || state == nil {
+		return nil, exists
+	}
+	return cloneContainerState(state), true
 }
 
 // UpdateState updates the state of a container
@@ -134,7 +137,7 @@ func (sm *StateManager) GetAllStates() map[string]*ContainerState {
 	// Create a copy to avoid race conditions
 	result := make(map[string]*ContainerState)
 	for id, state := range sm.states {
-		result[id] = state
+		result[id] = cloneContainerState(state)
 	}
 
 	return result
@@ -189,4 +192,13 @@ func cloneComposeGroups(in []ComposeGroup) []ComposeGroup {
 		})
 	}
 	return out
+}
+
+func cloneContainerState(in *ContainerState) *ContainerState {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	out.NetworkNames = append([]string(nil), in.NetworkNames...)
+	return &out
 }
