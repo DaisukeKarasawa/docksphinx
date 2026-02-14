@@ -3316,3 +3316,33 @@ make quality
 
 - `cmd/docksphinxd.checkGRPCHealth` で `parent==nil` を `context.Background()` に正規化し、`context.WithTimeout(nil, ...)` 由来 panic を防止。
 - `cmd/docksphinxd/main_test.go` に `TestCheckGRPCHealthHandlesNilParentContext` を追加し、nil 親 context 相当入力でも panic せず dial エラーへ収束する契約を回帰固定。
+
+---
+
+## 2026-02-14 (CLI signal/timeout parent-context normalization pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.runTail` / `runTUI` で `signal.NotifyContext` 呼び出し前に親 context を `normalizeParentContext` で正規化し、nil 親 context での child-context 生成 panic を防止。
+- `cmd/docksphinxd.runStart` / `runStop` で `signal.NotifyContext` / `context.WithTimeout` の親 context を同様に正規化し、nil 親入力でも安全に処理できるよう hardening。
+- `cmd/docksphinxd.checkGRPCHealth` は既存の nil 親正規化を共通 helper へ統一し、重複実装を削減。
+- 回帰テストを追加:
+  - `cmd/docksphinx/main_test.go`: `TestNormalizeParentContext`
+  - `cmd/docksphinxd/main_test.go`: `TestNormalizeParentContext`
