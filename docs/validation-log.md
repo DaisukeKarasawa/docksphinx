@@ -1972,3 +1972,33 @@ make quality
   - `TestPrintSnapshotToSkipsNilResourceEntries`
   - `TestRenderResourcesSkipNilEntries`
   - `TestFilteredContainerRowsForDetailSkipsNilEntries`
+
+---
+
+## 2026-02-14 (tui event buffer nil-filter compaction pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx/tui.go` に `compactEvents` を追加し、stream受信イベント配列で `nil` を除去しつつ上限件数を一元管理。
+- `consumeStream` の snapshot/event 更新時に `compactEvents` を利用し、`m.events` 内の `nil` 混入と過剰保持を抑止。
+- `renderRight` / `lastEventType` で `nil` イベントを明示スキップし、右ペインの空行アーティファクトと誤判定を防止。
+- 追加テスト:
+  - `TestCompactEventsFiltersNilAndAppliesLimit`
+  - `TestLastEventTypeSkipsNilEntries`
