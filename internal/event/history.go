@@ -122,6 +122,17 @@ func cloneValueReflect(v reflect.Value) reflect.Value {
 			out.Index(i).Set(cloneValueReflect(v.Index(i)))
 		}
 		return out
+	case reflect.Struct:
+		out := reflect.New(v.Type()).Elem()
+		out.Set(v) // copy all fields first (including unexported)
+		for i := 0; i < v.NumField(); i++ {
+			field := out.Field(i)
+			if !field.CanSet() {
+				continue
+			}
+			field.Set(cloneValueReflect(v.Field(i)))
+		}
+		return out
 	default:
 		return v
 	}

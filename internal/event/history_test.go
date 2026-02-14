@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+type structuredPayload struct {
+	Name  string
+	Items []string
+	Meta  map[string]string
+}
+
 func TestHistoryRecentReturnsNewestFirstWithinLimit(t *testing.T) {
 	h := NewHistory(2)
 
@@ -33,16 +39,22 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	nestedSlice := []interface{}{"x", "y"}
 	stringMap := map[string]string{"owner": "team-a"}
 	stringSlice := []string{"svc-a", "svc-b"}
+	structured := structuredPayload{
+		Name:  "payload",
+		Items: []string{"it-1", "it-2"},
+		Meta:  map[string]string{"k": "v"},
+	}
 	original := &Event{
 		ID:        "e1",
 		Type:      EventTypeCPUThreshold,
 		Timestamp: time.Unix(100, 0),
 		Data: map[string]interface{}{
-			"cpu":    95.5,
-			"meta":   nestedMap,
-			"tags":   nestedSlice,
-			"labels": stringMap,
-			"names":  stringSlice,
+			"cpu":        95.5,
+			"meta":       nestedMap,
+			"tags":       nestedSlice,
+			"labels":     stringMap,
+			"names":      stringSlice,
+			"structured": structured,
 		},
 		Message: "high cpu",
 	}
@@ -57,6 +69,8 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	nestedSlice[0] = "changed"
 	stringMap["owner"] = "mutated-team"
 	stringSlice[0] = "changed-svc"
+	structured.Items[0] = "mutated-item"
+	structured.Meta["k"] = "mutated-meta"
 
 	got := h.Recent(1)
 	if len(got) != 1 {
@@ -77,6 +91,11 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if gotNames, ok := got[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
 		t.Fatalf("expected typed slice to be isolated, got %#v", got[0].Data["names"])
 	}
+	if gotStructured, ok := got[0].Data["structured"].(structuredPayload); !ok ||
+		len(gotStructured.Items) != 2 || gotStructured.Items[0] != "it-1" ||
+		gotStructured.Meta["k"] != "v" {
+		t.Fatalf("expected struct payload to be isolated, got %#v", got[0].Data["structured"])
+	}
 	if !reflect.DeepEqual(got[0].Data["cpu"], 95.5) {
 		t.Fatalf("expected stored data to be unchanged, got %#v", got[0].Data)
 	}
@@ -95,6 +114,11 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if names, ok := got[0].Data["names"].([]string); ok && len(names) > 0 {
 		names[0] = "out-changed-svc"
+	}
+	if payload, ok := got[0].Data["structured"].(structuredPayload); ok {
+		payload.Items[0] = "out-mutated-item"
+		payload.Meta["k"] = "out-mutated-meta"
+		got[0].Data["structured"] = payload
 	}
 
 	gotAgain := h.Recent(1)
@@ -115,6 +139,11 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotNames, ok := gotAgain[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
 		t.Fatalf("expected typed slice in history to stay unchanged, got %#v", gotAgain[0].Data["names"])
+	}
+	if gotStructured, ok := gotAgain[0].Data["structured"].(structuredPayload); !ok ||
+		len(gotStructured.Items) != 2 || gotStructured.Items[0] != "it-1" ||
+		gotStructured.Meta["k"] != "v" {
+		t.Fatalf("expected struct payload in history to stay unchanged, got %#v", gotAgain[0].Data["structured"])
 	}
 }
 
