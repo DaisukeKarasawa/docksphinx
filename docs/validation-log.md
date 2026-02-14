@@ -1084,3 +1084,28 @@ make quality
   - `(*History)(nil).Add(...)` は panic せず no-op
   - `(*History)(nil).Recent(...)` は `nil` を返す
   - `History.Add(nil)` は履歴を汚染しない
+
+---
+
+## 2026-02-14 (event history typed-nil data preservation pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` に `TestHistoryPreservesTypedNilDataValues` を追加し、`Event.Data` 内の typed nil（`map[string]string(nil)`, `[]string(nil)`, `*structuredPayload(nil)`）が deep-copy 後も nil 性を保持することを確認。
