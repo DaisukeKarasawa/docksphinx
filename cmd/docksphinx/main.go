@@ -150,7 +150,7 @@ func runTail(parent context.Context, address string) error {
 			return nil
 		}
 
-		logTailRetry(os.Stderr, "stream disconnected", recvErr, backoff)
+		logTailStreamReconnect(os.Stderr, recvErr, backoff)
 		if err := waitOrDone(ctx, backoff); err != nil {
 			return nil
 		}
@@ -163,6 +163,13 @@ func logTailRetry(out io.Writer, phase string, err error, backoff time.Duration)
 		return
 	}
 	fmt.Fprintf(out, "tail %s failed: %v (retrying in %s)\n", phase, err, backoff)
+}
+
+func logTailStreamReconnect(out io.Writer, err error, backoff time.Duration) {
+	if out == nil {
+		return
+	}
+	fmt.Fprintf(out, "tail stream disconnected: %v (retrying in %s)\n", err, backoff)
 }
 
 func consumeStream(ctx context.Context, stream pb.DocksphinxService_StreamClient) error {

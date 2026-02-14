@@ -197,6 +197,23 @@ func TestLogTailRetry(t *testing.T) {
 	})
 }
 
+func TestLogTailStreamReconnect(t *testing.T) {
+	t.Run("writes expected format", func(t *testing.T) {
+		var buf bytes.Buffer
+		logTailStreamReconnect(&buf, io.EOF, time.Second)
+
+		got := buf.String()
+		want := "tail stream disconnected: EOF (retrying in 1s)\n"
+		if got != want {
+			t.Fatalf("unexpected stream reconnect log format:\n got: %q\nwant: %q", got, want)
+		}
+	})
+
+	t.Run("nil writer is no-op", func(t *testing.T) {
+		logTailStreamReconnect(nil, io.EOF, time.Second)
+	})
+}
+
 func TestWrapDaemonError(t *testing.T) {
 	t.Run("connection refused suggests daemon start", func(t *testing.T) {
 		refused := &net.OpError{Err: syscall.ECONNREFUSED}
