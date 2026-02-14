@@ -3264,3 +3264,29 @@ make quality
 
 - `cmd/docksphinx.warnInsecure` で trim 後 address が空文字の場合は no-op 返却するよう変更し、空白-only 入力で無意味な plaintext warning を出さないよう hardening。
 - `cmd/docksphinx/main_test.go` に `TestWarnInsecure/whitespace-only address does not warn` を追加し、空白-only 境界で警告非出力契約を回帰固定。
+
+---
+
+## 2026-02-14 (daemon CLI nil-command guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinxd.runStart` / `runStop` / `runStatus` に `cmd==nil` ガードを追加し、nil command 入力で panic せず明示エラー（`command is nil`）を返す契約へ強化。
+- `cmd/docksphinxd/main_test.go` に `TestRunCommandsRejectNilCommand` を追加し、上記3 action の nil command 境界を回帰固定。
