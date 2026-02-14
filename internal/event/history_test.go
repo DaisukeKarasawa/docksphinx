@@ -74,6 +74,36 @@ func TestHistoryNilSafetyContracts(t *testing.T) {
 	}
 }
 
+func TestHistoryPreservesTypedNilDataValues(t *testing.T) {
+	h := NewHistory(2)
+	var nilMap map[string]string
+	var nilSlice []string
+	var nilPtr *structuredPayload
+
+	h.Add(&Event{
+		ID: "typed-nil",
+		Data: map[string]interface{}{
+			"nilMap":   nilMap,
+			"nilSlice": nilSlice,
+			"nilPtr":   nilPtr,
+		},
+	})
+
+	got := h.Recent(1)
+	if len(got) != 1 {
+		t.Fatalf("expected one event, got %d", len(got))
+	}
+	if v, ok := got[0].Data["nilMap"].(map[string]string); !ok || v != nil {
+		t.Fatalf("expected typed nil map, got %#v", got[0].Data["nilMap"])
+	}
+	if v, ok := got[0].Data["nilSlice"].([]string); !ok || v != nil {
+		t.Fatalf("expected typed nil slice, got %#v", got[0].Data["nilSlice"])
+	}
+	if v, ok := got[0].Data["nilPtr"].(*structuredPayload); !ok || v != nil {
+		t.Fatalf("expected typed nil pointer, got %#v", got[0].Data["nilPtr"])
+	}
+}
+
 func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	h := NewHistory(5)
 
