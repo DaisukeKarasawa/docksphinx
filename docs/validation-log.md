@@ -1914,3 +1914,31 @@ make quality
   - `project="a|b", service="c"`
   - `project="a", service="b|c"`
   の2組が誤って1グループに融合しないことを確認。
+
+---
+
+## 2026-02-14 (compose-group comparator canonicalization pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/snapshotorder.LessComposeGroup` の tie-break 比較で `container_ids` / `network_names` / `container_names` を比較前にコピーしてソートし、入力配列順のゆらぎに依存しない canonical order へ強化。
+- `TestLessComposeGroupCanonicalizesSlicesAndKeepsInputsUnchanged` を追加し、以下を確認:
+  - 比較時に内部スライス順を正規化して順序判定されること
+  - 比較処理が元の `ComposeGroup` スライスを破壊しないこと（non-mutating）
