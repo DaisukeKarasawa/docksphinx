@@ -223,6 +223,22 @@ func TestDescribePIDStatusInvalidPIDReturnsError(t *testing.T) {
 	}
 }
 
+func TestDescribePIDStatusNilCheckerReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, err := describePIDStatus(pidPath, nil)
+	if err == nil {
+		t.Fatal("expected explicit error for nil checker")
+	}
+	if !strings.Contains(err.Error(), "pid checker is nil") {
+		t.Fatalf("expected nil checker error, got: %v", err)
+	}
+}
+
 func TestInspectPID(t *testing.T) {
 	dir := t.TempDir()
 	pidPath := filepath.Join(dir, "docksphinxd.pid")
@@ -261,6 +277,22 @@ func TestInspectPID(t *testing.T) {
 	_, _, _, err = inspectPID(pidPath, func(_ int) error { return errors.New("boom") })
 	if err == nil {
 		t.Fatal("expected unknown checker error")
+	}
+}
+
+func TestInspectPIDNilCheckerReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, _, err := inspectPID(pidPath, nil)
+	if err == nil {
+		t.Fatal("expected explicit error for nil checker")
+	}
+	if !strings.Contains(err.Error(), "pid checker is nil") {
+		t.Fatalf("expected nil checker error, got: %v", err)
 	}
 }
 
