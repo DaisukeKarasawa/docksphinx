@@ -31,6 +31,7 @@
 - [ ] `reviewer-checklist.md`
 - [ ] `review-sequence.md`
 - [ ] `plan-completion-checklist.md`
+- [ ] `plan-execution-report.md`
 - [ ] `acceptance-signoff-template.md`
 
 ## 6. 導線整合
@@ -42,3 +43,4 @@
 - [ ] `final-status.md` が最新
 - [ ] `risk-register.md` が最新
 - [ ] `execution-changelog.md` が最新
+- [ ] `navigation-map.md` が最新
