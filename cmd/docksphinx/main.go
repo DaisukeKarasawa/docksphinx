@@ -399,6 +399,9 @@ func warnInsecure(address string, insecure bool) {
 }
 
 func isConnectionRefused(err error) bool {
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		return true
+	}
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
 		return errors.Is(opErr.Err, syscall.ECONNREFUSED)

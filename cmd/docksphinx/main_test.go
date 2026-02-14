@@ -309,3 +309,25 @@ func TestWarnInsecure(t *testing.T) {
 		}
 	})
 }
+
+func TestIsConnectionRefused(t *testing.T) {
+	t.Run("direct errno", func(t *testing.T) {
+		if !isConnectionRefused(syscall.ECONNREFUSED) {
+			t.Fatal("expected direct ECONNREFUSED to be detected")
+		}
+	})
+
+	t.Run("nested net op error", func(t *testing.T) {
+		err := &net.OpError{Err: syscall.ECONNREFUSED}
+		if !isConnectionRefused(err) {
+			t.Fatal("expected nested ECONNREFUSED to be detected")
+		}
+	})
+
+	t.Run("non refused error", func(t *testing.T) {
+		err := &net.OpError{Err: syscall.ETIMEDOUT}
+		if isConnectionRefused(err) {
+			t.Fatal("did not expect ETIMEDOUT to be detected as refused")
+		}
+	})
+}
