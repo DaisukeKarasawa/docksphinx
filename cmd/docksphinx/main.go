@@ -449,9 +449,13 @@ func nextBackoff(current time.Duration) time.Duration {
 }
 
 func isLoopback(address string) bool {
-	host, _, err := net.SplitHostPort(address)
+	trimmed := strings.TrimSpace(address)
+	if trimmed == "" {
+		return false
+	}
+	host, _, err := net.SplitHostPort(trimmed)
 	if err != nil {
-		host = address
+		host = trimmed
 	}
 	if strings.EqualFold(host, "localhost") {
 		return true
@@ -461,10 +465,11 @@ func isLoopback(address string) bool {
 }
 
 func warnInsecure(address string, insecure bool) {
-	if insecure || isLoopback(address) {
+	normalizedAddress := strings.TrimSpace(address)
+	if insecure || isLoopback(normalizedAddress) {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "WARNING: connecting to %s over plaintext (no TLS)\n", address)
+	fmt.Fprintf(os.Stderr, "WARNING: connecting to %s over plaintext (no TLS)\n", normalizedAddress)
 }
 
 func isConnectionRefused(err error) bool {
