@@ -60,6 +60,36 @@ func TestWaitForProcessExitPermissionDenied(t *testing.T) {
 	}
 }
 
+func TestWaitForProcessExitUnexpectedCheckerError(t *testing.T) {
+	pid := 4567
+	checker := func(_ int) error { return errors.New("checker boom") }
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, checker)
+	if err == nil {
+		t.Fatal("expected checker error to be returned")
+	}
+	if !strings.Contains(err.Error(), "failed to check process") {
+		t.Fatalf("expected wrapped checker error, got: %v", err)
+	}
+}
+
+func TestWaitForProcessExitImmediateContextCancel(t *testing.T) {
+	pid := 5678
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, func(_ int) error { return nil })
+	if err == nil {
+		t.Fatal("expected error when context is already canceled")
+	}
+	if !strings.Contains(err.Error(), "did not stop") {
+		t.Fatalf("expected timeout/cancel message, got: %v", err)
+	}
+}
+
 func TestRemovePIDFileIfExists(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "docksphinxd.pid")
