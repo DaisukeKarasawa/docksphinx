@@ -7,6 +7,26 @@
 
 ## 主要コミット（新しい順）
 
+- `6a01200` - master checklistに実行レポート確認項目追加
+- `fe8c355` - PLAN実行レポート追加 + README/index/link-audit導線更新
+- `5370de3` - 成果物マニフェストを最新文書群へ同期
+- `d787dfa` - final-status参照起点を最終運用導線まで拡張
+- `0144512` - link-auditにmaster checklistを追加
+- `68eb4ca` - docs indexにmaster checklistを追加
+- `1f3dd3f` - READMEにmaster checklistリンク追加
+- `8db05fc` - master checklist追加
+- `51890da` - link-auditにowner-rotation-noteを追加
+- `c1379e0` - docs indexにowner-rotation-noteを追加
+- `c8f892e` - READMEにowner-rotation-noteリンク追加
+- `846109c` - owner-rotation-note追加
+- `0f3936f` - final-statusにmaintenance-routine参照追加
+- `7aa4c03` - link-auditにmaintenance-routineを追加
+- `0ac917f` - docs indexにmaintenance-routineを追加
+- `283e0d2` - READMEにmaintenance-routineリンク追加
+- `6577988` - maintenance-routine追加
+- `7f32fa9` - link-auditを最新READMEリンクに同期
+- `c9ad92b` - AGENTSにdocs導線整合ルールを追加
+- `c400316` - docs indexにnavigation-mapを追加
 - `6b9b70d` - READMEにFAQリンク追加
 - `50be876` - MVP FAQ追加
 - `d75cd4f` - READMEに制約/次の一手リンク追加
