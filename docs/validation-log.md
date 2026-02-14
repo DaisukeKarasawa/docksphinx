@@ -724,3 +724,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/monitor` の `TestBuildComposeGroupsUsesComposeLabels` で、group 内 `ContainerIDs` が昇順で安定化されることを検証。
+
+---
+
+## 2026-02-14 (recent-events tie-break regression assertion pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx` の `TestSelectRecentEvents` に、同一 timestamp での `id asc` タイブレーク保証ケースを追加。
