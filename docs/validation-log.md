@@ -2618,3 +2618,29 @@ make quality
 - `engine_test.go` に `TestEngineLoggerNilSafetyOnInternalPaths` を追加し、以下を回帰固定:
   - `collectAndDetect` の early-return 経路が nil logger でも panic しない
   - `publishEvent` の full-channel warning 経路が nil logger でも panic しない（履歴追加は継続）
+
+---
+
+## 2026-02-14 (config-validate nil-receiver contract regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `config_test.go` に `TestValidateNilConfigReturnsExplicitError` を追加し、`(*Config)(nil).Validate()` が `config is nil` を返す境界契約を回帰固定。
+- 既存実装の nil receiver ガードを「挙動だけでなく明示メッセージ」までテストで固定。
