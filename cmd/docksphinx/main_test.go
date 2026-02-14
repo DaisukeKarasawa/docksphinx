@@ -110,6 +110,20 @@ func TestSelectRecentEvents(t *testing.T) {
 	if got[0].GetId() != "a" || got[1].GetId() != "b" || got[2].GetId() != "c" {
 		t.Fatalf("expected id-asc tie-break [a b c], got [%s %s %s]", got[0].GetId(), got[1].GetId(), got[2].GetId())
 	}
+
+	withNil := []*pb.Event{
+		nil,
+		{Id: "z", TimestampUnix: 10},
+		nil,
+		{Id: "a", TimestampUnix: 20},
+	}
+	got = selectRecentEvents(withNil, 10)
+	if len(got) != 2 {
+		t.Fatalf("expected nil events to be filtered out, got len=%d", len(got))
+	}
+	if got[0].GetId() != "a" || got[1].GetId() != "z" {
+		t.Fatalf("expected filtered/sorted order [a z], got [%s %s]", got[0].GetId(), got[1].GetId())
+	}
 }
 
 func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
