@@ -36,6 +36,7 @@ This file defines instructions for coding agents working on this project.
 - When the same ordering contract is required in multiple paths, centralize comparator logic in a shared helper/package to prevent drift.
 - For snapshot resource ordering (containers/images/networks/volumes/groups), reuse shared `internal/snapshotorder` comparators instead of duplicating sort predicates.
 - Shared comparator helpers must be nil-safe (no panic on nil inputs) and covered by explicit nil-case regression tests.
+- Local display-sort comparator helpers that accept pointer records should also define nil-ordering behavior explicitly and be covered by nil-case regression tests.
 - When adding nil-receiver guards, include direct regression tests for the guard contract (returned value/error and, where stable, explicit error message).
 - For map/group aggregation keyed by multiple fields, use structured keys (e.g., struct keys) instead of delimiter-concatenated strings to avoid collision bugs.
 - When slice fields participate in tie-break ordering, compare canonicalized copies (sorted/joined) so ordering is independent of source slice order and remains non-mutating.
