@@ -115,3 +115,11 @@ Consider updating AGENTS.md in the following situations:
 - When directory structure or package management files are changed
 - **After receiving user feedback**: When a user provides feedback about documentation quality, process improvements, or policy gaps, immediately update AGENTS.md to incorporate the feedback
 - **After completing significant work**: Review and update AGENTS.md after completing major tasks to capture any new insights or patterns
+
+### Documentation Navigation Integrity
+
+- When adding or renaming files under `docs/`, always update both:
+  - `README.md` (major document links)
+  - `docs/index.md` (category index)
+- After updating documentation links, refresh `docs/link-audit.md` so the audit target list matches README.
+- Treat navigation consistency (`README` ↔ `docs/index.md` ↔ `docs/link-audit.md`) as a required completion check.
