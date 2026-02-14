@@ -34,6 +34,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 要件トレーサビリティ表: `docs/requirements-traceability.md`
 - コントリビューション作業フロー: `docs/contribution-workflow.md`
 - 障害初動プレイブック: `docs/incident-playbook.md`
+- macOS launchd チェックリスト: `docs/macos-launchd-checklist.md`
 
 ## 補足
 
