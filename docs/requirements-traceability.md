@@ -20,6 +20,11 @@
 | REQ-H4 | compose推定 | `requirements.md`, `mvp-spec-freeze.md` | `phase4-implementation.md`, `patches/phase3-6.diff.md` |
 | REQ-H5 | メトリクス定義 | `requirements.md`, `glossary.md` | `specs/metrics-definition.md` |
 | REQ-H6 | テスト戦略 | `security-check-summary.md`, `ci-gate-template.md` | `phase5-validation.md`, `test-plan.md` |
+| REQ-OPS1 | 障害初動/運用復旧 | `incident-playbook.md`, `macos-launchd-checklist.md` | `ops/launchd.md` |
+| REQ-OPS2 | セキュリティ基準運用 | `security-baseline-checklist.md`, `risk-register.md` | `security-report.md` |
+| REQ-OPS3 | 回帰運用固定 | `minimal-regression-suite.md`, `validation-log-template.md` | `phase5-validation.md` |
+| REQ-OPS4 | 承認・サインオフ | `review-sequence.md`, `acceptance-signoff-template.md`, `master-checklist.md` | `phase6-security-refactor.md` |
+| REQ-OPS5 | 継続保守 | `maintenance-routine.md`, `owner-rotation-note.md`, `navigation-map.md` | `README-update-proposal.md` |
 
 ---
 
