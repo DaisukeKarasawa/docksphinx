@@ -19,6 +19,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - ADR-0001（outputsベース実装提供方針）: `docs/adr-0001-mvp-delivery-mode.md`
 - READMEリンク監査レポート: `docs/link-audit.md`
 - CI品質ゲートテンプレート: `docs/ci-gate-template.md`
+- 制約事項と次の一手: `docs/limitations-and-next-steps.md`
 
 ## 補足
 
