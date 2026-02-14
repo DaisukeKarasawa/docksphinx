@@ -29,6 +29,7 @@ internal error 以外の失敗は `make security` をエラー終了します。
 ```bash
 ./bin/docksphinxd start --config ./configs/docksphinx.yaml.example
 ```
+`start` は既存 PID が稼働中なら二重起動を防止し、stale PID の場合は自動掃除して起動します。
 
 状態確認:
 ```bash
