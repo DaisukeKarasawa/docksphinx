@@ -32,6 +32,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - PLAN完了チェックリスト: `docs/plan-completion-checklist.md`
 - コマンド出力サンプル（実行証跡）: `docs/command-output-samples.md`
 - 要件トレーサビリティ表: `docs/requirements-traceability.md`
+- コントリビューション作業フロー: `docs/contribution-workflow.md`
 
 ## 補足
 
