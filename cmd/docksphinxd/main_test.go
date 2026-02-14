@@ -251,3 +251,29 @@ func TestInspectPIDInvalidPIDFileReturnsError(t *testing.T) {
 		t.Fatalf("expected invalid pid error, got: %v", err)
 	}
 }
+
+func TestMarkAlreadyReported(t *testing.T) {
+	t.Run("wraps original error", func(t *testing.T) {
+		orig := errors.New("boom")
+		err := markAlreadyReported(orig)
+		if err == nil {
+			t.Fatal("expected non-nil error")
+		}
+		if !errors.Is(err, ErrAlreadyReported) {
+			t.Fatalf("expected ErrAlreadyReported wrapper, got: %v", err)
+		}
+		if !strings.Contains(err.Error(), "boom") {
+			t.Fatalf("expected wrapped original message, got: %v", err)
+		}
+	})
+
+	t.Run("nil input still returns sentinel", func(t *testing.T) {
+		err := markAlreadyReported(nil)
+		if err == nil {
+			t.Fatal("expected non-nil sentinel error")
+		}
+		if !errors.Is(err, ErrAlreadyReported) {
+			t.Fatalf("expected ErrAlreadyReported for nil input, got: %v", err)
+		}
+	})
+}

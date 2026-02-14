@@ -18,6 +18,7 @@ import (
 )
 
 var ErrPIDFileNotFound = errors.New("pid file not found")
+var ErrAlreadyReported = errors.New("error already reported")
 
 func main() {
 	configFlag := &cli.StringFlag{
@@ -51,7 +52,9 @@ func main() {
 	}
 
 	if err := app.Run(context.Background(), os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if !errors.Is(err, ErrAlreadyReported) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		}
 		os.Exit(1)
 	}
 }
@@ -151,11 +154,18 @@ func runStatus(ctx context.Context, cmd *cli.Command) error {
 	healthErr := checkGRPCHealth(ctx, cfg.GRPC.Address, time.Duration(cfg.GRPC.Timeout)*time.Second)
 	if healthErr != nil {
 		fmt.Printf("status: not running (%s, grpc=%s, err=%v)\n", pidStatus, cfg.GRPC.Address, healthErr)
-		return healthErr
+		return markAlreadyReported(healthErr)
 	}
 
 	fmt.Printf("status: running (%s, grpc=%s)\n", pidStatus, cfg.GRPC.Address)
 	return nil
+}
+
+func markAlreadyReported(err error) error {
+	if err == nil {
+		return ErrAlreadyReported
+	}
+	return fmt.Errorf("%w: %v", ErrAlreadyReported, err)
 }
 
 func readPID(path string) (int, error) {
