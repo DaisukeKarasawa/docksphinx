@@ -49,6 +49,7 @@ This file defines instructions for coding agents working on this project.
 - gRPC client wrappers should normalize nil contexts and validate connection/client dependencies to avoid panic-prone call paths.
 - gRPC client methods should short-circuit canceled contexts before invoking downstream RPC calls.
 - gRPC client constructors should also short-circuit already-canceled contexts before attempting dial/readiness workflows.
+- gRPC server constructors should trim/validate listen addresses and reject whitespace-only inputs before net.Listen.
 - Docker client wrappers should guard nil receivers/internal api clients and return explicit errors instead of panic-prone dereferences.
 - When mapping Docker inspect responses, treat nested pointer sections (e.g., `State`, `Config`) as optional and build output fields with nil-safe fallbacks.
 - Shared conversion helpers (e.g., state/proto builders) should be nil-safe and return explicit empty results instead of panicking on nil inputs.
