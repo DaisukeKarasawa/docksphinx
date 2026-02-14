@@ -65,6 +65,7 @@ This file defines instructions for coding agents working on this project.
 - Internal logging paths should tolerate nil logger dependencies (guard log calls so primary control flow remains panic-safe).
 - Engine lifecycle/collection paths should normalize missing contexts and guard optional stop dependencies (`cancel`, event channels) for partially initialized states.
 - Engine start paths should lazily initialize missing runtime dependencies/defaults when instances are partially constructed (non-NewEngine paths).
+- Engine startup should also repair inconsistent dependency wiring (e.g., detector referencing a different state manager) to keep runtime pointers coherent.
 - Pub/sub broadcaster utilities should be nil-safe across subscribe/send/run paths and avoid blocking callers on nil receivers.
 - Broadcaster internals that rely on maps/slices should lazily initialize zero-value fields before first write (e.g., subscribe registration).
 - Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
