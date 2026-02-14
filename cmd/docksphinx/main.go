@@ -438,10 +438,7 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 		return nil
 	}
 	sort.Slice(sorted, func(i, j int) bool {
-		if sorted[i].GetTimestampUnix() != sorted[j].GetTimestampUnix() {
-			return sorted[i].GetTimestampUnix() > sorted[j].GetTimestampUnix()
-		}
-		return sorted[i].GetId() < sorted[j].GetId()
+		return lessRecentEvent(sorted[i], sorted[j])
 	})
 	if limit > len(sorted) {
 		limit = len(sorted)
@@ -451,6 +448,31 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 		out = append(out, proto.Clone(ev).(*pb.Event))
 	}
 	return out
+}
+
+func lessRecentEvent(a, b *pb.Event) bool {
+	if a.GetTimestampUnix() != b.GetTimestampUnix() {
+		return a.GetTimestampUnix() > b.GetTimestampUnix()
+	}
+	if a.GetId() != b.GetId() {
+		return a.GetId() < b.GetId()
+	}
+	if a.GetContainerName() != b.GetContainerName() {
+		return a.GetContainerName() < b.GetContainerName()
+	}
+	if a.GetType() != b.GetType() {
+		return a.GetType() < b.GetType()
+	}
+	if a.GetMessage() != b.GetMessage() {
+		return a.GetMessage() < b.GetMessage()
+	}
+	if a.GetContainerId() != b.GetContainerId() {
+		return a.GetContainerId() < b.GetContainerId()
+	}
+	if a.GetImageName() != b.GetImageName() {
+		return a.GetImageName() < b.GetImageName()
+	}
+	return false
 }
 
 func waitOrDone(ctx context.Context, d time.Duration) error {

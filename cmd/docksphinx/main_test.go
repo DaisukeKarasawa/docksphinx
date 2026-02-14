@@ -120,6 +120,44 @@ func TestSelectRecentEvents(t *testing.T) {
 		t.Fatalf("expected id-asc tie-break [a b c], got [%s %s %s]", got[0].GetId(), got[1].GetId(), got[2].GetId())
 	}
 
+	sameTimestampAndID := []*pb.Event{
+		{Id: "", TimestampUnix: 300, ContainerName: "same", Type: "a", Message: "a", ContainerId: "cid-2", ImageName: "img-b"},
+		{Id: "", TimestampUnix: 300, ContainerName: "same", Type: "a", Message: "a", ContainerId: "cid-1", ImageName: "img-c"},
+		{Id: "", TimestampUnix: 300, ContainerName: "same", Type: "a", Message: "b", ContainerId: "cid-0", ImageName: "img-a"},
+		{Id: "", TimestampUnix: 300, ContainerName: "same", Type: "b", Message: "a", ContainerId: "cid-0", ImageName: "img-a"},
+		{Id: "", TimestampUnix: 300, ContainerName: "same", Type: "a", Message: "a", ContainerId: "cid-1", ImageName: "img-a"},
+	}
+	got = selectRecentEvents(sameTimestampAndID, 10)
+	if len(got) != 5 {
+		t.Fatalf("expected 5 events for sameTimestampAndID, got len=%d", len(got))
+	}
+	gotKey := func(e *pb.Event) string {
+		return strings.Join([]string{
+			e.GetContainerName(),
+			e.GetType(),
+			e.GetMessage(),
+			e.GetContainerId(),
+			e.GetImageName(),
+		}, "|")
+	}
+	gotOrder := []string{
+		gotKey(got[0]),
+		gotKey(got[1]),
+		gotKey(got[2]),
+		gotKey(got[3]),
+		gotKey(got[4]),
+	}
+	wantOrder := []string{
+		"same|a|a|cid-1|img-a",
+		"same|a|a|cid-1|img-c",
+		"same|a|a|cid-2|img-b",
+		"same|a|b|cid-0|img-a",
+		"same|b|a|cid-0|img-a",
+	}
+	if !reflect.DeepEqual(gotOrder, wantOrder) {
+		t.Fatalf("expected extended tie-break order %v, got %v", wantOrder, gotOrder)
+	}
+
 	withNil := []*pb.Event{
 		nil,
 		{Id: "z", TimestampUnix: 10},
