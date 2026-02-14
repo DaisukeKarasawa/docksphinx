@@ -1341,3 +1341,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/monitor.TestBuildComposeGroupsDoesNotMutateInputStateNetworks` を追加し、`buildComposeGroups` 呼び出し後も入力 `ContainerState.NetworkNames` が未変更であることを確認。
+
+---
+
+## 2026-02-14 (snapshot rendering non-mutating regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields` を追加し、`printSnapshotTo` 実行後も `Snapshot` の `Groups/Networks/Volumes/Images` の順序および group 内 `NetworkNames` 順序が入力のまま維持されることを確認。
