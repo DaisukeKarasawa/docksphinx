@@ -74,3 +74,14 @@ func TestRemovePIDFileIfExists(t *testing.T) {
 		t.Fatalf("expected pid file to be removed, stat err=%v", err)
 	}
 }
+
+func TestRemovePIDFileIfExistsNoOpCases(t *testing.T) {
+	if err := removePIDFileIfExists(""); err != nil {
+		t.Fatalf("expected empty path no-op success, got: %v", err)
+	}
+
+	missing := filepath.Join(t.TempDir(), "missing.pid")
+	if err := removePIDFileIfExists(missing); err != nil {
+		t.Fatalf("expected missing file no-op success, got: %v", err)
+	}
+}
