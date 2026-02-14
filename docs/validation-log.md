@@ -1467,3 +1467,29 @@ make quality
 
 - `cmd/docksphinx.TestFilteredContainerRowsForDetailSortAndNonMutating` を追加し、`filteredContainerRowsForDetail` の sort mode（CPU/MEM/Uptime/Name）ごとの順序契約を固定。
 - 併せて、同関数の実行で `Snapshot.Containers` の入力順序が変化しないこと（non-mutating）を確認。
+
+---
+
+## 2026-02-14 (tui image created N/A rendering pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.renderImages` の created 表示を `formatDateTimeOrNA` 化し、`CreatedUnix<=0` を `N/A` 表示へ統一。
+- `TestFormatDateTimeOrNA` と `TestRenderImagesShowsNAForMissingCreatedTimestamp` を追加し、ヘルパー契約と TUI 実表示を固定。
