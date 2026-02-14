@@ -10,6 +10,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 実行レポート（運用ルール準拠版）: `docs/mvp-execution-report.md`
 - 実装適用ハンドオフランブック: `docs/implementation-handoff-runbook.md`
 - セキュリティ/検証結果サマリ: `docs/security-check-summary.md`
+- フェーズ進捗ログ: `docs/phase-progress-log.md`
 
 ## 補足
 
