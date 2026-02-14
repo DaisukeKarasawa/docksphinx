@@ -31,14 +31,18 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 
 	nestedMap := map[string]interface{}{"name": "alpha"}
 	nestedSlice := []interface{}{"x", "y"}
+	stringMap := map[string]string{"owner": "team-a"}
+	stringSlice := []string{"svc-a", "svc-b"}
 	original := &Event{
 		ID:        "e1",
 		Type:      EventTypeCPUThreshold,
 		Timestamp: time.Unix(100, 0),
 		Data: map[string]interface{}{
-			"cpu":  95.5,
-			"meta": nestedMap,
-			"tags": nestedSlice,
+			"cpu":    95.5,
+			"meta":   nestedMap,
+			"tags":   nestedSlice,
+			"labels": stringMap,
+			"names":  stringSlice,
 		},
 		Message: "high cpu",
 	}
@@ -51,6 +55,8 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	original.Data["new"] = "x"
 	nestedMap["name"] = "mutated"
 	nestedSlice[0] = "changed"
+	stringMap["owner"] = "mutated-team"
+	stringSlice[0] = "changed-svc"
 
 	got := h.Recent(1)
 	if len(got) != 1 {
@@ -65,6 +71,12 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if gotTags, ok := got[0].Data["tags"].([]interface{}); !ok || len(gotTags) != 2 || gotTags[0] != "x" {
 		t.Fatalf("expected nested slice to be isolated, got %#v", got[0].Data["tags"])
 	}
+	if gotLabels, ok := got[0].Data["labels"].(map[string]string); !ok || gotLabels["owner"] != "team-a" {
+		t.Fatalf("expected typed map to be isolated, got %#v", got[0].Data["labels"])
+	}
+	if gotNames, ok := got[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
+		t.Fatalf("expected typed slice to be isolated, got %#v", got[0].Data["names"])
+	}
 	if !reflect.DeepEqual(got[0].Data["cpu"], 95.5) {
 		t.Fatalf("expected stored data to be unchanged, got %#v", got[0].Data)
 	}
@@ -77,6 +89,12 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if tags, ok := got[0].Data["tags"].([]interface{}); ok && len(tags) > 0 {
 		tags[0] = "out-changed"
+	}
+	if labels, ok := got[0].Data["labels"].(map[string]string); ok {
+		labels["owner"] = "out-mutated-team"
+	}
+	if names, ok := got[0].Data["names"].([]string); ok && len(names) > 0 {
+		names[0] = "out-changed-svc"
 	}
 
 	gotAgain := h.Recent(1)
@@ -91,6 +109,12 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotTags, ok := gotAgain[0].Data["tags"].([]interface{}); !ok || len(gotTags) != 2 || gotTags[0] != "x" {
 		t.Fatalf("expected nested slice in history to stay unchanged, got %#v", gotAgain[0].Data["tags"])
+	}
+	if gotLabels, ok := gotAgain[0].Data["labels"].(map[string]string); !ok || gotLabels["owner"] != "team-a" {
+		t.Fatalf("expected typed map in history to stay unchanged, got %#v", gotAgain[0].Data["labels"])
+	}
+	if gotNames, ok := gotAgain[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
+		t.Fatalf("expected typed slice in history to stay unchanged, got %#v", gotAgain[0].Data["names"])
 	}
 }
 

@@ -1,6 +1,9 @@
 package event
 
-import "sync"
+import (
+	"reflect"
+	"sync"
+)
 
 // History stores recent events in memory.
 type History struct {
@@ -73,30 +76,53 @@ func cloneEvent(in *Event) *Event {
 }
 
 func cloneValue(v interface{}) interface{} {
-	switch x := v.(type) {
-	case map[string]interface{}:
-		out := make(map[string]interface{}, len(x))
-		for k, vv := range x {
-			out[k] = cloneValue(vv)
+	rv := reflect.ValueOf(v)
+	if !rv.IsValid() {
+		return nil
+	}
+	return cloneValueReflect(rv).Interface()
+}
+
+func cloneValueReflect(v reflect.Value) reflect.Value {
+	switch v.Kind() {
+	case reflect.Interface:
+		if v.IsNil() {
+			return reflect.Zero(v.Type())
+		}
+		return cloneValueReflect(v.Elem())
+	case reflect.Pointer:
+		if v.IsNil() {
+			return reflect.Zero(v.Type())
+		}
+		out := reflect.New(v.Type().Elem())
+		out.Elem().Set(cloneValueReflect(v.Elem()))
+		return out
+	case reflect.Map:
+		if v.IsNil() {
+			return reflect.Zero(v.Type())
+		}
+		out := reflect.MakeMapWithSize(v.Type(), v.Len())
+		iter := v.MapRange()
+		for iter.Next() {
+			out.SetMapIndex(cloneValueReflect(iter.Key()), cloneValueReflect(iter.Value()))
 		}
 		return out
-	case []interface{}:
-		out := make([]interface{}, len(x))
-		for i, vv := range x {
-			out[i] = cloneValue(vv)
+	case reflect.Slice:
+		if v.IsNil() {
+			return reflect.Zero(v.Type())
+		}
+		out := reflect.MakeSlice(v.Type(), v.Len(), v.Len())
+		for i := 0; i < v.Len(); i++ {
+			out.Index(i).Set(cloneValueReflect(v.Index(i)))
 		}
 		return out
-	case []string:
-		return append([]string(nil), x...)
-	case []int:
-		return append([]int(nil), x...)
-	case []int64:
-		return append([]int64(nil), x...)
-	case []float64:
-		return append([]float64(nil), x...)
-	case []bool:
-		return append([]bool(nil), x...)
+	case reflect.Array:
+		out := reflect.New(v.Type()).Elem()
+		for i := 0; i < v.Len(); i++ {
+			out.Index(i).Set(cloneValueReflect(v.Index(i)))
+		}
+		return out
 	default:
-		return x
+		return v
 	}
 }
