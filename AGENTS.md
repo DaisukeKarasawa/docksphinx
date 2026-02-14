@@ -59,6 +59,7 @@ This file defines instructions for coding agents working on this project.
 - Monitoring helpers with internal maps should lazily initialize map fields so zero-value construction paths remain panic-safe.
 - Public orchestrator/engine methods should be nil-receiver safe, returning explicit errors or no-op/empty values instead of panicking.
 - Pub/sub broadcaster utilities should be nil-safe across subscribe/send/run paths and avoid blocking callers on nil receivers.
+- Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
