@@ -178,3 +178,25 @@ func TestResolveConfigPathExplicitMissingReturnsError(t *testing.T) {
 		t.Fatal("expected error for missing explicit config path")
 	}
 }
+
+func TestEngineConfigNilReceiverUsesDefaults(t *testing.T) {
+	var cfg *Config
+	got := cfg.EngineConfig()
+	want := Default().EngineConfig()
+
+	if got.Interval != want.Interval {
+		t.Fatalf("expected default interval %v, got %v", want.Interval, got.Interval)
+	}
+	if got.ResourceInterval != want.ResourceInterval {
+		t.Fatalf("expected default resource interval %v, got %v", want.ResourceInterval, got.ResourceInterval)
+	}
+	if got.Thresholds.CPU.Warning != want.Thresholds.CPU.Warning ||
+		got.Thresholds.CPU.Critical != want.Thresholds.CPU.Critical ||
+		got.Thresholds.CPU.ConsecutiveCount != want.Thresholds.CPU.ConsecutiveCount ||
+		got.Thresholds.Memory.Warning != want.Thresholds.Memory.Warning ||
+		got.Thresholds.Memory.Critical != want.Thresholds.Memory.Critical ||
+		got.Thresholds.Memory.ConsecutiveCount != want.Thresholds.Memory.ConsecutiveCount ||
+		got.Thresholds.CooldownSeconds != want.Thresholds.CooldownSeconds {
+		t.Fatalf("expected default thresholds %#v, got %#v", want.Thresholds, got.Thresholds)
+	}
+}

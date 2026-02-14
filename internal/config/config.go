@@ -57,6 +57,9 @@ type DaemonConfig struct {
 
 // EngineConfig converts config to monitor.EngineConfig.
 func (c *Config) EngineConfig() monitor.EngineConfig {
+	if c == nil {
+		return Default().EngineConfig()
+	}
 	containerPattern := joinRegexOr(c.Monitor.Filters.ContainerNames)
 	imagePattern := joinRegexOr(c.Monitor.Filters.ImageNames)
 
