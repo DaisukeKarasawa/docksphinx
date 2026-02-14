@@ -2840,3 +2840,29 @@ make quality
 
 - `internal/monitor.Start` の detector 補完条件を強化し、`detector.stateManager != engine.stateManager` の不整合時も `NewDetector(engine.stateManager)` へ再接続するよう修正。
 - `engine_test.go` に `TestEngineStartRebindsDetectorToCurrentStateManager` を追加し、部分構築時の detector/state manager 不整合が起動時に自己修復される契約を回帰固定。
+
+---
+
+## 2026-02-14 (grpc server options non-mutating constructor hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.NewServer` で `ServerOptions` をローカルコピーへ解決してから `Address` trim / `RecentEventLimit` default 補正を適用し、呼び出し元 `opts` を非破壊に変更。
+- `server_test.go` に `TestNewServerDoesNotMutateCallerOptions` を追加し、constructor 実行後も caller 側 options が不変であること、および server 側には default 補正値が反映されることを回帰固定。
