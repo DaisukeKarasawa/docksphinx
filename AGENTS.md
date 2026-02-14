@@ -50,6 +50,7 @@ This file defines instructions for coding agents working on this project.
 - Docker client wrappers should guard nil receivers/internal api clients and return explicit errors instead of panic-prone dereferences.
 - When mapping Docker inspect responses, treat nested pointer sections (e.g., `State`, `Config`) as optional and build output fields with nil-safe fallbacks.
 - Shared conversion helpers (e.g., state/proto builders) should be nil-safe and return explicit empty results instead of panicking on nil inputs.
+- Config-to-runtime conversion helpers (e.g., `Config.EngineConfig`) should be nil-receiver safe and fall back to explicit defaults.
 - Normalize user-provided address/path strings with trim operations before emptiness validation to reject whitespace-only inputs deterministically.
 - Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
 - Detection/evaluation helpers (e.g., detector paths) should also be nil-safe and prefer empty-result contracts over panics when dependencies are missing.
