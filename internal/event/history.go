@@ -25,7 +25,7 @@ func (h *History) Add(ev *Event) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.events = append(h.events, ev)
+	h.events = append(h.events, cloneEvent(ev))
 	if len(h.events) > h.maxSize {
 		h.events = h.events[len(h.events)-h.maxSize:]
 	}
@@ -46,7 +46,21 @@ func (h *History) Recent(limit int) []*Event {
 	}
 	out := make([]*Event, 0, limit)
 	for i := len(h.events) - 1; i >= len(h.events)-limit; i-- {
-		out = append(out, h.events[i])
+		out = append(out, cloneEvent(h.events[i]))
 	}
 	return out
+}
+
+func cloneEvent(in *Event) *Event {
+	if in == nil {
+		return nil
+	}
+	out := *in
+	if in.Data != nil {
+		out.Data = make(map[string]interface{}, len(in.Data))
+		for k, v := range in.Data {
+			out.Data[k] = v
+		}
+	}
+	return &out
 }
