@@ -124,7 +124,7 @@ func (e *Engine) Start() error {
 	if e.stateManager == nil {
 		e.stateManager = NewStateManager()
 	}
-	if e.detector == nil || e.detector.stateManager == nil {
+	if e.detector == nil || e.detector.stateManager == nil || e.detector.stateManager != e.stateManager {
 		e.detector = NewDetector(e.stateManager)
 	}
 	if e.thresholdMon == nil {

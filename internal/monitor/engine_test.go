@@ -540,3 +540,32 @@ func TestEngineStartInitializesMissingRuntimeDependencies(t *testing.T) {
 		t.Fatalf("expected event history max to be defaulted, got %d", engine.config.EventHistoryMax)
 	}
 }
+
+func TestEngineStartRebindsDetectorToCurrentStateManager(t *testing.T) {
+	primaryStateManager := NewStateManager()
+	staleStateManager := NewStateManager()
+
+	engine := &Engine{
+		config: EngineConfig{
+			Interval:         time.Second,
+			ResourceInterval: time.Second,
+			EventHistoryMax:  10,
+			Thresholds:       DefaultThresholdConfig(),
+		},
+		dockerClient: &docker.Client{},
+		stateManager: primaryStateManager,
+		detector:     NewDetector(staleStateManager), // intentionally inconsistent
+	}
+
+	if err := engine.Start(); err != nil {
+		t.Fatalf("expected Start to recover detector/state manager mismatch: %v", err)
+	}
+	defer engine.Stop()
+
+	if engine.detector == nil {
+		t.Fatal("expected detector to be initialized")
+	}
+	if engine.detector.stateManager != primaryStateManager {
+		t.Fatalf("expected detector to bind current state manager, got %#v want %#v", engine.detector.stateManager, primaryStateManager)
+	}
+}
