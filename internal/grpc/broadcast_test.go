@@ -54,3 +54,32 @@ func TestBroadcasterRunStopsOnContextCancel(t *testing.T) {
 		t.Fatal("broadcaster run did not stop on context cancellation")
 	}
 }
+
+func TestBroadcasterSendDoesNotBlockWhenSubscriberIsSlow(t *testing.T) {
+	b := NewBroadcaster()
+	ch, unsub := b.Subscribe()
+	defer unsub()
+
+	// Fill subscriber buffer without receiving.
+	for i := 0; i < subscriberChanBuf; i++ {
+		b.Send(event.NewEvent(event.EventTypeStarted, "id", "name", "img"))
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		b.Send(event.NewEvent(event.EventTypeStarted, "id2", "name2", "img2"))
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("Send blocked on full subscriber channel")
+	}
+
+	// Drain one item to avoid goroutine leak in test.
+	select {
+	case <-ch:
+	default:
+	}
+}
