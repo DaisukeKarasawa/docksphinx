@@ -9,6 +9,7 @@ import (
 	ggrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 const defaultDialTimeout = 5 * time.Second
@@ -61,6 +62,9 @@ func (c *Client) GetSnapshot(ctx context.Context) (*pb.Snapshot, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
+	}
 	return c.client.GetSnapshot(ctx, &pb.GetSnapshotRequest{})
 }
 
@@ -70,6 +74,9 @@ func (c *Client) Stream(ctx context.Context, includeInitialSnapshot bool) (pb.Do
 	}
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
 	}
 	return c.client.Stream(ctx, &pb.StreamRequest{
 		IncludeInitialSnapshot: includeInitialSnapshot,

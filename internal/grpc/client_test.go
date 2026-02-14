@@ -6,6 +6,8 @@ import (
 
 	pb "docksphinx/api/docksphinx/v1"
 	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type stubClient struct {
@@ -13,6 +15,8 @@ type stubClient struct {
 	lastSnapshotReq *pb.GetSnapshotRequest
 	lastStreamCtx   context.Context
 	lastStreamReq   *pb.StreamRequest
+	snapshotCalls   int
+	streamCalls     int
 }
 
 type testCtxKey string
@@ -20,12 +24,14 @@ type testCtxKey string
 func (s *stubClient) GetSnapshot(ctx context.Context, in *pb.GetSnapshotRequest, opts ...ggrpc.CallOption) (*pb.Snapshot, error) {
 	s.lastSnapshotCtx = ctx
 	s.lastSnapshotReq = in
+	s.snapshotCalls++
 	return &pb.Snapshot{}, nil
 }
 
 func (s *stubClient) Stream(ctx context.Context, in *pb.StreamRequest, opts ...ggrpc.CallOption) (ggrpc.ServerStreamingClient[pb.StreamUpdate], error) {
 	s.lastStreamCtx = ctx
 	s.lastStreamReq = in
+	s.streamCalls++
 	return nil, nil
 }
 
@@ -82,5 +88,27 @@ func TestNewClientRejectsEmptyAddress(t *testing.T) {
 	}
 	if got := err.Error(); got != "address cannot be empty" {
 		t.Fatalf("expected empty address error, got %q", got)
+	}
+}
+
+func TestClientMethodsReturnContextErrorBeforeRPCWhenCanceled(t *testing.T) {
+	stub := &stubClient{}
+	c := &Client{client: stub}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := c.GetSnapshot(ctx); status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled status from GetSnapshot, got %v", err)
+	}
+	if stub.snapshotCalls != 0 {
+		t.Fatalf("expected no downstream GetSnapshot call when context canceled, got %d", stub.snapshotCalls)
+	}
+
+	if _, err := c.Stream(ctx, true); status.Code(err) != codes.Canceled {
+		t.Fatalf("expected canceled status from Stream, got %v", err)
+	}
+	if stub.streamCalls != 0 {
+		t.Fatalf("expected no downstream Stream call when context canceled, got %d", stub.streamCalls)
 	}
 }
