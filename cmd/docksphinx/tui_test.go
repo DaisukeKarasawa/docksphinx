@@ -513,6 +513,30 @@ func TestTUIConsumeStreamNilGuards(t *testing.T) {
 	})
 }
 
+func TestTUIStreamLoopNilGuards(t *testing.T) {
+	t.Run("nil receiver returns explicit error", func(t *testing.T) {
+		var m *tuiModel
+		err := m.streamLoop(context.Background(), tview.NewApplication(), "127.0.0.1:50051")
+		if err == nil {
+			t.Fatal("expected explicit error for nil tui model")
+		}
+		if !strings.Contains(err.Error(), "tui model is nil") {
+			t.Fatalf("expected nil model error message, got: %v", err)
+		}
+	})
+
+	t.Run("nil app returns explicit error", func(t *testing.T) {
+		m := newTUIModel()
+		err := m.streamLoop(context.Background(), nil, "127.0.0.1:50051")
+		if err == nil {
+			t.Fatal("expected explicit error for nil app")
+		}
+		if !strings.Contains(err.Error(), "tui application is nil") {
+			t.Fatalf("expected nil app error message, got: %v", err)
+		}
+	})
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 

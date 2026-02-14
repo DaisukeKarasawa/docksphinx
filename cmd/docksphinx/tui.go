@@ -86,6 +86,14 @@ func runTUI(parent context.Context, address string) error {
 }
 
 func (m *tuiModel) streamLoop(ctx context.Context, app *tview.Application, address string) error {
+	if m == nil {
+		return errors.New("tui model is nil")
+	}
+	if app == nil {
+		return errors.New("tui application is nil")
+	}
+	ctx = normalizeParentContext(ctx)
+
 	backoff := 500 * time.Millisecond
 	for {
 		if ctx.Err() != nil {
