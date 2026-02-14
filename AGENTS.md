@@ -67,6 +67,7 @@ This file defines instructions for coding agents working on this project.
 - Runtime consumers of validated config values (log level/path, pid path, etc.) should also apply local trim/normalization to keep behavior consistent with validation acceptance.
 - Address classification/diagnostic helpers (e.g., loopback checks and plaintext warning emitters) should trim runtime inputs before both classification and message rendering.
 - PID helper paths in CLI/daemon commands should use trimmed paths consistently for both read and remove operations.
+- PID status/inspection helpers that accept process-check callbacks should reject nil callbacks explicitly rather than invoking them blindly.
 - Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
 - Detection/evaluation helpers (e.g., detector paths) should also be nil-safe and prefer empty-result contracts over panics when dependencies are missing.
 - State-change detection paths must tolerate inconsistent snapshots (e.g., `exists=true` with `oldState=nil`) by guarding old-state field reads before comparisons/copies.
