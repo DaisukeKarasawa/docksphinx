@@ -3038,3 +3038,33 @@ make quality
 
 - `internal/daemon.newLogger` に `cfg==nil` ガードを追加し、nil 入力時は `config.Default()` を使用する fallback 契約へ強化。
 - `daemon_test.go` に `TestNewLoggerNilConfigUsesDefaults` を追加し、`newLogger(nil)` が panic せず既定 logger（stdout / info レベル）を返すことを回帰固定。
+
+---
+
+## 2026-02-14 (CLI loopback warning address normalization hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.isLoopback` で入力 address を trim してから loopback 判定するよう強化し、前後空白付き `localhost` / loopback 指定でも正しく抑制判定できるよう修正。
+- `cmd/docksphinx.warnInsecure` で address を trim 正規化後に判定・警告表示するよう変更し、runtime 入力境界（空白付き引数）での不要警告/表示ゆらぎを防止。
+- `main_test.go` に以下を追加:
+  - `TestIsLoopback` 内 `  LOCALHOST:50051  ` ケース
+  - `TestWarnInsecure/whitespace-wrapped localhost does not warn`
+  - `TestWarnInsecure/warning output uses trimmed address`
