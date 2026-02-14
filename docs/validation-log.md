@@ -1553,3 +1553,29 @@ make quality
 - 追加テスト:
   - `cmd/docksphinx.TestPrintSnapshotToUsesDeterministicTieBreakers`
   - `internal/grpc.TestStateToSnapshotUsesDeterministicTieBreakers`
+
+---
+
+## 2026-02-14 (tui same-name container-id tie-break hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx/tui.go` の `renderContainers` と `filteredContainerRowsForDetail` で、`ContainerName` 同値時に `ContainerId asc` を最終 tie-break として適用。
+- `TestFilteredContainerRowsForDetailUsesContainerIDTieBreakWhenNamesEqual` を追加し、CPU/MEM/Uptime/Name の全 sort mode で同名コンテナ順が `container_id asc` になることを確認。
