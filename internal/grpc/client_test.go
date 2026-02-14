@@ -91,6 +91,16 @@ func TestNewClientRejectsEmptyAddress(t *testing.T) {
 	}
 }
 
+func TestNewClientRejectsWhitespaceAddress(t *testing.T) {
+	_, err := NewClient(context.Background(), "   \t  ")
+	if err == nil {
+		t.Fatal("expected NewClient to fail for whitespace-only address")
+	}
+	if got := err.Error(); got != "address cannot be empty" {
+		t.Fatalf("expected empty address error for whitespace input, got %q", got)
+	}
+}
+
 func TestClientMethodsReturnContextErrorBeforeRPCWhenCanceled(t *testing.T) {
 	stub := &stubClient{}
 	c := &Client{client: stub}

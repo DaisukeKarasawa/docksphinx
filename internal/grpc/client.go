@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
@@ -20,6 +21,7 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, address string) (*Client, error) {
+	address = strings.TrimSpace(address)
 	if address == "" {
 		return nil, fmt.Errorf("address cannot be empty")
 	}
