@@ -174,7 +174,7 @@ func TestDescribePIDStatus(t *testing.T) {
 	if stale {
 		t.Fatal("expected stale=false for unknown checker error")
 	}
-	if !strings.Contains(status, "(unknown)") {
+	if !strings.Contains(status, "(unknown: boom)") {
 		t.Fatalf("expected unknown status, got %q", status)
 	}
 }

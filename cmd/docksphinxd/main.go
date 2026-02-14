@@ -271,7 +271,7 @@ func describePIDStatus(pidFile string, checker func(int) error) (status string, 
 	if errors.Is(checkErr, syscall.EPERM) {
 		return fmt.Sprintf("pid: %d (permission denied)", pid), false, nil
 	}
-	return fmt.Sprintf("pid: %d (unknown)", pid), false, nil
+	return fmt.Sprintf("pid: %d (unknown: %v)", pid, checkErr), false, nil
 }
 
 func inspectPID(pidFile string, checker func(int) error) (pid int, running bool, stale bool, err error) {
