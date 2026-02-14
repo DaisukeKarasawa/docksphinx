@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"docksphinx/internal/docker"
+	"docksphinx/internal/event"
 )
 
 func TestStateManager(t *testing.T) {
@@ -385,4 +386,37 @@ func TestEngineNilSafetyContracts(t *testing.T) {
 	if events := engine.GetRecentEvents(10); events != nil {
 		t.Fatalf("expected nil engine recent events to be nil, got %#v", events)
 	}
+}
+
+func TestEngineLoggerNilSafetyOnInternalPaths(t *testing.T) {
+	t.Run("collectAndDetect early-return path", func(t *testing.T) {
+		engine := &Engine{
+			dockerClient: nil,
+			logger:       nil,
+		}
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("collectAndDetect should not panic with nil logger: %v", r)
+			}
+		}()
+		engine.collectAndDetect()
+	})
+
+	t.Run("publishEvent full-channel path", func(t *testing.T) {
+		engine := &Engine{
+			history:   event.NewHistory(10),
+			eventChan: make(chan *event.Event), // unbuffered => send falls back to default case
+			logger:    nil,
+		}
+		ev := event.NewEvent(event.EventTypeStarted, "cid", "cname", "img")
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("publishEvent should not panic with nil logger: %v", r)
+			}
+		}()
+		engine.publishEvent(ev)
+		if got := engine.history.Recent(1); len(got) != 1 || got[0] == nil || got[0].ID != ev.ID {
+			t.Fatalf("expected event to be recorded in history, got %#v", got)
+		}
+	})
 }

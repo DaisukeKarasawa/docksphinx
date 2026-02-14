@@ -157,7 +157,9 @@ func (e *Engine) monitorLoop() {
 // collectAndDetect collects container information and detects events
 func (e *Engine) collectAndDetect() {
 	if e.dockerClient == nil {
-		e.logger.Error("docker client is nil; skipping collection")
+		if e.logger != nil {
+			e.logger.Error("docker client is nil; skipping collection")
+		}
 		return
 	}
 	ctx, cancel := context.WithTimeout(e.ctx, 30*time.Second)
@@ -172,7 +174,9 @@ func (e *Engine) collectAndDetect() {
 
 	containers, err := e.dockerClient.ListContainers(ctx, opts)
 	if err != nil {
-		e.logger.Error("list containers failed", "error", err)
+		if e.logger != nil {
+			e.logger.Error("list containers failed", "error", err)
+		}
 		return
 	}
 
@@ -313,7 +317,9 @@ func (e *Engine) publishEvent(evt *event.Event) {
 	select {
 	case e.eventChan <- evt:
 	default:
-		e.logger.Warn("event channel full; dropping event", "event_type", evt.Type, "container", evt.ContainerName)
+		if e.logger != nil {
+			e.logger.Warn("event channel full; dropping event", "event_type", evt.Type, "container", evt.ContainerName)
+		}
 	}
 }
 
@@ -339,7 +345,9 @@ func (e *Engine) needsContainerDetails(exists bool, oldState *ContainerState, ne
 func (e *Engine) fillContainerDetails(ctx context.Context, containerID string, state *ContainerState) {
 	detail, err := e.dockerClient.GetContainerDetails(ctx, containerID)
 	if err != nil {
-		e.logger.Debug("inspect container failed", "container_id", containerID, "error", err)
+		if e.logger != nil {
+			e.logger.Debug("inspect container failed", "container_id", containerID, "error", err)
+		}
 		return
 	}
 
@@ -385,15 +393,21 @@ func (e *Engine) collectResources(ctx context.Context, now time.Time) {
 
 	images, err := e.dockerClient.ListImages(ctx)
 	if err != nil {
-		e.logger.Warn("list images failed", "error", err)
+		if e.logger != nil {
+			e.logger.Warn("list images failed", "error", err)
+		}
 	}
 	networks, err := e.dockerClient.ListNetworks(ctx)
 	if err != nil {
-		e.logger.Warn("list networks failed", "error", err)
+		if e.logger != nil {
+			e.logger.Warn("list networks failed", "error", err)
+		}
 	}
 	volumes, err := e.dockerClient.ListVolumes(ctx)
 	if err != nil {
-		e.logger.Warn("list volumes failed", "error", err)
+		if e.logger != nil {
+			e.logger.Warn("list volumes failed", "error", err)
+		}
 	}
 
 	for i := range networks {
