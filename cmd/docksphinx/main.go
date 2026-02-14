@@ -215,17 +215,69 @@ func printSnapshot(snapshot *pb.Snapshot) {
 
 	recent := selectRecentEvents(snapshot.GetRecentEvents(), 10)
 	if len(recent) == 0 {
-		return
+	} else {
+		fmt.Println("\nRECENT EVENTS")
+		for _, ev := range recent {
+			fmt.Printf(
+				"[%s] %-14s %-24s %s\n",
+				time.Unix(ev.GetTimestampUnix(), 0).Format("15:04:05"),
+				ev.GetType(),
+				trimContainerName(ev.GetContainerName()),
+				ev.GetMessage(),
+			)
+		}
 	}
-	fmt.Println("\nRECENT EVENTS")
-	for _, ev := range recent {
-		fmt.Printf(
-			"[%s] %-14s %-24s %s\n",
-			time.Unix(ev.GetTimestampUnix(), 0).Format("15:04:05"),
-			ev.GetType(),
-			trimContainerName(ev.GetContainerName()),
-			ev.GetMessage(),
-		)
+
+	if len(snapshot.GetGroups()) > 0 {
+		fmt.Println("\nGROUPS")
+		for _, g := range snapshot.GetGroups() {
+			fmt.Printf(
+				"%s/%s\tcontainers=%d\tnetworks=%s\n",
+				g.GetProject(),
+				g.GetService(),
+				len(g.GetContainerIds()),
+				strings.Join(g.GetNetworkNames(), ","),
+			)
+		}
+	}
+
+	if len(snapshot.GetNetworks()) > 0 {
+		fmt.Println("\nNETWORKS")
+		for _, n := range snapshot.GetNetworks() {
+			fmt.Printf(
+				"%s\tdriver=%s\tscope=%s\tcontainers=%d\n",
+				n.GetName(),
+				n.GetDriver(),
+				n.GetScope(),
+				n.GetContainerCount(),
+			)
+		}
+	}
+
+	if len(snapshot.GetVolumes()) > 0 {
+		fmt.Println("\nVOLUMES")
+		for _, v := range snapshot.GetVolumes() {
+			fmt.Printf(
+				"%s\tdriver=%s\trefs=%d\tnote=%s\n",
+				v.GetName(),
+				v.GetDriver(),
+				v.GetRefCount(),
+				v.GetUsageNote(),
+			)
+		}
+	}
+
+	if len(snapshot.GetImages()) > 0 {
+		fmt.Println("\nIMAGES")
+		for _, img := range snapshot.GetImages() {
+			fmt.Printf(
+				"%s:%s\tsize=%d\tcreated=%s\n",
+				img.GetRepository(),
+				img.GetTag(),
+				img.GetSize(),
+				time.Unix(img.GetCreatedUnix(), 0).Format("2006-01-02"),
+			)
+		}
 	}
 }
 
