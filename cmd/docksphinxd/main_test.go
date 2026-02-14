@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -54,5 +57,20 @@ func TestWaitForProcessExitPermissionDenied(t *testing.T) {
 	err := waitForProcessExit(ctx, pid, 10*time.Millisecond, checker)
 	if err == nil {
 		t.Fatal("expected permission denied error")
+	}
+}
+
+func TestRemovePIDFileIfExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(path, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	if err := removePIDFileIfExists(path); err != nil {
+		t.Fatalf("expected pid file removal success, got: %v", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected pid file to be removed, stat err=%v", err)
 	}
 }

@@ -75,7 +75,7 @@ func runStart(parent context.Context, cmd *cli.Command) error {
 	return d.Run(ctx)
 }
 
-func runStop(_ context.Context, cmd *cli.Command) error {
+func runStop(parent context.Context, cmd *cli.Command) error {
 	cfg, _, err := config.Load(cmd.String("config"))
 	if err != nil {
 		return err
@@ -87,18 +87,25 @@ func runStop(_ context.Context, cmd *cli.Command) error {
 	}
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
 		if errors.Is(err, syscall.ESRCH) {
-			return fmt.Errorf("process %d not found", pid)
+			if rmErr := removePIDFileIfExists(cfg.Daemon.PIDFile); rmErr != nil {
+				return fmt.Errorf("process %d is already stopped, but failed to remove stale pid file: %w", pid, rmErr)
+			}
+			fmt.Printf("Process %d is already stopped (stale PID file removed)\n", pid)
+			return nil
 		}
 		return fmt.Errorf("send SIGTERM to %d: %w", pid, err)
 	}
 	fmt.Printf("Sent SIGTERM to PID %d\n", pid)
 
-	waitCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	waitCtx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 	if err := waitForProcessExit(waitCtx, pid, 100*time.Millisecond, func(targetPID int) error {
 		return syscall.Kill(targetPID, 0)
 	}); err != nil {
 		return err
+	}
+	if err := removePIDFileIfExists(cfg.Daemon.PIDFile); err != nil {
+		return fmt.Errorf("process %d stopped but failed to remove pid file: %w", pid, err)
 	}
 	fmt.Printf("Process %d stopped\n", pid)
 	return nil
@@ -197,4 +204,14 @@ func waitForProcessExit(
 			return fmt.Errorf("failed to check process %d: %w", pid, err)
 		}
 	}
+}
+
+func removePIDFileIfExists(path string) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
