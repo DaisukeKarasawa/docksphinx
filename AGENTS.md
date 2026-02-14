@@ -4,8 +4,6 @@ This file defines instructions for coding agents working on this project.
 
 ## Project Overview
 
-This project's basic policy is to output documents as requirements definition files, rather than directly modifying or implementing code.
-
 ## Output Directory Rules
 
 ### Output Directory Decision Criteria
@@ -30,8 +28,6 @@ This project's basic policy is to output documents as requirements definition fi
 
 ### Code Modification and Implementation Rules
 
-- **Direct code modification and implementation is prohibited**
-- Do not directly modify code files; instead, append them as implementation files
 - Implementation files must be output to the `outputs/` directory (Markdown format)
 - Information about project specifications (implemented content and requirements) must be output to the `docs/` directory
 - When instructed by the user to output implementation or modification code to implementation files, always include the following information:
@@ -74,7 +70,6 @@ This project's basic policy is to output documents as requirements definition fi
 
 - **`docs/` directory**: Place information about project specifications (implemented content and requirements)
 - **`outputs/` directory**: Place all information other than project specifications (Markdown format, not included in git history)
-- Code files: Do not modify directly; describe as requirements definitions
 
 ## Maintenance Policy
 
