@@ -341,6 +341,27 @@ func TestWaitOrDone(t *testing.T) {
 	})
 }
 
+func TestNextBackoff(t *testing.T) {
+	tests := []struct {
+		name    string
+		current time.Duration
+		want    time.Duration
+	}{
+		{name: "zero current uses minimum", current: 0, want: 500 * time.Millisecond},
+		{name: "negative current uses minimum", current: -1 * time.Second, want: 500 * time.Millisecond},
+		{name: "doubles under cap", current: 750 * time.Millisecond, want: 1500 * time.Millisecond},
+		{name: "caps at five seconds", current: 3 * time.Second, want: 5 * time.Second},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := nextBackoff(tt.current); got != tt.want {
+				t.Fatalf("nextBackoff(%s)=%s, want %s", tt.current, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLogTailRetry(t *testing.T) {
 	t.Run("writes expected format", func(t *testing.T) {
 		var buf bytes.Buffer

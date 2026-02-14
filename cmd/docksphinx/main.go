@@ -451,6 +451,9 @@ func waitOrDone(ctx context.Context, d time.Duration) error {
 }
 
 func nextBackoff(current time.Duration) time.Duration {
+	if current <= 0 {
+		return 500 * time.Millisecond
+	}
 	next := current * 2
 	if next > 5*time.Second {
 		return 5 * time.Second
