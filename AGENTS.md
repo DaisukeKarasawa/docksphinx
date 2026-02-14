@@ -58,6 +58,7 @@ This file defines instructions for coding agents working on this project.
 - Validation helpers should remain robust even when called before normalization (apply local trim/case-normalization for comparisons without requiring caller order).
 - Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
 - Detection/evaluation helpers (e.g., detector paths) should also be nil-safe and prefer empty-result contracts over panics when dependencies are missing.
+- State-change detection paths must tolerate inconsistent snapshots (e.g., `exists=true` with `oldState=nil`) by guarding old-state field reads before comparisons/copies.
 - Monitoring helpers with internal maps should lazily initialize map fields so zero-value construction paths remain panic-safe.
 - Public orchestrator/engine methods should be nil-receiver safe, returning explicit errors or no-op/empty values instead of panicking.
 - Internal logging paths should tolerate nil logger dependencies (guard log calls so primary control flow remains panic-safe).
