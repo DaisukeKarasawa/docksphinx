@@ -112,3 +112,19 @@ func TestBroadcasterNilSafetyContracts(t *testing.T) {
 		t.Fatal("expected nil broadcaster run to return immediately")
 	}
 }
+
+func TestBroadcasterRunReturnsWhenSourceIsNil(t *testing.T) {
+	b := NewBroadcaster()
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		b.Run(context.Background(), nil)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected run with nil source channel to return immediately")
+	}
+}

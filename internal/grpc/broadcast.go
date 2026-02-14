@@ -75,6 +75,12 @@ func (b *Broadcaster) Run(ctx context.Context, src <-chan *event.Event) {
 	if b == nil {
 		return
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if src == nil {
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
