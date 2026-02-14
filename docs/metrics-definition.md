@@ -57,3 +57,23 @@ OS差異や Docker API 制約による曖昧さをなくします。
 ## 5. OS差異と制約
 - CPU / Network の値は Docker Desktop / Engine 実装差で差異が出る可能性がある。
 - 本MVPは「ローカル監視の初動調査」を目的とし、厳密会計値ではなく傾向把握を優先する。
+
+## 6. 表示ルール（CLI / TUI）
+
+### 6.1 `docksphinx snapshot`
+- `metrics` が未取得のコンテナは以下を `N/A` 表示:
+  - CPU%
+  - MEM%
+- `started_at` と `uptime_seconds` がともに欠損の場合、uptime は `N/A` 表示。
+
+### 6.2 `docksphinx tui`
+- containers ペインで `metrics` が未取得のコンテナは以下を `N/A` 表示:
+  - CPU%
+  - MEM%
+  - Rx
+  - Tx
+- 右詳細ペインでも同様に `CPU/Memory/Network` を `N/A` 表示。
+
+## 7. ストリーム断時の挙動（TUI）
+- TUI は gRPC stream 切断時に指数バックオフで再接続を試みる。
+- `status` ペインに接続状態（接続失敗/再試行/再接続）を表示する。
