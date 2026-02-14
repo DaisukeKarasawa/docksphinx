@@ -1579,3 +1579,28 @@ make quality
 
 - `cmd/docksphinx/tui.go` の `renderContainers` と `filteredContainerRowsForDetail` で、`ContainerName` 同値時に `ContainerId asc` を最終 tie-break として適用。
 - `TestFilteredContainerRowsForDetailUsesContainerIDTieBreakWhenNamesEqual` を追加し、CPU/MEM/Uptime/Name の全 sort mode で同名コンテナ順が `container_id asc` になることを確認。
+
+---
+
+## 2026-02-14 (snapshot groups tie-break collision regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.TestPrintSnapshotToUsesDeterministicTieBreakers` を拡張し、`project/service` が同値な `GROUPS` 行でも `container_ids` ベース tie-break が適用され、表示順が決定的に固定されることを確認。
