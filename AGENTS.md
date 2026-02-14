@@ -46,6 +46,7 @@ This file defines instructions for coding agents working on this project.
 - Public gRPC handlers should guard missing internal dependencies (engine/broadcaster/options) and return explicit status errors instead of panicking.
 - Public API/handler entrypoints should explicitly validate required pointer arguments (e.g., stream/request objects) and return typed errors for nil inputs.
 - Public gRPC handlers should check request/stream context cancellation early and return context-derived status errors before expensive processing.
+- gRPC request/stream handlers should normalize potentially nil contexts (including `stream.Context()`) before `Err()`/`Done()` access to avoid nil-context dereference panics.
 - Public service methods should guard nil receivers and uninitialized dependencies, returning explicit errors instead of panicking.
 - gRPC client wrappers should normalize nil contexts and validate connection/client dependencies to avoid panic-prone call paths.
 - gRPC client methods should short-circuit canceled contexts before invoking downstream RPC calls.
