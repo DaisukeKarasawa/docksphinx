@@ -368,12 +368,13 @@ func (m *tuiModel) renderContainers() {
 	}
 
 	type row struct {
-		c     *pb.ContainerInfo
-		cpu   float64
-		mem   float64
-		rx    int64
-		tx    int64
-		group string
+		c         *pb.ContainerInfo
+		cpu       float64
+		mem       float64
+		rx        int64
+		tx        int64
+		hasMetric bool
+		group     string
 	}
 	rows := make([]row, 0, len(m.snapshot.GetContainers()))
 	for _, c := range m.snapshot.GetContainers() {
@@ -384,6 +385,7 @@ func (m *tuiModel) renderContainers() {
 			r.mem = metric.GetMemoryPercent()
 			r.rx = metric.GetNetworkRx()
 			r.tx = metric.GetNetworkTx()
+			r.hasMetric = true
 		}
 		r.group = fmt.Sprintf("%s/%s", c.GetComposeProject(), c.GetComposeService())
 		if m.matchesFilter(strings.Join([]string{
@@ -409,7 +411,7 @@ func (m *tuiModel) renderContainers() {
 
 	for i, r := range rows {
 		prefix := ""
-		if r.cpu >= 80 || r.mem >= 85 {
+		if r.hasMetric && (r.cpu >= 80 || r.mem >= 85) {
 			prefix = "🔥"
 		}
 		name := trimContainerName(r.c.GetContainerName())
@@ -419,11 +421,11 @@ func (m *tuiModel) renderContainers() {
 		values := []string{
 			prefix + name,
 			r.c.GetState(),
-			fmt.Sprintf("%.1f", r.cpu),
-			fmt.Sprintf("%.1f", r.mem),
-			fmt.Sprintf("%d", r.c.GetUptimeSeconds()),
-			fmt.Sprintf("%d", r.rx),
-			fmt.Sprintf("%d", r.tx),
+			formatFloat1OrNA(r.cpu, r.hasMetric),
+			formatFloat1OrNA(r.mem, r.hasMetric),
+			formatUptimeOrNA(r.c),
+			formatInt64OrNA(r.rx, r.hasMetric),
+			formatInt64OrNA(r.tx, r.hasMetric),
 			r.c.GetImageName(),
 			r.group,
 		}
@@ -567,7 +569,7 @@ func (m *tuiModel) renderRight() {
 				builder.WriteString(fmt.Sprintf("ID: %s\n", c.GetContainerId()))
 				builder.WriteString(fmt.Sprintf("State: %s\n", c.GetState()))
 				builder.WriteString(fmt.Sprintf("Image: %s\n", c.GetImageName()))
-				builder.WriteString(fmt.Sprintf("Uptime: %ds\n", c.GetUptimeSeconds()))
+				builder.WriteString(fmt.Sprintf("Uptime: %s\n", formatUptimeOrNA(c)))
 				builder.WriteString(fmt.Sprintf("Compose: %s/%s\n", c.GetComposeProject(), c.GetComposeService()))
 				builder.WriteString(fmt.Sprintf("RestartCount: %d\n", c.GetRestartCount()))
 				builder.WriteString(fmt.Sprintf("VolumeMounts: %d\n", c.GetVolumeMountCount()))
@@ -575,6 +577,10 @@ func (m *tuiModel) renderRight() {
 					builder.WriteString(fmt.Sprintf("CPU: %.2f%%\n", metric.GetCpuPercent()))
 					builder.WriteString(fmt.Sprintf("Memory: %.2f%% (%d/%d)\n", metric.GetMemoryPercent(), metric.GetMemoryUsage(), metric.GetMemoryLimit()))
 					builder.WriteString(fmt.Sprintf("Network Rx/Tx: %d / %d\n", metric.GetNetworkRx(), metric.GetNetworkTx()))
+				} else {
+					builder.WriteString("CPU: N/A\n")
+					builder.WriteString("Memory: N/A\n")
+					builder.WriteString("Network Rx/Tx: N/A\n")
 				}
 			} else if len(containers) == 0 {
 				builder.WriteString("No containers\n")
@@ -702,4 +708,18 @@ func titleTarget(v string) string {
 		return ""
 	}
 	return strings.ToUpper(v[:1]) + v[1:]
+}
+
+func formatFloat1OrNA(value float64, ok bool) string {
+	if !ok {
+		return "N/A"
+	}
+	return fmt.Sprintf("%.1f", value)
+}
+
+func formatInt64OrNA(value int64, ok bool) string {
+	if !ok {
+		return "N/A"
+	}
+	return fmt.Sprintf("%d", value)
 }
