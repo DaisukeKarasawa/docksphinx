@@ -567,6 +567,42 @@ func TestCaptureInputHandlesNilEvent(t *testing.T) {
 	}
 }
 
+func TestCaptureInputTabHandlesNilApp(t *testing.T) {
+	m := newTUIModel()
+	handler := m.captureInput(nil, func() {})
+	if handler == nil {
+		t.Fatal("expected non-nil input handler")
+	}
+
+	event := tcell.NewEventKey(tcell.KeyTAB, 0, tcell.ModNone)
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected no panic on nil app tab path, got %v", r)
+		}
+	}()
+	if got := handler(event); got != nil {
+		t.Fatalf("expected handled tab key to return nil event, got %#v", got)
+	}
+}
+
+func TestCaptureInputSearchHandlesNilApp(t *testing.T) {
+	m := newTUIModel()
+	handler := m.captureInput(nil, func() {})
+	if handler == nil {
+		t.Fatal("expected non-nil input handler")
+	}
+
+	event := tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModNone)
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected no panic on nil app search path, got %v", r)
+		}
+	}()
+	if got := handler(event); got != nil {
+		t.Fatalf("expected handled search key to return nil event, got %#v", got)
+	}
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 

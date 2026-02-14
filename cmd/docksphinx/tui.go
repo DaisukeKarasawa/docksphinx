@@ -265,6 +265,9 @@ func (m *tuiModel) cycleFocus(app *tview.Application, forward bool) {
 			m.focusPanel--
 		}
 	}
+	if app == nil {
+		return
+	}
 	switch m.focusPanel {
 	case panelLeft:
 		app.SetFocus(m.left)
@@ -302,6 +305,9 @@ func (m *tuiModel) moveSelection(delta int) {
 }
 
 func (m *tuiModel) openSearchModal(app *tview.Application) {
+	if app == nil {
+		return
+	}
 	input := tview.NewInputField().
 		SetLabel("Filter / search: ").
 		SetText(m.filter)
