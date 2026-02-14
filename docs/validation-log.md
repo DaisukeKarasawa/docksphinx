@@ -2927,3 +2927,30 @@ make quality
   - `TestNewLoggerTrimsLogFilePath`
   - `TestDaemonPIDHelpersTrimConfiguredPath`
 - 実装途中で `gosec G304`（variable path の `os.OpenFile`）を検出したため、設定値が事前検証済みである前提を `#nosec G304` コメントで明示して再実行 PASS を確認。
+
+---
+
+## 2026-02-14 (daemon cleanup non-running release hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/daemon.cleanup` で `running` フラグによる早期 return を廃止し、非稼働状態でも保有リソース（grpc server / engine / docker client / log sink / pid file）を解放するよう強化。
+- cleanup 後に `grpcServer` / `engine` / `dockerClient` / `logSink` を nil クリアし、再実行時の二重解放を回避する idempotent 挙動へ修正。
+- `daemon_test.go` に `TestDaemonCleanupRunsEvenWhenNotRunningAndIsIdempotent` を追加し、`running=false` でも cleanup が動作すること、2回目 cleanup で追加 close が発生しないことを回帰固定。
