@@ -324,6 +324,15 @@ func (m *tuiModel) consumeStream(
 	app *tview.Application,
 	stream pb.DocksphinxService_StreamClient,
 ) error {
+	if stream == nil {
+		return errors.New("stream client is nil")
+	}
+	if app == nil {
+		return errors.New("tui application is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	for {
 		update, err := stream.Recv()
 		if err != nil {

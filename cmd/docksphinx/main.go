@@ -176,6 +176,12 @@ func logTailStreamReconnect(out io.Writer, err error, backoff time.Duration) {
 }
 
 func consumeStream(ctx context.Context, stream pb.DocksphinxService_StreamClient) error {
+	if stream == nil {
+		return errors.New("stream client is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	for {
 		update, err := stream.Recv()
 		if err != nil {

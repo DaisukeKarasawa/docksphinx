@@ -313,6 +313,16 @@ func TestShouldReconnectTail(t *testing.T) {
 	}
 }
 
+func TestConsumeStreamNilStream(t *testing.T) {
+	err := consumeStream(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected explicit error for nil stream client")
+	}
+	if !strings.Contains(err.Error(), "stream client is nil") {
+		t.Fatalf("expected nil stream error message, got: %v", err)
+	}
+}
+
 func TestWaitOrDone(t *testing.T) {
 	t.Run("already canceled context returns context error", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())

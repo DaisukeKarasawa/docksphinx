@@ -1,12 +1,27 @@
 package main
 
 import (
+	"context"
+	"io"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
+	"github.com/rivo/tview"
+	"google.golang.org/grpc/metadata"
 )
+
+type stubStreamClient struct{}
+
+func (s *stubStreamClient) Recv() (*pb.StreamUpdate, error) { return nil, io.EOF }
+func (s *stubStreamClient) Header() (metadata.MD, error)    { return nil, nil }
+func (s *stubStreamClient) Trailer() metadata.MD            { return nil }
+func (s *stubStreamClient) CloseSend() error                { return nil }
+func (s *stubStreamClient) Context() context.Context        { return context.Background() }
+func (s *stubStreamClient) SendMsg(any) error               { return nil }
+func (s *stubStreamClient) RecvMsg(any) error               { return io.EOF }
 
 func TestFormatFloat1OrNA(t *testing.T) {
 	if got := formatFloat1OrNA(12.34, true); got != "12.3" {
@@ -472,4 +487,28 @@ func TestLastEventTypeSkipsNilEntries(t *testing.T) {
 	if got := m.lastEventType("id-a"); got != "started" {
 		t.Fatalf("expected last event type started, got %q", got)
 	}
+}
+
+func TestTUIConsumeStreamNilGuards(t *testing.T) {
+	m := newTUIModel()
+
+	t.Run("nil stream returns explicit error", func(t *testing.T) {
+		err := m.consumeStream(context.Background(), tview.NewApplication(), nil)
+		if err == nil {
+			t.Fatal("expected explicit error for nil stream client")
+		}
+		if !strings.Contains(err.Error(), "stream client is nil") {
+			t.Fatalf("expected nil stream error message, got: %v", err)
+		}
+	})
+
+	t.Run("nil app returns explicit error", func(t *testing.T) {
+		err := m.consumeStream(context.Background(), nil, &stubStreamClient{})
+		if err == nil {
+			t.Fatal("expected explicit error for nil app")
+		}
+		if !strings.Contains(err.Error(), "tui application is nil") {
+			t.Fatalf("expected nil app error message, got: %v", err)
+		}
+	})
 }
