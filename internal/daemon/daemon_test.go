@@ -10,6 +10,15 @@ import (
 	"docksphinx/internal/config"
 )
 
+type countCloser struct {
+	closeCount int
+}
+
+func (c *countCloser) Close() error {
+	c.closeCount++
+	return nil
+}
+
 func TestDaemonRunNilReceiver(t *testing.T) {
 	var d *Daemon
 
@@ -114,5 +123,42 @@ func TestDaemonPIDHelpersTrimConfiguredPath(t *testing.T) {
 	}
 	if _, err := os.Stat(trimmedPath); !os.IsNotExist(err) {
 		t.Fatalf("expected pid file to be removed, stat err=%v", err)
+	}
+}
+
+func TestDaemonCleanupRunsEvenWhenNotRunningAndIsIdempotent(t *testing.T) {
+	pidPath := filepath.Join(t.TempDir(), "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("1234\n"), 0o600); err != nil {
+		t.Fatalf("failed to prepare pid file: %v", err)
+	}
+
+	sink := &countCloser{}
+	d := &Daemon{
+		cfg: &config.Config{
+			Daemon: config.DaemonConfig{
+				PIDFile: pidPath,
+			},
+		},
+		logSink: sink,
+		running: false,
+	}
+
+	d.cleanup()
+	if d.running {
+		t.Fatal("expected cleanup to keep running=false")
+	}
+	if sink.closeCount != 1 {
+		t.Fatalf("expected log sink to be closed once, got %d", sink.closeCount)
+	}
+	if d.logSink != nil {
+		t.Fatal("expected log sink to be cleared after cleanup")
+	}
+	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
+		t.Fatalf("expected pid file to be removed by cleanup, stat err=%v", err)
+	}
+
+	d.cleanup()
+	if sink.closeCount != 1 {
+		t.Fatalf("expected second cleanup not to re-close already-cleared sink, got %d", sink.closeCount)
 	}
 }

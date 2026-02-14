@@ -161,23 +161,22 @@ func (d *Daemon) cleanup() {
 		return
 	}
 	d.mu.Lock()
-	if !d.running {
-		d.mu.Unlock()
-		return
-	}
 	d.running = false
 	d.mu.Unlock()
 
 	if d.grpcServer != nil {
 		d.grpcServer.Stop()
+		d.grpcServer = nil
 	}
 	if d.engine != nil {
 		d.engine.Stop()
+		d.engine = nil
 	}
 	if d.dockerClient != nil {
 		if err := d.dockerClient.Close(); err != nil && d.logger != nil {
 			d.logger.Warn("docker client close failed", "error", err)
 		}
+		d.dockerClient = nil
 	}
 	if err := d.removePID(); err != nil {
 		if d.logger != nil {
@@ -188,6 +187,7 @@ func (d *Daemon) cleanup() {
 		if err := d.logSink.Close(); err != nil && d.logger != nil {
 			d.logger.Warn("log sink close failed", "error", err)
 		}
+		d.logSink = nil
 	}
 }
 
