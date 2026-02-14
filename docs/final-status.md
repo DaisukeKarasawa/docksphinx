@@ -46,4 +46,9 @@
 - セキュリティ基準: `docs/security-baseline-checklist.md`
 - 最小回帰テスト: `docs/minimal-regression-suite.md`
 - 定期運用: `docs/maintenance-routine.md`
+- レビュー順: `docs/review-sequence.md`
+- 承認テンプレート: `docs/acceptance-signoff-template.md`
+- マスターチェック: `docs/master-checklist.md`
+- 導線マップ: `docs/navigation-map.md`
+- オーナー交代: `docs/owner-rotation-note.md`
 - 成果物一覧: `docs/delivery-manifest.md`
