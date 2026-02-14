@@ -22,6 +22,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 制約事項と次の一手: `docs/limitations-and-next-steps.md`
 - FAQ（適用/検証時のよくある問題）: `docs/faq.md`
 - 実行チェンジログ: `docs/execution-changelog.md`
+- 用語集: `docs/glossary.md`
 
 ## 補足
 
