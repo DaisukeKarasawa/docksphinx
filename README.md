@@ -8,6 +8,8 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - MVP仕様固定: `docs/mvp-spec-freeze.md`
 - MVP受け入れ基準マトリクス: `docs/mvp-acceptance-matrix.md`
 - 実行レポート（運用ルール準拠版）: `docs/mvp-execution-report.md`
+- 実装適用ハンドオフランブック: `docs/implementation-handoff-runbook.md`
+- セキュリティ/検証結果サマリ: `docs/security-check-summary.md`
 
 ## 補足
 
