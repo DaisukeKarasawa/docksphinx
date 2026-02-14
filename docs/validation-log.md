@@ -423,6 +423,17 @@ make quality
   - `govulncheck -mode=binary`: PASS
   - `govulncheck ./...`: known internal error (warning)
 
+### Manual terminal E2E: status output invariant after marker change
+
+```bash
+./bin/docksphinxd status
+```
+
+観測結果（抜粋）:
+- `status: not running (pid: not found, grpc=127.0.0.1:50051, err=dial daemon: wait for grpc readiness 127.0.0.1:50051: context deadline exceeded)`
+
+判定: PASS（`Error:` 行の重複出力なしを維持）
+
 ### Additional security hardening
 
 - `grpc.allow_non_loopback=false`（既定）時に、`grpc.address` が loopback 以外なら設定バリデーションで拒否することを追加。
