@@ -35,11 +35,14 @@ go test -v ./internal/monitor -run TestThresholdMonitorCooldown
 ```bash
 "$(go env GOPATH)/bin/staticcheck" ./...
 "$(go env GOPATH)/bin/gosec" -exclude-dir=api ./...
+"$(go env GOPATH)/bin/govulncheck" -mode=binary ./bin/docksphinx
+"$(go env GOPATH)/bin/govulncheck" -mode=binary ./bin/docksphinxd
 "$(go env GOPATH)/bin/govulncheck" ./...
 ```
 
 - staticcheck: PASS
 - gosec: PASS (Issues: 0, excluding generated `api/`)
+- govulncheck (binary mode): PASS (No vulnerabilities found)
 - govulncheck: FAIL (tool internal error)
 
 govulncheck エラー:
@@ -80,4 +83,5 @@ make security
 - `go test -race ./...` : PASS
 - `staticcheck` : PASS
 - `gosec -exclude-dir=api ./...` : PASS (Issues: 0)
+- `govulncheck -mode=binary` : PASS
 - `govulncheck ./...` : internal error（既知、warning扱い）

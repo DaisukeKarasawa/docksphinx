@@ -75,15 +75,18 @@ deps:
 	go mod tidy
 	@echo "Dependencies updated"
 
-security:
+security: build
 	@echo "Running staticcheck..."
 	@command -v staticcheck >/dev/null 2>&1 || { echo "Installing staticcheck..."; go install honnef.co/go/tools/cmd/staticcheck@latest; }
 	"$(shell go env GOPATH)/bin/staticcheck" ./...
 	@echo "Running gosec..."
 	@command -v gosec >/dev/null 2>&1 || { echo "Installing gosec..."; go install github.com/securego/gosec/v2/cmd/gosec@latest; }
 	"$(shell go env GOPATH)/bin/gosec" -exclude-dir=api ./...
-	@echo "Running govulncheck..."
 	@command -v govulncheck >/dev/null 2>&1 || { echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
+	@echo "Running govulncheck in binary mode..."
+	@"$(shell go env GOPATH)/bin/govulncheck" -mode=binary $(BINARY_DOCKSPHINX)
+	@"$(shell go env GOPATH)/bin/govulncheck" -mode=binary $(BINARY_DOCKSPHINXD)
+	@echo "Running govulncheck..."
 	@out=$$(mktemp); \
 	if "$(shell go env GOPATH)/bin/govulncheck" ./... >$$out 2>&1; then \
 		cat $$out; \

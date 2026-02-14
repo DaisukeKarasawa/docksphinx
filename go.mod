@@ -2,7 +2,7 @@ module docksphinx
 
 go 1.24.0
 
-toolchain go1.24.11
+toolchain go1.24.13
 
 require (
 	github.com/gdamore/tcell/v2 v2.13.8
