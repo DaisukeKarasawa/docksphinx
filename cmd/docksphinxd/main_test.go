@@ -170,6 +170,18 @@ func TestWaitForProcessExitNilChecker(t *testing.T) {
 	}
 }
 
+func TestWaitForProcessExitHandlesNilParentContext(t *testing.T) {
+	ctxMap := map[string]context.Context{}
+	parent := ctxMap["missing"]
+
+	err := waitForProcessExit(parent, 7777, time.Millisecond, func(_ int) error {
+		return syscall.ESRCH
+	})
+	if err != nil {
+		t.Fatalf("expected success with nil-like parent context normalization, got: %v", err)
+	}
+}
+
 func TestRemovePIDFileIfExists(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "docksphinxd.pid")

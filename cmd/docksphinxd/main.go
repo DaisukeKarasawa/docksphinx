@@ -249,6 +249,7 @@ func waitForProcessExit(
 	interval time.Duration,
 	checker func(int) error,
 ) error {
+	ctx = normalizeParentContext(ctx)
 	if checker == nil {
 		return fmt.Errorf("process checker is nil")
 	}
