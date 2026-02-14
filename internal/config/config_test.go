@@ -200,3 +200,28 @@ func TestEngineConfigNilReceiverUsesDefaults(t *testing.T) {
 		t.Fatalf("expected default thresholds %#v, got %#v", want.Thresholds, got.Thresholds)
 	}
 }
+
+func TestSaveRejectsWhitespacePath(t *testing.T) {
+	cfg := Default()
+	cfg.Daemon.PIDFile = "/tmp/docksphinxd-test-save.pid"
+
+	err := cfg.Save("   \t ")
+	if err == nil {
+		t.Fatal("expected Save to fail for whitespace-only path")
+	}
+	if got := err.Error(); got != "save path is empty" {
+		t.Fatalf("expected whitespace path error, got %q", got)
+	}
+}
+
+func TestSaveNilConfigReturnsExplicitError(t *testing.T) {
+	var cfg *Config
+
+	err := cfg.Save("/tmp/docksphinx-config.yaml")
+	if err == nil {
+		t.Fatal("expected Save on nil config to fail")
+	}
+	if got := err.Error(); got != "config is nil" {
+		t.Fatalf("expected nil config error, got %q", got)
+	}
+}
