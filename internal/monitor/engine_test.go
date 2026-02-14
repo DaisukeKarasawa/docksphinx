@@ -364,3 +364,25 @@ func TestEngineCannotRestartAfterStop(t *testing.T) {
 		t.Fatal("expected Start to fail after engine has been stopped once")
 	}
 }
+
+func TestEngineNilSafetyContracts(t *testing.T) {
+	var engine *Engine
+
+	if err := engine.Start(); err == nil {
+		t.Fatal("expected nil engine start to fail")
+	}
+
+	engine.Stop() // should not panic
+
+	if ch := engine.GetEventChannel(); ch != nil {
+		t.Fatalf("expected nil engine event channel to be nil, got %#v", ch)
+	}
+	if sm := engine.GetStateManager(); sm != nil {
+		t.Fatalf("expected nil engine state manager to be nil, got %#v", sm)
+	}
+	engine.SetLogger(nil) // should not panic
+
+	if events := engine.GetRecentEvents(10); events != nil {
+		t.Fatalf("expected nil engine recent events to be nil, got %#v", events)
+	}
+}

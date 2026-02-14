@@ -91,6 +91,9 @@ func NewEngine(config EngineConfig, dockerClient *docker.Client) (*Engine, error
 
 // Start starts the monitoring engine
 func (e *Engine) Start() error {
+	if e == nil {
+		return fmt.Errorf("monitoring engine is nil")
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -113,6 +116,9 @@ func (e *Engine) Start() error {
 
 // Stop stops the monitoring engine
 func (e *Engine) Stop() {
+	if e == nil {
+		return
+	}
 	e.mu.Lock()
 
 	if !e.running {
@@ -266,16 +272,25 @@ func (e *Engine) collectAndDetect() {
 
 // GetEventChannel returns the event channel
 func (e *Engine) GetEventChannel() <-chan *event.Event {
+	if e == nil {
+		return nil
+	}
 	return e.eventChan
 }
 
 // GetStateManager returns the state manager
 func (e *Engine) GetStateManager() *StateManager {
+	if e == nil {
+		return nil
+	}
 	return e.stateManager
 }
 
 // SetLogger overrides engine logger.
 func (e *Engine) SetLogger(logger *slog.Logger) {
+	if e == nil {
+		return
+	}
 	if logger == nil {
 		return
 	}
@@ -284,6 +299,9 @@ func (e *Engine) SetLogger(logger *slog.Logger) {
 
 // GetRecentEvents returns recent events from newest to oldest.
 func (e *Engine) GetRecentEvents(limit int) []*event.Event {
+	if e == nil {
+		return nil
+	}
 	return e.history.Recent(limit)
 }
 
