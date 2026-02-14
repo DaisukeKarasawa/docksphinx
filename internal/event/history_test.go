@@ -51,12 +51,18 @@ func TestHistoryRecentLimitContract(t *testing.T) {
 
 	if got := h.Recent(0); len(got) != 3 {
 		t.Fatalf("expected full length for zero limit, got %d", len(got))
+	} else if got[0].ID != "e3" || got[1].ID != "e2" || got[2].ID != "e1" {
+		t.Fatalf("expected newest-first ordering for zero limit, got [%s %s %s]", got[0].ID, got[1].ID, got[2].ID)
 	}
 	if got := h.Recent(-1); len(got) != 3 {
 		t.Fatalf("expected full length for negative limit, got %d", len(got))
+	} else if got[0].ID != "e3" || got[1].ID != "e2" || got[2].ID != "e1" {
+		t.Fatalf("expected newest-first ordering for negative limit, got [%s %s %s]", got[0].ID, got[1].ID, got[2].ID)
 	}
 	if got := h.Recent(99); len(got) != 3 {
 		t.Fatalf("expected full length for large limit, got %d", len(got))
+	} else if got[0].ID != "e3" || got[1].ID != "e2" || got[2].ID != "e1" {
+		t.Fatalf("expected newest-first ordering for large limit, got [%s %s %s]", got[0].ID, got[1].ID, got[2].ID)
 	}
 }
 
@@ -68,9 +74,10 @@ func TestHistoryNilSafetyContracts(t *testing.T) {
 	}
 
 	h := NewHistory(3)
+	h.Add(&Event{ID: "kept"})
 	h.Add(nil)
-	if got := h.Recent(10); got != nil {
-		t.Fatalf("expected nil after Add(nil), got %#v", got)
+	if got := h.Recent(10); len(got) != 1 || got[0].ID != "kept" {
+		t.Fatalf("expected Add(nil) to keep existing history unchanged, got %#v", got)
 	}
 }
 
