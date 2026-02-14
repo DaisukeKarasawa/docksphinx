@@ -38,6 +38,7 @@ This file defines instructions for coding agents working on this project.
 - Shared comparator helpers must be nil-safe (no panic on nil inputs) and covered by explicit nil-case regression tests.
 - For map/group aggregation keyed by multiple fields, use structured keys (e.g., struct keys) instead of delimiter-concatenated strings to avoid collision bugs.
 - When slice fields participate in tie-break ordering, compare canonicalized copies (sorted/joined) so ordering is independent of source slice order and remains non-mutating.
+- In CLI/TUI rendering loops over repeated proto fields, skip nil entries explicitly to avoid blank/placeholder artifact rows.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
 - When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
