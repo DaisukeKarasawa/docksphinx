@@ -3401,3 +3401,29 @@ make quality
 
 - `cmd/docksphinxd.waitForProcessExit` で `ctx` を `normalizeParentContext` に通すよう変更し、`ctx.Done()` 参照前に nil 親 context を正規化して panic を防止。
 - `cmd/docksphinxd/main_test.go` に `TestWaitForProcessExitHandlesNilParentContext` を追加し、nil-like context 入力でも `ESRCH` 経路で正常終了することを回帰固定。
+
+---
+
+## 2026-02-14 (gRPC server nil-options reflection guard fix pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.NewServer` の reflection 判定を `opts.EnableReflection` 参照から `resolved.EnableReflection` 参照へ修正し、`opts==nil` 経路での nil dereference panic を解消。
+- `internal/grpc/server_test.go` に `TestNewServerNilOptionsUsesDefaults` を追加し、`NewServer(nil, engine)` が panic せず既定 `RecentEventLimit=50` を適用する契約を回帰固定（既定ポート競合時は環境依存で skip）。
