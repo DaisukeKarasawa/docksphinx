@@ -62,6 +62,7 @@ This file defines instructions for coding agents working on this project.
 - Monitoring helpers with internal maps should lazily initialize map fields so zero-value construction paths remain panic-safe.
 - Public orchestrator/engine methods should be nil-receiver safe, returning explicit errors or no-op/empty values instead of panicking.
 - Internal logging paths should tolerate nil logger dependencies (guard log calls so primary control flow remains panic-safe).
+- Engine lifecycle/collection paths should normalize missing contexts and guard optional stop dependencies (`cancel`, event channels) for partially initialized states.
 - Pub/sub broadcaster utilities should be nil-safe across subscribe/send/run paths and avoid blocking callers on nil receivers.
 - Stream/channel-driven run loops should explicitly guard nil source channels to avoid permanent blocking states.
 - Daemon lifecycle entrypoints (run/stop/cleanup) should guard nil receivers and uninitialized dependencies with explicit errors or no-op behavior.
