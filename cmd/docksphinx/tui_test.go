@@ -9,6 +9,7 @@ import (
 	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"google.golang.org/grpc/metadata"
 )
@@ -535,6 +536,24 @@ func TestTUIStreamLoopNilGuards(t *testing.T) {
 			t.Fatalf("expected nil app error message, got: %v", err)
 		}
 	})
+}
+
+func TestCaptureInputQuitHandlesNilDependencies(t *testing.T) {
+	m := newTUIModel()
+	handler := m.captureInput(nil, nil)
+	if handler == nil {
+		t.Fatal("expected non-nil input handler")
+	}
+
+	event := tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone)
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("expected no panic on nil app/cancel quit path, got %v", r)
+		}
+	}()
+	if got := handler(event); got != nil {
+		t.Fatalf("expected handled quit key to return nil event, got %#v", got)
+	}
 }
 
 func TestLessContainerNameIDNilSafety(t *testing.T) {

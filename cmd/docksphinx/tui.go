@@ -223,8 +223,12 @@ func (m *tuiModel) captureInput(app *tview.Application, cancel context.CancelFun
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'q':
-				cancel()
-				app.Stop()
+				if cancel != nil {
+					cancel()
+				}
+				if app != nil {
+					app.Stop()
+				}
 				return nil
 			case 'j':
 				m.moveSelection(1)
