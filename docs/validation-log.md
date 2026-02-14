@@ -1161,3 +1161,30 @@ make quality
 - `internal/event` の契約テストを強化:
   - `TestHistoryRecentLimitContract` で `limit<=0` / `limit>len` の newest-first 順序を明示検証
   - `TestHistoryNilSafetyContracts` で `Add(nil)` が既存履歴を維持することを確認
+
+---
+
+## 2026-02-14 (selectRecentEvents boundary contract coverage pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx` の `TestSelectRecentEvents` を拡張し、以下を追加検証:
+  - `limit<0` は `nil` を返す
+  - `nil` 混在入力 + `limit` 制限時に、フィルタ後のソート結果から先頭 N 件が返る
