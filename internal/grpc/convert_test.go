@@ -73,6 +73,22 @@ func TestStateToSnapshotClampsLargeValues(t *testing.T) {
 	}
 }
 
+func TestStateToSnapshotNilStateManagerReturnsEmptySnapshot(t *testing.T) {
+	snapshot := StateToSnapshot(nil)
+	if snapshot == nil {
+		t.Fatal("expected non-nil snapshot")
+	}
+	if snapshot.GetAtUnix() <= 0 {
+		t.Fatalf("expected AtUnix to be set, got %d", snapshot.GetAtUnix())
+	}
+	if len(snapshot.GetContainers()) != 0 || len(snapshot.GetImages()) != 0 || len(snapshot.GetNetworks()) != 0 || len(snapshot.GetVolumes()) != 0 || len(snapshot.GetGroups()) != 0 {
+		t.Fatalf("expected empty resources for nil state manager, got %#v", snapshot)
+	}
+	if snapshot.GetMetrics() == nil {
+		t.Fatal("expected metrics map to be initialized")
+	}
+}
+
 func TestStateToSnapshotSortsComposeGroupsAndFields(t *testing.T) {
 	sm := monitor.NewStateManager()
 	inputGroups := []monitor.ComposeGroup{

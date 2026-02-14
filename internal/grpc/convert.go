@@ -52,6 +52,12 @@ func fmtString(v interface{}) string {
 
 // StateToSnapshot builds proto Snapshot from StateManager
 func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
+	if sm == nil {
+		return &pb.Snapshot{
+			AtUnix:  time.Now().Unix(),
+			Metrics: map[string]*pb.ContainerMetrics{},
+		}
+	}
 	states := sm.GetAllStates()
 	containers := make([]*pb.ContainerInfo, 0, len(states))
 	metrics := make(map[string]*pb.ContainerMetrics)
