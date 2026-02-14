@@ -85,8 +85,8 @@ func TestWaitForProcessExitImmediateContextCancel(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when context is already canceled")
 	}
-	if !strings.Contains(err.Error(), "did not stop") {
-		t.Fatalf("expected timeout/cancel message, got: %v", err)
+	if !strings.Contains(err.Error(), "canceled") {
+		t.Fatalf("expected canceled message, got: %v", err)
 	}
 }
 

@@ -237,7 +237,10 @@ func waitForProcessExit(
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("process %d did not stop within timeout", pid)
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("process %d did not stop within timeout", pid)
+			}
+			return fmt.Errorf("waiting for process %d stop canceled", pid)
 		case <-ticker.C:
 			err := checker(pid)
 			if err == nil {
