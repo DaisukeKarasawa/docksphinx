@@ -17,24 +17,33 @@ import (
 // Server is the gRPC server for DocksphinxService
 type Server struct {
 	pb.UnimplementedDocksphinxServiceServer
-	lis    net.Listener
-	grpc   *grpc.Server
-	opts   *ServerOptions
-	engine *monitor.Engine
-	bcast  *Broadcaster
-	mu     sync.Mutex
+	lis         net.Listener
+	grpc        *grpc.Server
+	opts        *ServerOptions
+	engine      *monitor.Engine
+	bcast       *Broadcaster
+	bcastCancel context.CancelFunc
+	mu          sync.Mutex
 }
 
 // ServerOptions configures the gRPC server
 type ServerOptions struct {
-	Address string // e.g. "127.0.0.1:50051"
+	Address          string // e.g. "127.0.0.1:50051"
+	EnableReflection bool
+	RecentEventLimit int
 }
 
 // NewServer creates a new gRPC server (does not start listening).
 // Engine must already be started; its event channel is fanned out via Broadcaster.
 func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
+	if engine == nil {
+		return nil, fmt.Errorf("engine is nil")
+	}
 	if opts == nil {
-		opts = &ServerOptions{Address: "127.0.0.1:50051"}
+		opts = &ServerOptions{Address: "127.0.0.1:50051", RecentEventLimit: 50}
+	}
+	if opts.RecentEventLimit <= 0 {
+		opts.RecentEventLimit = 50
 	}
 	lis, err := net.Listen("tcp", opts.Address)
 	if err != nil {
@@ -42,10 +51,13 @@ func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
 	}
 	s := grpc.NewServer()
 	bcast := NewBroadcaster()
-	srv := &Server{lis: lis, grpc: s, opts: opts, engine: engine, bcast: bcast}
+	bcastCtx, bcastCancel := context.WithCancel(context.Background())
+	srv := &Server{lis: lis, grpc: s, opts: opts, engine: engine, bcast: bcast, bcastCancel: bcastCancel}
 	pb.RegisterDocksphinxServiceServer(s, srv)
-	reflection.Register(s)
-	go bcast.Run(engine.GetEventChannel())
+	if opts.EnableReflection {
+		reflection.Register(s)
+	}
+	go bcast.Run(bcastCtx, engine.GetEventChannel())
 	return srv, nil
 }
 
@@ -59,6 +71,9 @@ func (s *Server) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.grpc != nil {
+		if s.bcastCancel != nil {
+			s.bcastCancel()
+		}
 		s.grpc.GracefulStop()
 		s.grpc = nil
 	}
@@ -70,7 +85,9 @@ func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*
 	if sm == nil {
 		return nil, status.Error(codes.Unavailable, "state not available")
 	}
-	return StateToSnapshot(sm), nil
+	snapshot := StateToSnapshot(sm)
+	snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.opts.RecentEventLimit))
+	return snapshot, nil
 }
 
 // Stream implements DocksphinxService
@@ -78,7 +95,9 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 	if req != nil && req.IncludeInitialSnapshot {
 		sm := s.engine.GetStateManager()
 		if sm != nil {
-			_ = stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: StateToSnapshot(sm)}})
+			snapshot := StateToSnapshot(sm)
+			snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.opts.RecentEventLimit))
+			_ = stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: snapshot}})
 		}
 	}
 	sub, unsub := s.bcast.Subscribe()

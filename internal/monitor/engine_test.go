@@ -104,9 +104,9 @@ func TestThresholdMonitor(t *testing.T) {
 	th := NewThresholdMonitor(config)
 
 	state := &ContainerState{
-		ContainerID:           "test-container",
-		CPUThresholdCount:     0,
-		MemoryThresholdCount:  0,
+		ContainerID:          "test-container",
+		CPUThresholdCount:    0,
+		MemoryThresholdCount: 0,
 	}
 
 	events := th.CheckThresholds("test-container", "test", "test-image", 50.0, 50.0, state)

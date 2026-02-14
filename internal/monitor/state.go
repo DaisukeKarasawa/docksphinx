@@ -3,6 +3,8 @@ package monitor
 import (
 	"sync"
 	"time"
+
+	"docksphinx/internal/docker"
 )
 
 // ContainerState represents the current state of a container
@@ -25,6 +27,15 @@ type ContainerState struct {
 	NetworkRx     int64
 	NetworkTx     int64
 
+	// Runtime details
+	StartedAt        time.Time
+	UptimeSeconds    int64
+	RestartCount     int
+	ComposeProject   string
+	ComposeService   string
+	VolumeMountCount int
+	NetworkNames     []string
+
 	// For threshold detection
 	CPUThresholdCount    int // Consecutive CPU threshold violations
 	MemoryThresholdCount int // Consecutive memory threshold violations
@@ -35,16 +46,40 @@ type ContainerState struct {
 	PreviousMem   float64
 }
 
+// ComposeGroup is a heuristic grouping based on compose labels and shared network.
+type ComposeGroup struct {
+	Project        string
+	Service        string
+	ContainerIDs   []string
+	ContainerNames []string
+	NetworkNames   []string
+}
+
+// ResourceState stores latest non-container resources.
+type ResourceState struct {
+	Images   []docker.Image
+	Networks []docker.Network
+	Volumes  []docker.Volume
+	Groups   []ComposeGroup
+}
+
 // StateManager manages container states
 type StateManager struct {
-	mu     sync.RWMutex
-	states map[string]*ContainerState // Key: ContainerID
+	mu        sync.RWMutex
+	states    map[string]*ContainerState // Key: ContainerID
+	resources ResourceState
 }
 
 // NewStateManager creates a new state manager
 func NewStateManager() *StateManager {
 	return &StateManager{
 		states: make(map[string]*ContainerState),
+		resources: ResourceState{
+			Images:   nil,
+			Networks: nil,
+			Volumes:  nil,
+			Groups:   nil,
+		},
 	}
 }
 
@@ -111,4 +146,25 @@ func (sm *StateManager) Clear() {
 	defer sm.mu.Unlock()
 
 	sm.states = make(map[string]*ContainerState)
+	sm.resources = ResourceState{}
+}
+
+// UpdateResources updates non-container resource snapshots.
+func (sm *StateManager) UpdateResources(resources ResourceState) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	sm.resources = resources
+}
+
+// GetResources returns latest non-container resource snapshot.
+func (sm *StateManager) GetResources() ResourceState {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return ResourceState{
+		Images:   append([]docker.Image(nil), sm.resources.Images...),
+		Networks: append([]docker.Network(nil), sm.resources.Networks...),
+		Volumes:  append([]docker.Volume(nil), sm.resources.Volumes...),
+		Groups:   append([]ComposeGroup(nil), sm.resources.Groups...),
+	}
 }

@@ -136,8 +136,8 @@ func (c *Client) GetNetworkStats(ctx context.Context, containerID string) (int64
 
 // VolumeMount represents a volume mount in a container
 type VolumeMount struct {
-	Name   		  string
-	Source			string
+	Name        string
+	Source      string
 	Destination string
 	Driver      string
 }
@@ -156,8 +156,8 @@ func (c *Client) GetVolumeUsage(ctx context.Context, containerID string) ([]Volu
 	for _, mount := range container.Mounts {
 		if mount.Type == "volume" {
 			result = append(result, VolumeMount{
-				Name:  			 mount.Name,
-				Source: 		 mount.Source,
+				Name:        mount.Name,
+				Source:      mount.Source,
 				Destination: mount.Destination,
 				Driver:      mount.Driver,
 			})

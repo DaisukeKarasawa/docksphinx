@@ -3,8 +3,8 @@
 outputs/
 
 # Binaries
-docksphinx
-docksphinxd
+/docksphinx
+/docksphinxd
 docksphinx.exe
 docksphinxd.exe
 test-monitor
@@ -27,9 +27,6 @@ vendor/
 
 # Go workspace file
 go.work
-
-# Generated gRPC code
-api/
 
 # IDE
 .idea/

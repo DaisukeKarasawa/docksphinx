@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -53,12 +54,18 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 	metrics := make(map[string]*pb.ContainerMetrics)
 	for _, st := range states {
 		containers = append(containers, &pb.ContainerInfo{
-			ContainerId:   st.ContainerID,
-			ContainerName: st.ContainerName,
-			ImageName:     st.ImageName,
-			State:         st.State,
-			Status:        st.Status,
-			LastSeenUnix:  st.LastSeen.Unix(),
+			ContainerId:      st.ContainerID,
+			ContainerName:    st.ContainerName,
+			ImageName:        st.ImageName,
+			State:            st.State,
+			Status:           st.Status,
+			LastSeenUnix:     st.LastSeen.Unix(),
+			StartedAtUnix:    st.StartedAt.Unix(),
+			UptimeSeconds:    st.UptimeSeconds,
+			ComposeProject:   st.ComposeProject,
+			ComposeService:   st.ComposeService,
+			RestartCount:     int32(st.RestartCount),
+			VolumeMountCount: int32(st.VolumeMountCount),
 		})
 		metrics[st.ContainerID] = &pb.ContainerMetrics{
 			ContainerId:   st.ContainerID,
@@ -70,9 +77,86 @@ func StateToSnapshot(sm *monitor.StateManager) *pb.Snapshot {
 			NetworkTx:     st.NetworkTx,
 		}
 	}
+	sort.Slice(containers, func(i, j int) bool {
+		return containers[i].GetContainerName() < containers[j].GetContainerName()
+	})
+
+	resources := sm.GetResources()
+	images := make([]*pb.ImageInfo, 0, len(resources.Images))
+	for _, img := range resources.Images {
+		images = append(images, &pb.ImageInfo{
+			ImageId:     img.ID,
+			Repository:  img.Repository,
+			Tag:         img.Tag,
+			Size:        img.Size,
+			CreatedUnix: img.Created,
+		})
+	}
+	sort.Slice(images, func(i, j int) bool {
+		if images[i].GetRepository() == images[j].GetRepository() {
+			return images[i].GetTag() < images[j].GetTag()
+		}
+		return images[i].GetRepository() < images[j].GetRepository()
+	})
+
+	networks := make([]*pb.NetworkInfo, 0, len(resources.Networks))
+	for _, net := range resources.Networks {
+		networks = append(networks, &pb.NetworkInfo{
+			NetworkId:      net.ID,
+			Name:           net.Name,
+			Driver:         net.Driver,
+			Scope:          net.Scope,
+			Internal:       net.Internal,
+			ContainerCount: int32(net.ContainerCount),
+		})
+	}
+	sort.Slice(networks, func(i, j int) bool {
+		return networks[i].GetName() < networks[j].GetName()
+	})
+
+	volumes := make([]*pb.VolumeInfo, 0, len(resources.Volumes))
+	for _, vol := range resources.Volumes {
+		volumes = append(volumes, &pb.VolumeInfo{
+			Name:       vol.Name,
+			Driver:     vol.Driver,
+			Mountpoint: vol.Mountpoint,
+			RefCount:   int32(vol.RefCount),
+			UsageNote:  vol.UsageNote,
+		})
+	}
+	sort.Slice(volumes, func(i, j int) bool {
+		return volumes[i].GetName() < volumes[j].GetName()
+	})
+
+	groups := make([]*pb.ComposeGroup, 0, len(resources.Groups))
+	for _, g := range resources.Groups {
+		groups = append(groups, &pb.ComposeGroup{
+			Project:        g.Project,
+			Service:        g.Service,
+			ContainerIds:   append([]string(nil), g.ContainerIDs...),
+			ContainerNames: append([]string(nil), g.ContainerNames...),
+			NetworkNames:   append([]string(nil), g.NetworkNames...),
+		})
+	}
+
 	return &pb.Snapshot{
 		Containers: containers,
 		Metrics:    metrics,
+		Images:     images,
+		Networks:   networks,
+		Volumes:    volumes,
+		Groups:     groups,
 		AtUnix:     time.Now().Unix(),
 	}
+}
+
+func EventsToProto(events []*event.Event) []*pb.Event {
+	out := make([]*pb.Event, 0, len(events))
+	for _, ev := range events {
+		converted := EventToProto(ev)
+		if converted != nil {
+			out = append(out, converted)
+		}
+	}
+	return out
 }

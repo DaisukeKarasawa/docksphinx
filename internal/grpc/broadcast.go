@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"context"
 	"sync"
 
 	"docksphinx/internal/event"
@@ -57,9 +58,18 @@ func (b *Broadcaster) Send(ev *event.Event) {
 	}
 }
 
-// Run reads from src and forwards to all subscribers. Call in a goroutine; stops when src is closed.
-func (b *Broadcaster) Run(src <-chan *event.Event) {
-	for ev := range src {
-		b.Send(ev)
+// Run reads from src and forwards to all subscribers. Call in a goroutine;
+// stops when ctx is canceled or src is closed.
+func (b *Broadcaster) Run(ctx context.Context, src <-chan *event.Event) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ev, ok := <-src:
+			if !ok {
+				return
+			}
+			b.Send(ev)
+		}
 	}
 }

@@ -4,6 +4,8 @@
 monitor:
   # 収集感覚(s)
   interval: 5
+  # images/networks/volumes の収集間隔(s)
+  resource_interval: 15
 
   # 監視対象のフィルタ
   filters:
@@ -27,6 +29,8 @@ monitor:
       critical: 95
       # 連続N回超過でイベント生成
       consecutive_count: 3
+    # 同一イベント連投抑止(s)
+    cooldown_seconds: 30
 
 # gRPCサーバー設定
 grpc:
@@ -35,6 +39,8 @@ grpc:
 
   # タイムアウト設定(s)
   timeout: 30
+  # gRPC reflection (default: false)
+  enable_reflection: false
 
 # ログ設定
 log:
@@ -48,3 +54,8 @@ log:
 event:
   # メモリ内に保持する最大イベント数
   max_history: 1000
+
+# デーモン制御
+daemon:
+  # PID ファイル
+  pid_file: "/tmp/docksphinxd.pid"
