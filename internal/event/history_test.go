@@ -44,17 +44,23 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 		Items: []string{"it-1", "it-2"},
 		Meta:  map[string]string{"k": "v"},
 	}
+	ptrStructured := &structuredPayload{
+		Name:  "ptr-payload",
+		Items: []string{"pit-1", "pit-2"},
+		Meta:  map[string]string{"pk": "pv"},
+	}
 	original := &Event{
 		ID:        "e1",
 		Type:      EventTypeCPUThreshold,
 		Timestamp: time.Unix(100, 0),
 		Data: map[string]interface{}{
-			"cpu":        95.5,
-			"meta":       nestedMap,
-			"tags":       nestedSlice,
-			"labels":     stringMap,
-			"names":      stringSlice,
-			"structured": structured,
+			"cpu":           95.5,
+			"meta":          nestedMap,
+			"tags":          nestedSlice,
+			"labels":        stringMap,
+			"names":         stringSlice,
+			"structured":    structured,
+			"structuredPtr": ptrStructured,
 		},
 		Message: "high cpu",
 	}
@@ -71,6 +77,8 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	stringSlice[0] = "changed-svc"
 	structured.Items[0] = "mutated-item"
 	structured.Meta["k"] = "mutated-meta"
+	ptrStructured.Items[0] = "mutated-ptr-item"
+	ptrStructured.Meta["pk"] = "mutated-ptr-meta"
 
 	got := h.Recent(1)
 	if len(got) != 1 {
@@ -96,6 +104,12 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 		gotStructured.Meta["k"] != "v" {
 		t.Fatalf("expected struct payload to be isolated, got %#v", got[0].Data["structured"])
 	}
+	if gotStructuredPtr, ok := got[0].Data["structuredPtr"].(*structuredPayload); !ok ||
+		gotStructuredPtr == nil ||
+		len(gotStructuredPtr.Items) != 2 || gotStructuredPtr.Items[0] != "pit-1" ||
+		gotStructuredPtr.Meta["pk"] != "pv" {
+		t.Fatalf("expected struct pointer payload to be isolated, got %#v", got[0].Data["structuredPtr"])
+	}
 	if !reflect.DeepEqual(got[0].Data["cpu"], 95.5) {
 		t.Fatalf("expected stored data to be unchanged, got %#v", got[0].Data)
 	}
@@ -119,6 +133,10 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 		payload.Items[0] = "out-mutated-item"
 		payload.Meta["k"] = "out-mutated-meta"
 		got[0].Data["structured"] = payload
+	}
+	if payloadPtr, ok := got[0].Data["structuredPtr"].(*structuredPayload); ok && payloadPtr != nil {
+		payloadPtr.Items[0] = "out-mutated-ptr-item"
+		payloadPtr.Meta["pk"] = "out-mutated-ptr-meta"
 	}
 
 	gotAgain := h.Recent(1)
@@ -144,6 +162,12 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 		len(gotStructured.Items) != 2 || gotStructured.Items[0] != "it-1" ||
 		gotStructured.Meta["k"] != "v" {
 		t.Fatalf("expected struct payload in history to stay unchanged, got %#v", gotAgain[0].Data["structured"])
+	}
+	if gotStructuredPtr, ok := gotAgain[0].Data["structuredPtr"].(*structuredPayload); !ok ||
+		gotStructuredPtr == nil ||
+		len(gotStructuredPtr.Items) != 2 || gotStructuredPtr.Items[0] != "pit-1" ||
+		gotStructuredPtr.Meta["pk"] != "pv" {
+		t.Fatalf("expected struct pointer payload in history to stay unchanged, got %#v", gotAgain[0].Data["structuredPtr"])
 	}
 }
 
