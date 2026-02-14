@@ -241,7 +241,10 @@ func removePIDFileIfExists(path string) error {
 func describePIDStatus(pidFile string, checker func(int) error) (status string, stale bool, err error) {
 	pid, err := readPID(pidFile)
 	if err != nil {
-		return "pid: not found", false, nil
+		if errors.Is(err, ErrPIDFileNotFound) {
+			return "pid: not found", false, nil
+		}
+		return "", false, err
 	}
 
 	checkErr := checker(pid)

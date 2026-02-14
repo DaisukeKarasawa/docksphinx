@@ -179,6 +179,22 @@ func TestDescribePIDStatus(t *testing.T) {
 	}
 }
 
+func TestDescribePIDStatusInvalidPIDReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("not-a-number\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	_, _, err := describePIDStatus(pidPath, func(_ int) error { return nil })
+	if err == nil {
+		t.Fatal("expected invalid pid to return error")
+	}
+	if !strings.Contains(err.Error(), "invalid pid") {
+		t.Fatalf("expected invalid pid error, got: %v", err)
+	}
+}
+
 func TestInspectPID(t *testing.T) {
 	dir := t.TempDir()
 	pidPath := filepath.Join(dir, "docksphinxd.pid")
