@@ -32,6 +32,34 @@ func TestHistoryRecentReturnsNewestFirstWithinLimit(t *testing.T) {
 	}
 }
 
+func TestNewHistoryEnforcesMinSize(t *testing.T) {
+	h := NewHistory(0)
+	for i := 0; i < 3; i++ {
+		h.Add(&Event{ID: "e", Timestamp: time.Now()})
+	}
+	got := h.Recent(10)
+	if len(got) != 1 {
+		t.Fatalf("expected min capacity behavior to keep 1 event, got %d", len(got))
+	}
+}
+
+func TestHistoryRecentLimitContract(t *testing.T) {
+	h := NewHistory(5)
+	h.Add(&Event{ID: "e1", Timestamp: time.Unix(1, 0)})
+	h.Add(&Event{ID: "e2", Timestamp: time.Unix(2, 0)})
+	h.Add(&Event{ID: "e3", Timestamp: time.Unix(3, 0)})
+
+	if got := h.Recent(0); len(got) != 3 {
+		t.Fatalf("expected full length for zero limit, got %d", len(got))
+	}
+	if got := h.Recent(-1); len(got) != 3 {
+		t.Fatalf("expected full length for negative limit, got %d", len(got))
+	}
+	if got := h.Recent(99); len(got) != 3 {
+		t.Fatalf("expected full length for large limit, got %d", len(got))
+	}
+}
+
 func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	h := NewHistory(5)
 
