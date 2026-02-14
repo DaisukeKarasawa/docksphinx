@@ -103,6 +103,10 @@ func runStop(parent context.Context, cmd *cli.Command) error {
 
 	pid, err := readPID(cfg.Daemon.PIDFile)
 	if err != nil {
+		if errors.Is(err, ErrPIDFileNotFound) {
+			fmt.Println("Daemon is already stopped (pid file not found)")
+			return nil
+		}
 		return err
 	}
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
