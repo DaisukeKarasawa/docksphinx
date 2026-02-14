@@ -54,10 +54,16 @@ func NewClient(ctx context.Context, address string) (*Client, error) {
 }
 
 func (c *Client) Close() error {
-	if c == nil || c.conn == nil {
+	if c == nil {
 		return nil
 	}
-	return c.conn.Close()
+	conn := c.conn
+	c.conn = nil
+	c.client = nil
+	if conn == nil {
+		return nil
+	}
+	return conn.Close()
 }
 
 func (c *Client) GetSnapshot(ctx context.Context) (*pb.Snapshot, error) {

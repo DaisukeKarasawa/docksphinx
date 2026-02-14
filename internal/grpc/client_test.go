@@ -77,6 +77,33 @@ func TestClientMethodsReturnErrorWhenClientIsNil(t *testing.T) {
 	}
 }
 
+func TestClientCloseClearsClientForPostCloseCalls(t *testing.T) {
+	stub := &stubClient{}
+	c := &Client{client: stub}
+
+	if err := c.Close(); err != nil {
+		t.Fatalf("expected Close without connection to succeed, got %v", err)
+	}
+	if _, err := c.GetSnapshot(context.Background()); err == nil {
+		t.Fatal("expected GetSnapshot to fail after Close cleared client")
+	}
+	if _, err := c.Stream(context.Background(), false); err == nil {
+		t.Fatal("expected Stream to fail after Close cleared client")
+	}
+}
+
+func TestClientCloseIsIdempotent(t *testing.T) {
+	stub := &stubClient{}
+	c := &Client{client: stub}
+
+	if err := c.Close(); err != nil {
+		t.Fatalf("first Close failed: %v", err)
+	}
+	if err := c.Close(); err != nil {
+		t.Fatalf("second Close should be no-op: %v", err)
+	}
+}
+
 func TestWaitUntilReadyRejectsNilConnection(t *testing.T) {
 	if err := waitUntilReady(context.Background(), nil); err == nil {
 		t.Fatal("expected waitUntilReady(nil conn) to fail")
