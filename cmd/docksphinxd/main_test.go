@@ -116,6 +116,21 @@ func TestRemovePIDFileIfExistsNoOpCases(t *testing.T) {
 	}
 }
 
+func TestRemovePIDFileIfExistsTrimsPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(path, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	if err := removePIDFileIfExists("  " + path + "  "); err != nil {
+		t.Fatalf("expected trimmed path removal success, got: %v", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected pid file to be removed via trimmed path, stat err=%v", err)
+	}
+}
+
 func TestDescribePIDStatus(t *testing.T) {
 	dir := t.TempDir()
 	pidPath := filepath.Join(dir, "docksphinxd.pid")
@@ -295,6 +310,22 @@ func TestReadPID(t *testing.T) {
 		}
 		if pid != 4321 {
 			t.Fatalf("expected pid 4321, got %d", pid)
+		}
+	})
+
+	t.Run("trimmed path is accepted", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("2468\n"), 0o600); err != nil {
+			t.Fatalf("failed to write pid file: %v", err)
+		}
+
+		pid, err := readPID("  " + pidPath + "  ")
+		if err != nil {
+			t.Fatalf("expected trimmed path to be accepted, got error: %v", err)
+		}
+		if pid != 2468 {
+			t.Fatalf("expected pid 2468, got %d", pid)
 		}
 	})
 

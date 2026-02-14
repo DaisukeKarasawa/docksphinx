@@ -185,18 +185,22 @@ func markAlreadyReported(err error) error {
 }
 
 func readPID(path string) (int, error) {
+	trimmedPath := strings.TrimSpace(path)
+	if trimmedPath == "" {
+		return 0, fmt.Errorf("%w: %s", ErrPIDFileNotFound, path)
+	}
 	// #nosec G304 -- path is loaded from validated config and expected absolute pid path.
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(trimmedPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return 0, fmt.Errorf("%w: %s", ErrPIDFileNotFound, path)
+			return 0, fmt.Errorf("%w: %s", ErrPIDFileNotFound, trimmedPath)
 		}
 		return 0, err
 	}
 
 	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
 	if err != nil || pid <= 0 {
-		return 0, fmt.Errorf("invalid pid in %s", path)
+		return 0, fmt.Errorf("invalid pid in %s", trimmedPath)
 	}
 	return pid, nil
 }
@@ -258,10 +262,11 @@ func waitForProcessExit(
 }
 
 func removePIDFileIfExists(path string) error {
-	if strings.TrimSpace(path) == "" {
+	trimmedPath := strings.TrimSpace(path)
+	if trimmedPath == "" {
 		return nil
 	}
-	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(trimmedPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	return nil
