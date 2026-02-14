@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -82,6 +83,54 @@ func TestServerSnapshotAndStreamInitial(t *testing.T) {
 	}
 	if update.GetSnapshot() == nil {
 		t.Fatalf("expected initial snapshot payload, got %#v", update.GetPayload())
+	}
+}
+
+func TestNewServerRejectsWhitespaceAddress(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	_, err = NewServer(&ServerOptions{
+		Address:          "   ",
+		EnableReflection: false,
+		RecentEventLimit: 10,
+	}, engine)
+	if err == nil {
+		t.Fatal("expected NewServer to fail for whitespace-only address")
+	}
+	if got := err.Error(); got != "address cannot be empty" {
+		t.Fatalf("expected empty address error, got %q", got)
+	}
+}
+
+func TestNewServerTrimsAddressBeforeListen(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	srv, err := NewServer(&ServerOptions{
+		Address:          " 127.0.0.1:0 ",
+		EnableReflection: false,
+		RecentEventLimit: 10,
+	}, engine)
+	if err != nil {
+		t.Fatalf("expected NewServer to accept trimmed address: %v", err)
+	}
+	defer srv.Stop()
+
+	if addr := srv.Address(); !strings.HasPrefix(addr, "127.0.0.1:") {
+		t.Fatalf("expected listener to bind loopback address, got %q", addr)
 	}
 }
 

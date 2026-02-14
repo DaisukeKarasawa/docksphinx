@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 
 	pb "docksphinx/api/docksphinx/v1"
@@ -41,6 +42,10 @@ func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
 	}
 	if opts == nil {
 		opts = &ServerOptions{Address: "127.0.0.1:50051", RecentEventLimit: 50}
+	}
+	opts.Address = strings.TrimSpace(opts.Address)
+	if opts.Address == "" {
+		return nil, fmt.Errorf("address cannot be empty")
 	}
 	if opts.RecentEventLimit <= 0 {
 		opts.RecentEventLimit = 50
