@@ -178,3 +178,44 @@ func TestDescribePIDStatus(t *testing.T) {
 		t.Fatalf("expected unknown status, got %q", status)
 	}
 }
+
+func TestInspectPID(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	pid, running, stale, err := inspectPID(pidPath, func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pid != 123 || !running || stale {
+		t.Fatalf("unexpected inspect result: pid=%d running=%t stale=%t", pid, running, stale)
+	}
+
+	pid, running, stale, err = inspectPID(pidPath, func(_ int) error { return syscall.ESRCH })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pid != 123 || running || !stale {
+		t.Fatalf("unexpected inspect stale result: pid=%d running=%t stale=%t", pid, running, stale)
+	}
+
+	pid, running, stale, err = inspectPID(filepath.Join(dir, "missing.pid"), func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pid != 0 || running || stale {
+		t.Fatalf("expected missing pid file to be treated as not running, got pid=%d running=%t stale=%t", pid, running, stale)
+	}
+
+	_, _, _, err = inspectPID(pidPath, func(_ int) error { return syscall.EPERM })
+	if err == nil {
+		t.Fatal("expected permission denied error")
+	}
+	_, _, _, err = inspectPID(pidPath, func(_ int) error { return errors.New("boom") })
+	if err == nil {
+		t.Fatal("expected unknown checker error")
+	}
+}

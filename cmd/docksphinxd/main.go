@@ -64,6 +64,21 @@ func runStart(parent context.Context, cmd *cli.Command) error {
 	} else {
 		fmt.Println("Using config: defaults")
 	}
+	pid, running, stale, err := inspectPID(cfg.Daemon.PIDFile, func(targetPID int) error {
+		return syscall.Kill(targetPID, 0)
+	})
+	if err != nil {
+		return err
+	}
+	if running {
+		return fmt.Errorf("daemon already running with pid %d", pid)
+	}
+	if stale {
+		if err := removePIDFileIfExists(cfg.Daemon.PIDFile); err != nil {
+			return fmt.Errorf("found stale pid %d but failed to remove pid file: %w", pid, err)
+		}
+		fmt.Printf("Removed stale PID file for pid %d\n", pid)
+	}
 
 	d, err := daemon.New(cfg)
 	if err != nil {
@@ -238,4 +253,23 @@ func describePIDStatus(pidFile string, checker func(int) error) (status string, 
 		return fmt.Sprintf("pid: %d (permission denied)", pid), false, nil
 	}
 	return fmt.Sprintf("pid: %d (unknown)", pid), false, nil
+}
+
+func inspectPID(pidFile string, checker func(int) error) (pid int, running bool, stale bool, err error) {
+	pid, err = readPID(pidFile)
+	if err != nil {
+		return 0, false, false, nil
+	}
+
+	checkErr := checker(pid)
+	if checkErr == nil {
+		return pid, true, false, nil
+	}
+	if errors.Is(checkErr, syscall.ESRCH) {
+		return pid, false, true, nil
+	}
+	if errors.Is(checkErr, syscall.EPERM) {
+		return pid, false, false, fmt.Errorf("permission denied while checking existing pid %d", pid)
+	}
+	return pid, false, false, fmt.Errorf("failed to inspect existing pid %d: %w", pid, checkErr)
 }
