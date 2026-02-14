@@ -37,6 +37,7 @@ README の「主要ドキュメント」節にある以下リンク:
 - `docs/validation-log-template.md`
 - `docs/handover-checklist.md`
 - `docs/plan-completion-checklist.md`
+- `docs/plan-execution-report.md`
 - `docs/command-output-samples.md`
 - `docs/requirements-traceability.md`
 - `docs/contribution-workflow.md`

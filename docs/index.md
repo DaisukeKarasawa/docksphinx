@@ -36,6 +36,7 @@
 
 ## 5. 進捗と履歴
 - `phase-progress-log.md`
+- `plan-execution-report.md`
 - `execution-changelog.md`
 - `delivery-manifest.md`
 - `final-status.md`
