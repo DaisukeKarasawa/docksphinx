@@ -8,6 +8,17 @@ Docker 環境をローカルで継続監視し、`snapshot` / `tail` / `tui` で
 make build
 ```
 
+## Quality Gates
+
+```bash
+make test
+make test-race
+make security
+```
+
+`make security` は `staticcheck` / `gosec` / `govulncheck` を実行します。  
+`govulncheck` は環境依存で内部エラーになる場合があるため、詳細は `docs/security-check-summary.md` を参照してください。
+
 ## Daemon
 
 起動:
