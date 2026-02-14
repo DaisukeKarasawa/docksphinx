@@ -8,6 +8,7 @@
 ## 2. 実行・適用ガイド
 - `quickstart.md`
 - `implementation-handoff-runbook.md`
+- `handover-checklist.md`
 - `patch-application-procedure.md`
 - `command-reference.md`
 
