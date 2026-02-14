@@ -75,6 +75,7 @@ TUI:
 
 - 読み取り専用（コンテナ実行操作なし）
 - gRPC は既定で `127.0.0.1` bind
+- `grpc.allow_non_loopback=false`（既定）では loopback 以外の bind を拒否
 - volume 使用量は Docker API 制約により **metadata-only**
 
 詳細は以下を参照:

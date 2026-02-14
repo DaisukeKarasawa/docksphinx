@@ -38,7 +38,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := validateGRPCAddress(c.GRPC.Address); err != nil {
+	if err := validateGRPCAddress(c.GRPC.Address, c.GRPC.AllowNonLoopback); err != nil {
 		return err
 	}
 	if c.GRPC.Timeout <= 0 {
@@ -102,7 +102,7 @@ func validateThresholds(c *Config) error {
 	return nil
 }
 
-func validateGRPCAddress(addr string) error {
+func validateGRPCAddress(addr string, allowNonLoopback bool) error {
 	trimmed := strings.TrimSpace(addr)
 	if trimmed == "" {
 		return fmt.Errorf("grpc.address must not be empty")
@@ -117,5 +117,16 @@ func validateGRPCAddress(addr string) error {
 	if host == "" {
 		return fmt.Errorf("grpc.address host is empty")
 	}
+	if !allowNonLoopback && !isLoopbackHost(host) {
+		return fmt.Errorf("grpc.address host %q must be loopback unless grpc.allow_non_loopback=true", host)
+	}
 	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

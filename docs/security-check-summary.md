@@ -48,6 +48,8 @@ internal error: package "golang.org/x/text/encoding" without types was imported 
 
 - binary mode で検出された Go 標準ライブラリ脆弱性（GO-2026-4341 / GO-2026-4340 / GO-2026-4337）に対して、
   `toolchain go1.24.11` から `toolchain go1.24.13` へ更新し、再スキャンで解消を確認。
+- `grpc.allow_non_loopback`（既定 false）を追加し、誤って loopback 以外へ bind する設定を
+  バリデーションで拒否するようにした（明示 opt-in 時のみ許可）。
 
 ## 次アクション候補
 

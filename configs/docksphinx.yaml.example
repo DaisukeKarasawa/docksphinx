@@ -36,6 +36,8 @@ monitor:
 grpc:
   # リスニングアドレス
   address: "127.0.0.1:50051"
+  # true にすると loopback 以外の bind を許可（デフォルトは安全のため false）
+  allow_non_loopback: false
 
   # タイムアウト設定(s)
   timeout: 30

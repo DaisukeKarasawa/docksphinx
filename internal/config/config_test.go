@@ -21,6 +21,23 @@ func TestValidateRejectsInvalidGRPCAddress(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsNonLoopbackByDefault(t *testing.T) {
+	cfg := Default()
+	cfg.GRPC.Address = "0.0.0.0:50051"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected non-loopback grpc host to be rejected by default")
+	}
+}
+
+func TestValidateAllowsNonLoopbackWhenEnabled(t *testing.T) {
+	cfg := Default()
+	cfg.GRPC.Address = "0.0.0.0:50051"
+	cfg.GRPC.AllowNonLoopback = true
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected non-loopback grpc host to be allowed when enabled: %v", err)
+	}
+}
+
 func TestValidateRejectsInvalidRegex(t *testing.T) {
 	cfg := Default()
 	cfg.Monitor.Filters.ContainerNames = []string{"["}

@@ -28,6 +28,7 @@ func Default() *Config {
 			Address:          defaultGRPCAddress,
 			Timeout:          defaultGRPCTimeoutSeconds,
 			EnableReflection: false,
+			AllowNonLoopback: false,
 		},
 		Log: LogConfig{
 			Level: defaultLogLevel,

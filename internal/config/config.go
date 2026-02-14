@@ -39,6 +39,7 @@ type GRPCConfig struct {
 	Address          string `yaml:"address"`
 	Timeout          int    `yaml:"timeout"`
 	EnableReflection bool   `yaml:"enable_reflection"`
+	AllowNonLoopback bool   `yaml:"allow_non_loopback"`
 }
 
 type LogConfig struct {
