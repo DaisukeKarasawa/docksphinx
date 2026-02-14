@@ -154,6 +154,63 @@ func TestStateToSnapshotSortsComposeGroupsAndFields(t *testing.T) {
 	}
 }
 
+func TestStateToSnapshotSortsResourcesWithoutMutatingSource(t *testing.T) {
+	sm := monitor.NewStateManager()
+	inputImages := []docker.Image{
+		{ID: "img-z", Repository: "zrepo", Tag: "latest", Size: 2, Created: 2},
+		{ID: "img-a", Repository: "arepo", Tag: "latest", Size: 1, Created: 1},
+	}
+	inputNetworks := []docker.Network{
+		{ID: "n-z", Name: "znet", Driver: "bridge", Scope: "local", ContainerCount: 1},
+		{ID: "n-a", Name: "anet", Driver: "bridge", Scope: "local", ContainerCount: 2},
+	}
+	inputVolumes := []docker.Volume{
+		{Name: "zvol", Driver: "local", Mountpoint: "/z", RefCount: 1, UsageNote: "metadata-only"},
+		{Name: "avol", Driver: "local", Mountpoint: "/a", RefCount: 2, UsageNote: "metadata-only"},
+	}
+	sm.UpdateResources(monitor.ResourceState{
+		Images:   inputImages,
+		Networks: inputNetworks,
+		Volumes:  inputVolumes,
+	})
+
+	snapshot := StateToSnapshot(sm)
+	if snapshot == nil {
+		t.Fatal("expected snapshot")
+	}
+
+	if got := snapshot.GetImages(); len(got) != 2 || got[0].GetRepository() != "arepo" || got[1].GetRepository() != "zrepo" {
+		t.Fatalf("expected sorted images [arepo zrepo], got %#v", got)
+	}
+	if got := snapshot.GetNetworks(); len(got) != 2 || got[0].GetName() != "anet" || got[1].GetName() != "znet" {
+		t.Fatalf("expected sorted networks [anet znet], got %#v", got)
+	}
+	if got := snapshot.GetVolumes(); len(got) != 2 || got[0].GetName() != "avol" || got[1].GetName() != "zvol" {
+		t.Fatalf("expected sorted volumes [avol zvol], got %#v", got)
+	}
+
+	if !reflect.DeepEqual([]string{inputImages[0].Repository, inputImages[1].Repository}, []string{"zrepo", "arepo"}) {
+		t.Fatalf("expected caller image input order unchanged, got %#v", inputImages)
+	}
+	if !reflect.DeepEqual([]string{inputNetworks[0].Name, inputNetworks[1].Name}, []string{"znet", "anet"}) {
+		t.Fatalf("expected caller network input order unchanged, got %#v", inputNetworks)
+	}
+	if !reflect.DeepEqual([]string{inputVolumes[0].Name, inputVolumes[1].Name}, []string{"zvol", "avol"}) {
+		t.Fatalf("expected caller volume input order unchanged, got %#v", inputVolumes)
+	}
+
+	resourcesAfter := sm.GetResources()
+	if !reflect.DeepEqual([]string{resourcesAfter.Images[0].Repository, resourcesAfter.Images[1].Repository}, []string{"zrepo", "arepo"}) {
+		t.Fatalf("expected source image order unchanged, got %#v", resourcesAfter.Images)
+	}
+	if !reflect.DeepEqual([]string{resourcesAfter.Networks[0].Name, resourcesAfter.Networks[1].Name}, []string{"znet", "anet"}) {
+		t.Fatalf("expected source network order unchanged, got %#v", resourcesAfter.Networks)
+	}
+	if !reflect.DeepEqual([]string{resourcesAfter.Volumes[0].Name, resourcesAfter.Volumes[1].Name}, []string{"zvol", "avol"}) {
+		t.Fatalf("expected source volume order unchanged, got %#v", resourcesAfter.Volumes)
+	}
+}
+
 func TestEventsToProtoSkipsNilAndConvertsFields(t *testing.T) {
 	ts := time.Unix(1700000000, 0)
 	events := []*event.Event{
