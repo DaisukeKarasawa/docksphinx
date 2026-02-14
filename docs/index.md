@@ -21,6 +21,7 @@
 - `command-output-samples.md`
 - `security-baseline-checklist.md`
 - `minimal-regression-suite.md`
+- `acceptance-signoff-template.md`
 - `ci-gate-template.md`
 - `reviewer-checklist.md`
 - `link-audit.md`
