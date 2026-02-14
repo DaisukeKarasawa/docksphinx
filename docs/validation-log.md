@@ -3290,3 +3290,29 @@ make quality
 
 - `cmd/docksphinxd.runStart` / `runStop` / `runStatus` に `cmd==nil` ガードを追加し、nil command 入力で panic せず明示エラー（`command is nil`）を返す契約へ強化。
 - `cmd/docksphinxd/main_test.go` に `TestRunCommandsRejectNilCommand` を追加し、上記3 action の nil command 境界を回帰固定。
+
+---
+
+## 2026-02-14 (daemon health-check nil-parent context hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinxd.checkGRPCHealth` で `parent==nil` を `context.Background()` に正規化し、`context.WithTimeout(nil, ...)` 由来 panic を防止。
+- `cmd/docksphinxd/main_test.go` に `TestCheckGRPCHealthHandlesNilParentContext` を追加し、nil 親 context 相当入力でも panic せず dial エラーへ収束する契約を回帰固定。
