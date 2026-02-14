@@ -3453,3 +3453,29 @@ make quality
 
 - `cmd/docksphinx.captureInput` の `q` 分岐で `cancel` / `app` を nil ガードして呼び出すよう変更し、nil dependency 注入時の終了キー経路 panic を防止。
 - `cmd/docksphinx/tui_test.go` に `TestCaptureInputQuitHandlesNilDependencies` を追加し、`captureInput(nil, nil)` でも `q` キー処理が panic せずイベントを処理完了（`nil` 返却）する契約を回帰固定。
+
+---
+
+## 2026-02-14 (TUI input nil-event guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.captureInput` のハンドラ先頭で `event==nil` を no-op return するよう変更し、`event.Key()` 参照 panic を防止。
+- `cmd/docksphinx/tui_test.go` に `TestCaptureInputHandlesNilEvent` を追加し、nil key event 入力でも panic せず `nil` 返却で処理終了する契約を回帰固定。
