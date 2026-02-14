@@ -449,40 +449,19 @@ func (m *tuiModel) renderContainers() {
 	switch m.sortMode {
 	case sortCPU:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].cpu == rows[j].cpu {
-				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-				}
-				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
-			}
-			return rows[i].cpu > rows[j].cpu
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	case sortMemory:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].mem == rows[j].mem {
-				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-				}
-				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
-			}
-			return rows[i].mem > rows[j].mem
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	case sortUptime:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].c.GetUptimeSeconds() == rows[j].c.GetUptimeSeconds() {
-				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-				}
-				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
-			}
-			return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds()
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	default:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-				return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-			}
-			return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	}
 
@@ -773,40 +752,19 @@ func (m *tuiModel) filteredContainerRowsForDetail() []*pb.ContainerInfo {
 	switch m.sortMode {
 	case sortCPU:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].cpu == rows[j].cpu {
-				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-				}
-				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
-			}
-			return rows[i].cpu > rows[j].cpu
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	case sortMemory:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].mem == rows[j].mem {
-				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-				}
-				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
-			}
-			return rows[i].mem > rows[j].mem
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	case sortUptime:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].c.GetUptimeSeconds() == rows[j].c.GetUptimeSeconds() {
-				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-				}
-				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
-			}
-			return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds()
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	default:
 		sort.Slice(rows, func(i, j int) bool {
-			if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
-				return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
-			}
-			return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+			return lessContainerForMode(m.sortMode, rows[i].c, rows[j].c, rows[i].cpu, rows[j].cpu, rows[i].mem, rows[j].mem)
 		})
 	}
 	out := make([]*pb.ContainerInfo, 0, len(rows))
@@ -848,6 +806,35 @@ func formatInt64OrNA(value int64, ok bool) string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%d", value)
+}
+
+func lessContainerForMode(mode sortMode, a, b *pb.ContainerInfo, cpuA, cpuB, memA, memB float64) bool {
+	switch mode {
+	case sortCPU:
+		if cpuA == cpuB {
+			return lessContainerNameID(a, b)
+		}
+		return cpuA > cpuB
+	case sortMemory:
+		if memA == memB {
+			return lessContainerNameID(a, b)
+		}
+		return memA > memB
+	case sortUptime:
+		if a.GetUptimeSeconds() == b.GetUptimeSeconds() {
+			return lessContainerNameID(a, b)
+		}
+		return a.GetUptimeSeconds() > b.GetUptimeSeconds()
+	default:
+		return lessContainerNameID(a, b)
+	}
+}
+
+func lessContainerNameID(a, b *pb.ContainerInfo) bool {
+	if a.GetContainerName() == b.GetContainerName() {
+		return a.GetContainerId() < b.GetContainerId()
+	}
+	return a.GetContainerName() < b.GetContainerName()
 }
 
 func formatDateTimeOrNA(unix int64) string {
