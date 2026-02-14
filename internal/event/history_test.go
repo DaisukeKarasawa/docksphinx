@@ -60,6 +60,20 @@ func TestHistoryRecentLimitContract(t *testing.T) {
 	}
 }
 
+func TestHistoryNilSafetyContracts(t *testing.T) {
+	var nilHistory *History
+	nilHistory.Add(&Event{ID: "ignored"})
+	if got := nilHistory.Recent(1); got != nil {
+		t.Fatalf("expected nil result from nil receiver, got %#v", got)
+	}
+
+	h := NewHistory(3)
+	h.Add(nil)
+	if got := h.Recent(10); got != nil {
+		t.Fatalf("expected nil after Add(nil), got %#v", got)
+	}
+}
+
 func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	h := NewHistory(5)
 
