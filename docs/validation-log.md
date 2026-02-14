@@ -3346,3 +3346,32 @@ make quality
 - 回帰テストを追加:
   - `cmd/docksphinx/main_test.go`: `TestNormalizeParentContext`
   - `cmd/docksphinxd/main_test.go`: `TestNormalizeParentContext`
+
+---
+
+## 2026-02-14 (TUI stream loop nil-guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.tuiModel.streamLoop` に以下の入力ガードを追加:
+  - `m==nil` で明示エラー（`tui model is nil`）
+  - `app==nil` で明示エラー（`tui application is nil`）
+  - `ctx` は `normalizeParentContext` で正規化
+- `cmd/docksphinx/tui_test.go` に `TestTUIStreamLoopNilGuards` を追加し、nil receiver / nil app の両境界で panic せず明示エラーへ収束することを回帰固定。
