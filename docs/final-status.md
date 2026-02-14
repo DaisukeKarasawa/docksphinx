@@ -7,6 +7,7 @@
 - 実装提案一式（`outputs/` の phase0〜phase6 + diff案）
 - 適用ランブック、レビュー導線、監査導線、CIテンプレート
 - セキュリティ/検証の実行証跡（現環境で可能範囲）
+- フェーズ7として運用ドキュメント強化（quickstart/incident/launchd/security baseline/regression/traceability）を完了
 
 ---
 
