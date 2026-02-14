@@ -85,3 +85,21 @@ func TestBuildComposeGroupsKeepsUngroupedWhenOnlySystemNetworks(t *testing.T) {
 		t.Fatalf("expected default service, got %s", g.Service)
 	}
 }
+
+func TestBuildComposeGroupsDoesNotMutateInputStateNetworks(t *testing.T) {
+	states := map[string]*ContainerState{
+		"id1": {
+			ContainerID:   "id1",
+			ContainerName: "web-1",
+			NetworkNames:  []string{"z-net", "a-net", "m-net"},
+		},
+	}
+
+	before := append([]string(nil), states["id1"].NetworkNames...)
+	_ = buildComposeGroups(states)
+
+	after := states["id1"].NetworkNames
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("expected input state networks unchanged, before=%#v after=%#v", before, after)
+	}
+}
