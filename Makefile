@@ -1,4 +1,4 @@
-.PHONY: build clean test test-race proto generate install deps security help
+.PHONY: build clean test test-race proto generate install deps security quality help
 
 # 変数定義
 BINARY_DOCKSPHINX=./bin/docksphinx
@@ -25,6 +25,7 @@ help:
 	@echo " make deps      - 依存関係を更新"
 	@echo " make test-race - race detector 付きでテスト"
 	@echo " make security  - staticcheck / gosec / govulncheck を実行"
+	@echo " make quality   - test / race / security をまとめて実行"
 
 # バイナリのビルド
 build: proto
@@ -101,6 +102,9 @@ security: build
 		fi; \
 	fi; \
 	rm -f $$out
+
+quality: test test-race security
+	@echo "Quality gates complete"
 
 # インストール（GOPATH/binにインストール）
 install: build
