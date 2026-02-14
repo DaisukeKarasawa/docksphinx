@@ -43,3 +43,4 @@
 ## 6. 補助
 - `faq.md`
 - `glossary.md`
+- `navigation-map.md`
