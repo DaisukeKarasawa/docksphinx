@@ -11,6 +11,8 @@ READMEに記載された `docs/*` 参照リンクが、実在ファイルと一�
 ## 1. 監査対象
 README の「主要ドキュメント」節にある以下リンク:
 
+- `docs/index.md`
+- `docs/quickstart.md`
 - `docs/requirements.md`
 - `docs/mvp-spec-freeze.md`
 - `docs/mvp-acceptance-matrix.md`
@@ -24,6 +26,20 @@ README の「主要ドキュメント」節にある以下リンク:
 - `docs/command-reference.md`
 - `docs/delivery-manifest.md`
 - `docs/adr-0001-mvp-delivery-mode.md`
+- `docs/link-audit.md`
+- `docs/ci-gate-template.md`
+- `docs/limitations-and-next-steps.md`
+- `docs/faq.md`
+- `docs/execution-changelog.md`
+- `docs/glossary.md`
+- `docs/final-status.md`
+- `docs/risk-register.md`
+- `docs/validation-log-template.md`
+- `docs/handover-checklist.md`
+- `docs/plan-completion-checklist.md`
+- `docs/command-output-samples.md`
+- `docs/requirements-traceability.md`
+- `docs/contribution-workflow.md`
 
 ---
 
