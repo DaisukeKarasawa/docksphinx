@@ -2673,3 +2673,33 @@ make quality
   - `TestNewClientReturnsContextErrorWhenCanceledBeforeDial`
   - `TestWaitUntilReadyReturnsContextErrorWhenCanceled`
 - gRPC client 生成経路でも「不要な下流処理前に context-cancel short-circuit」契約を回帰固定。
+
+---
+
+## 2026-02-14 (monitor old-state nil guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.collectAndDetect` 内の `oldState` 参照箇所を `oldState != nil` で防御し、`exists=true` でも `oldState=nil` が混入した異常状態で panic しないよう強化。
+- 状態変化判定を `didStateChange(exists, oldState, currentState)` に切り出して契約を単体検証可能化。
+- `engine_test.go` に `TestDidStateChangeHandlesNilOldState` を追加し、以下を回帰固定:
+  - 新規 `running` のみ開始イベント対象
+  - `exists=true && oldState=nil` でも panic せず判定可能
+  - 既存状態では旧状態との比較で遷移判定
