@@ -979,3 +979,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Data` に `*structuredPayload` を含む場合でも入力・返却値ミューテーションが履歴へ波及しないことを確認。
+
+---
+
+## 2026-02-14 (event data deep-copy map-key identity preservation pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` に `map[*int]string` ケースを追加し、deep copy 後もキー同一性（pointer key）が維持されることを確認。
