@@ -45,3 +45,4 @@
 - `glossary.md`
 - `navigation-map.md`
 - `maintenance-routine.md`
+- `owner-rotation-note.md`
