@@ -92,7 +92,29 @@ func runStop(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("send SIGTERM to %d: %w", pid, err)
 	}
 	fmt.Printf("Sent SIGTERM to PID %d\n", pid)
-	return nil
+
+	waitCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-waitCtx.Done():
+			return fmt.Errorf("process %d did not stop within 5s", pid)
+		case <-ticker.C:
+			if err := syscall.Kill(pid, 0); err != nil {
+				if errors.Is(err, syscall.ESRCH) {
+					fmt.Printf("Process %d stopped\n", pid)
+					return nil
+				}
+				if errors.Is(err, syscall.EPERM) {
+					return fmt.Errorf("permission denied while checking process %d", pid)
+				}
+				return fmt.Errorf("failed to check process %d: %w", pid, err)
+			}
+		}
+	}
 }
 
 func runStatus(ctx context.Context, cmd *cli.Command) error {
