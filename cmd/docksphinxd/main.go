@@ -202,7 +202,7 @@ func checkGRPCHealth(parent context.Context, address string, timeout time.Durati
 	}
 	defer client.Close()
 
-	callCtx, callCancel := context.WithTimeout(parent, 2*time.Second)
+	callCtx, callCancel := context.WithTimeout(ctx, 2*time.Second)
 	defer callCancel()
 	if _, err := client.GetSnapshot(callCtx); err != nil {
 		return fmt.Errorf("health rpc failed: %w", err)
