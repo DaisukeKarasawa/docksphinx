@@ -62,7 +62,7 @@ func NewServer(opts *ServerOptions, engine *monitor.Engine) (*Server, error) {
 	bcastCtx, bcastCancel := context.WithCancel(context.Background())
 	srv := &Server{lis: lis, grpc: s, opts: &resolved, engine: engine, bcast: bcast, bcastCancel: bcastCancel}
 	pb.RegisterDocksphinxServiceServer(s, srv)
-	if opts.EnableReflection {
+	if resolved.EnableReflection {
 		reflection.Register(s)
 	}
 	go bcast.Run(bcastCtx, engine.GetEventChannel())

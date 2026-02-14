@@ -168,6 +168,33 @@ func TestNewServerDoesNotMutateCallerOptions(t *testing.T) {
 	}
 }
 
+func TestNewServerNilOptionsUsesDefaults(t *testing.T) {
+	engine, err := monitor.NewEngine(monitor.EngineConfig{
+		Interval:         time.Second,
+		ResourceInterval: 5 * time.Second,
+		Thresholds:       monitor.DefaultThresholdConfig(),
+	}, nil)
+	if err != nil {
+		t.Fatalf("new engine failed: %v", err)
+	}
+
+	srv, err := NewServer(nil, engine)
+	if err != nil {
+		if strings.Contains(err.Error(), "address already in use") {
+			t.Skipf("default address busy in test environment, skipping: %v", err)
+		}
+		t.Fatalf("expected NewServer(nil, engine) to succeed, got: %v", err)
+	}
+	defer srv.Stop()
+
+	if got := srv.recentEventLimit(); got != 50 {
+		t.Fatalf("expected default recent event limit 50, got %d", got)
+	}
+	if addr := srv.Address(); !strings.HasPrefix(addr, "127.0.0.1:") {
+		t.Fatalf("expected default loopback listener, got %q", addr)
+	}
+}
+
 func TestServerStartReturnsErrorWhenUninitialized(t *testing.T) {
 	var nilServer *Server
 	if err := nilServer.Start(); err == nil {
