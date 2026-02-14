@@ -30,6 +30,7 @@ This file defines instructions for coding agents working on this project.
 
 - Implementation files must be output to the `outputs/` directory (Markdown format)
 - Information about project specifications (implemented content and requirements) must be output to the `docs/` directory
+- When implementing list/snapshot style outputs, enforce deterministic ordering and add/maintain regression tests that assert the ordering contract.
 - When instructed by the user to output implementation or modification code to implementation files, always include the following information:
   - Technologies used for implementation/modification and specific usage
   - Reference links
