@@ -2179,3 +2179,29 @@ make quality
   - `TestClientMethodsReturnErrorWhenClientIsNil`
   - `TestWaitUntilReadyRejectsNilConnection`
   - `TestNewClientRejectsEmptyAddress`
+
+---
+
+## 2026-02-14 (grpc client early context-cancel hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Client.GetSnapshot` / `Stream` で `ctx.Err()` を呼び出し前に評価し、キャンセル済み context では `status.FromContextError` を返して下流 RPC 呼び出しを回避。
+- `TestClientMethodsReturnContextErrorBeforeRPCWhenCanceled` を追加し、`codes.Canceled` が返ること、および stub downstream call が 0 回であることを回帰固定。
