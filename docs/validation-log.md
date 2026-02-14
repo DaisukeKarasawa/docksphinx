@@ -1264,3 +1264,29 @@ make quality
 
 - `cmd/docksphinx` の `selectRecentEvents` を `proto.Clone` ベースへ変更し、返却イベントのミューテーションが入力 snapshot の `Event` に波及しないことを確認。
 - `TestSelectRecentEvents` に参照非共有（pointer inequality）と `Data` map の非波及を検証するケースを追加。
+
+---
+
+## 2026-02-14 (selectRecentEvents clone-scope optimization pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.selectRecentEvents` を最適化し、全候補 clone ではなく「ソート後の上位 `limit` 件のみ clone」へ変更。
+- 既存の alias-isolation 回帰テスト（pointer inequality / data non-propagation）が引き続き PASS することを確認。
