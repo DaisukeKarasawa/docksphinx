@@ -1238,3 +1238,29 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Recent()` の連続呼び出しで返却される `*Event` と `*structuredPayload` が同一ポインタ再利用ではなく、毎回独立 clone であることを確認。
+
+---
+
+## 2026-02-14 (selectRecentEvents alias-isolation pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx` の `selectRecentEvents` を `proto.Clone` ベースへ変更し、返却イベントのミューテーションが入力 snapshot の `Event` に波及しないことを確認。
+- `TestSelectRecentEvents` に参照非共有（pointer inequality）と `Data` map の非波及を検証するケースを追加。
