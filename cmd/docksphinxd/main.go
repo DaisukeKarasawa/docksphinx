@@ -101,14 +101,15 @@ func runStop(parent context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	pid, err := readPID(cfg.Daemon.PIDFile)
+	pid, alreadyStopped, err := resolveStopPID(cfg.Daemon.PIDFile)
 	if err != nil {
-		if errors.Is(err, ErrPIDFileNotFound) {
-			fmt.Println("Daemon is already stopped (pid file not found)")
-			return nil
-		}
 		return err
 	}
+	if alreadyStopped {
+		fmt.Println("Daemon is already stopped (pid file not found)")
+		return nil
+	}
+
 	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
 		if errors.Is(err, syscall.ESRCH) {
 			if rmErr := removePIDFileIfExists(cfg.Daemon.PIDFile); rmErr != nil {
@@ -133,6 +134,17 @@ func runStop(parent context.Context, cmd *cli.Command) error {
 	}
 	fmt.Printf("Process %d stopped\n", pid)
 	return nil
+}
+
+func resolveStopPID(pidFile string) (pid int, alreadyStopped bool, err error) {
+	pid, err = readPID(pidFile)
+	if err != nil {
+		if errors.Is(err, ErrPIDFileNotFound) {
+			return 0, true, nil
+		}
+		return 0, false, err
+	}
+	return pid, false, nil
 }
 
 func runStatus(ctx context.Context, cmd *cli.Command) error {

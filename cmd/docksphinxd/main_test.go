@@ -325,3 +325,54 @@ func TestReadPID(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveStopPID(t *testing.T) {
+	t.Run("valid pid", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("777\n"), 0o600); err != nil {
+			t.Fatalf("failed to write pid file: %v", err)
+		}
+
+		pid, alreadyStopped, err := resolveStopPID(pidPath)
+		if err != nil {
+			t.Fatalf("expected success, got: %v", err)
+		}
+		if alreadyStopped {
+			t.Fatal("expected alreadyStopped=false for valid pid")
+		}
+		if pid != 777 {
+			t.Fatalf("expected pid 777, got %d", pid)
+		}
+	})
+
+	t.Run("missing pid file means already stopped", func(t *testing.T) {
+		pidPath := filepath.Join(t.TempDir(), "missing.pid")
+		pid, alreadyStopped, err := resolveStopPID(pidPath)
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if !alreadyStopped {
+			t.Fatal("expected alreadyStopped=true for missing pid file")
+		}
+		if pid != 0 {
+			t.Fatalf("expected pid 0 when already stopped, got %d", pid)
+		}
+	})
+
+	t.Run("invalid pid returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		pidPath := filepath.Join(dir, "docksphinxd.pid")
+		if err := os.WriteFile(pidPath, []byte("invalid\n"), 0o600); err != nil {
+			t.Fatalf("failed to write invalid pid file: %v", err)
+		}
+
+		_, _, err := resolveStopPID(pidPath)
+		if err == nil {
+			t.Fatal("expected invalid pid error")
+		}
+		if !strings.Contains(err.Error(), "invalid pid") {
+			t.Fatalf("expected invalid pid message, got: %v", err)
+		}
+	})
+}
