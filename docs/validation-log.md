@@ -1416,3 +1416,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/grpc.TestStateToSnapshotSortsResourcesWithoutMutatingSource` を追加し、`StateToSnapshot` が `Images/Networks/Volumes` を出力用にソートしても、呼び出し元入力および `StateManager` 内の保持順序を変更しないことを確認。
+
+---
+
+## 2026-02-14 (selectRecentEvents cross-call clone independence pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.TestSelectRecentEvents` を拡張し、`selectRecentEvents` の連続呼び出し結果が相互に参照共有せず（独立 clone）、1回目の返却値ミューテーションが2回目返却値へ波及しないことを確認。
