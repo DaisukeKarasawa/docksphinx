@@ -929,3 +929,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Data` に `map[string]string` / `[]string` を含むケースでも入力・出力ミューテーションが履歴に波及しないことを確認。
+
+---
+
+## 2026-02-14 (event history struct-payload deep-copy pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` で、`Data` に構造体（内部に `[]string` と `map[string]string` を保持）を含む場合でも、入力・出力ミューテーションが履歴へ波及しないことを確認。
