@@ -47,6 +47,7 @@ README の「主要ドキュメント」節にある以下リンク:
 - `docs/acceptance-signoff-template.md`
 - `docs/review-sequence.md`
 - `docs/navigation-map.md`
+- `docs/maintenance-routine.md`
 
 ---
 
