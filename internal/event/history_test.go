@@ -39,6 +39,8 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	nestedSlice := []interface{}{"x", "y"}
 	stringMap := map[string]string{"owner": "team-a"}
 	stringSlice := []string{"svc-a", "svc-b"}
+	keyInt := 7
+	pointerKeyMap := map[*int]string{&keyInt: "seven"}
 	structured := structuredPayload{
 		Name:  "payload",
 		Items: []string{"it-1", "it-2"},
@@ -59,6 +61,7 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 			"tags":          nestedSlice,
 			"labels":        stringMap,
 			"names":         stringSlice,
+			"pointerKeyMap": pointerKeyMap,
 			"structured":    structured,
 			"structuredPtr": ptrStructured,
 		},
@@ -75,6 +78,7 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	nestedSlice[0] = "changed"
 	stringMap["owner"] = "mutated-team"
 	stringSlice[0] = "changed-svc"
+	pointerKeyMap[&keyInt] = "mutated-seven"
 	structured.Items[0] = "mutated-item"
 	structured.Meta["k"] = "mutated-meta"
 	ptrStructured.Items[0] = "mutated-ptr-item"
@@ -98,6 +102,9 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotNames, ok := got[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
 		t.Fatalf("expected typed slice to be isolated, got %#v", got[0].Data["names"])
+	}
+	if gotPointerKeyMap, ok := got[0].Data["pointerKeyMap"].(map[*int]string); !ok || gotPointerKeyMap[&keyInt] != "seven" {
+		t.Fatalf("expected pointer-key map to be isolated and key-preserved, got %#v", got[0].Data["pointerKeyMap"])
 	}
 	if gotStructured, ok := got[0].Data["structured"].(structuredPayload); !ok ||
 		len(gotStructured.Items) != 2 || gotStructured.Items[0] != "it-1" ||
@@ -129,6 +136,9 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if names, ok := got[0].Data["names"].([]string); ok && len(names) > 0 {
 		names[0] = "out-changed-svc"
 	}
+	if pointerMap, ok := got[0].Data["pointerKeyMap"].(map[*int]string); ok {
+		pointerMap[&keyInt] = "out-mutated-seven"
+	}
 	if payload, ok := got[0].Data["structured"].(structuredPayload); ok {
 		payload.Items[0] = "out-mutated-item"
 		payload.Meta["k"] = "out-mutated-meta"
@@ -157,6 +167,9 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotNames, ok := gotAgain[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
 		t.Fatalf("expected typed slice in history to stay unchanged, got %#v", gotAgain[0].Data["names"])
+	}
+	if gotPointerKeyMap, ok := gotAgain[0].Data["pointerKeyMap"].(map[*int]string); !ok || gotPointerKeyMap[&keyInt] != "seven" {
+		t.Fatalf("expected pointer-key map in history to stay unchanged, got %#v", gotAgain[0].Data["pointerKeyMap"])
 	}
 	if gotStructured, ok := gotAgain[0].Data["structured"].(structuredPayload); !ok ||
 		len(gotStructured.Items) != 2 || gotStructured.Items[0] != "it-1" ||

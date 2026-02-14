@@ -104,7 +104,8 @@ func cloneValueReflect(v reflect.Value) reflect.Value {
 		out := reflect.MakeMapWithSize(v.Type(), v.Len())
 		iter := v.MapRange()
 		for iter.Next() {
-			out.SetMapIndex(cloneValueReflect(iter.Key()), cloneValueReflect(iter.Value()))
+			// Keep map keys as-is to preserve key identity/semantics (especially pointer keys).
+			out.SetMapIndex(iter.Key(), cloneValueReflect(iter.Value()))
 		}
 		return out
 	case reflect.Slice:
