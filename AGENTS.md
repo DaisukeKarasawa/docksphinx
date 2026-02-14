@@ -44,6 +44,7 @@ This file defines instructions for coding agents working on this project.
 - Public gRPC handlers should guard missing internal dependencies (engine/broadcaster/options) and return explicit status errors instead of panicking.
 - Public API/handler entrypoints should explicitly validate required pointer arguments (e.g., stream/request objects) and return typed errors for nil inputs.
 - Public gRPC handlers should check request/stream context cancellation early and return context-derived status errors before expensive processing.
+- Public service methods should guard nil receivers and uninitialized dependencies, returning explicit errors instead of panicking.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
 - When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
