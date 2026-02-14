@@ -2087,3 +2087,32 @@ make quality
 
 - `internal/grpc.Server.Stream` 冒頭で `stream==nil` を `codes.InvalidArgument` として明示拒否し、`stream.Context()` 参照時 panic を予防。
 - `TestServerStreamReturnsUnavailableWhenDependenciesMissing` を拡張し、`engine/bcast` が揃っていても `stream=nil` の場合は `InvalidArgument` が返ることを回帰固定。
+
+---
+
+## 2026-02-14 (grpc handler early context-cancel hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.GetSnapshot` で `ctx.Err()` を先頭評価し、キャンセル済み context では依存チェックより先に `status.FromContextError(err)` を返すよう修正。
+- `internal/grpc.Server.Stream` で `stream.Context().Err()` を先頭評価し、既に終了済み stream context では同様に context 由来 status を返すよう修正。
+- 追加テスト:
+  - `TestServerGetSnapshotReturnsContextErrorWhenCanceled`
+  - `TestServerStreamReturnsContextErrorWhenAlreadyCanceled`
