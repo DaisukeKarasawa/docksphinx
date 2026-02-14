@@ -2148,3 +2148,34 @@ make quality
   - `TestServerStopNilReceiverNoPanic`
   - `TestServerGetSnapshotReturnsUnavailableWhenReceiverNil`
   - `TestServerStreamReturnsUnavailableWhenReceiverNil`
+
+---
+
+## 2026-02-14 (grpc client boundary hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.NewClient` / `Client.GetSnapshot` / `Client.Stream` で `ctx==nil` を `context.Background()` へ正規化し、`nil` context 起因の panic リスクを防止。
+- `internal/grpc.waitUntilReady` に `conn==nil` ガードを追加し、未初期化接続での panic を防止。
+- `internal/grpc/client_test.go` を新規追加し、以下の契約を回帰固定:
+  - `TestClientGetSnapshotAndStreamForwardContextAndRequests`
+  - `TestClientMethodsReturnErrorWhenClientIsNil`
+  - `TestWaitUntilReadyRejectsNilConnection`
+  - `TestNewClientRejectsEmptyAddress`
