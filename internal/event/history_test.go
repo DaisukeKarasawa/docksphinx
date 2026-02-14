@@ -67,6 +67,7 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	nestedSlice := []interface{}{"x", "y"}
 	stringMap := map[string]string{"owner": "team-a"}
 	stringSlice := []string{"svc-a", "svc-b"}
+	arrayPayload := [2][]string{{"arr-a"}, {"arr-b"}}
 	keyInt := 7
 	pointerKeyMap := map[*int]string{&keyInt: "seven"}
 	structured := structuredPayload{
@@ -89,6 +90,7 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 			"tags":          nestedSlice,
 			"labels":        stringMap,
 			"names":         stringSlice,
+			"arrayPayload":  arrayPayload,
 			"pointerKeyMap": pointerKeyMap,
 			"structured":    structured,
 			"structuredPtr": ptrStructured,
@@ -106,6 +108,7 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	nestedSlice[0] = "changed"
 	stringMap["owner"] = "mutated-team"
 	stringSlice[0] = "changed-svc"
+	arrayPayload[0][0] = "mutated-arr-a"
 	pointerKeyMap[&keyInt] = "mutated-seven"
 	structured.Items[0] = "mutated-item"
 	structured.Meta["k"] = "mutated-meta"
@@ -130,6 +133,10 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotNames, ok := got[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
 		t.Fatalf("expected typed slice to be isolated, got %#v", got[0].Data["names"])
+	}
+	if gotArrayPayload, ok := got[0].Data["arrayPayload"].([2][]string); !ok ||
+		len(gotArrayPayload[0]) != 1 || gotArrayPayload[0][0] != "arr-a" {
+		t.Fatalf("expected array payload to be isolated, got %#v", got[0].Data["arrayPayload"])
 	}
 	if gotPointerKeyMap, ok := got[0].Data["pointerKeyMap"].(map[*int]string); !ok || gotPointerKeyMap[&keyInt] != "seven" {
 		t.Fatalf("expected pointer-key map to be isolated and key-preserved, got %#v", got[0].Data["pointerKeyMap"])
@@ -164,6 +171,10 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if names, ok := got[0].Data["names"].([]string); ok && len(names) > 0 {
 		names[0] = "out-changed-svc"
 	}
+	if arr, ok := got[0].Data["arrayPayload"].([2][]string); ok {
+		arr[0][0] = "out-mutated-arr-a"
+		got[0].Data["arrayPayload"] = arr
+	}
 	if pointerMap, ok := got[0].Data["pointerKeyMap"].(map[*int]string); ok {
 		pointerMap[&keyInt] = "out-mutated-seven"
 	}
@@ -195,6 +206,10 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 	if gotNames, ok := gotAgain[0].Data["names"].([]string); !ok || len(gotNames) != 2 || gotNames[0] != "svc-a" {
 		t.Fatalf("expected typed slice in history to stay unchanged, got %#v", gotAgain[0].Data["names"])
+	}
+	if gotArrayPayload, ok := gotAgain[0].Data["arrayPayload"].([2][]string); !ok ||
+		len(gotArrayPayload[0]) != 1 || gotArrayPayload[0][0] != "arr-a" {
+		t.Fatalf("expected array payload in history to stay unchanged, got %#v", gotAgain[0].Data["arrayPayload"])
 	}
 	if gotPointerKeyMap, ok := gotAgain[0].Data["pointerKeyMap"].(map[*int]string); !ok || gotPointerKeyMap[&keyInt] != "seven" {
 		t.Fatalf("expected pointer-key map in history to stay unchanged, got %#v", gotAgain[0].Data["pointerKeyMap"])
