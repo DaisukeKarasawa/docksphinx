@@ -2031,3 +2031,33 @@ make quality
 - 追加テスト:
   - `TestServerStreamReturnsInitialSnapshotSendError`
   - `TestServerStreamSkipsNilEventPayloads`
+
+---
+
+## 2026-02-14 (grpc server nil-dependency guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.GetSnapshot` に `engine==nil` ガードを追加し、panic ではなく `codes.Unavailable` を返すよう修正。
+- `internal/grpc.Server.Stream` に `engine==nil` / `bcast==nil` ガードを追加し、依存欠落時に `codes.Unavailable` を返すよう修正。
+- `recentEventLimit` ヘルパーを追加し、`opts==nil` または `RecentEventLimit<=0` でも既定値（50）で安全に処理。
+- 追加テスト:
+  - `TestServerGetSnapshotReturnsUnavailableWhenEngineMissing`
+  - `TestServerStreamReturnsUnavailableWhenDependenciesMissing`
