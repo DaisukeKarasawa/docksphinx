@@ -16,6 +16,9 @@ type orderedEvent struct {
 }
 
 func LessPB(a, b *pb.Event) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	return lessOrdered(
 		orderedEvent{
 			TimestampUnix: a.GetTimestampUnix(),
@@ -39,6 +42,9 @@ func LessPB(a, b *pb.Event) bool {
 }
 
 func LessInternal(a, b *event.Event) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	return lessOrdered(
 		orderedEvent{
 			TimestampUnix: a.Timestamp.Unix(),

@@ -98,6 +98,32 @@ func TestLessInternalUsesSecondLevelTimestampBeforeID(t *testing.T) {
 	}
 }
 
+func TestLessPBNilSafety(t *testing.T) {
+	ev := &pb.Event{Id: "a", TimestampUnix: 1}
+	if !LessPB(ev, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessPB(nil, ev) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessPB(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
+func TestLessInternalNilSafety(t *testing.T) {
+	ev := &event.Event{ID: "a", Timestamp: time.Unix(1, 0)}
+	if !LessInternal(ev, nil) {
+		t.Fatalf("expected non-nil to sort before nil")
+	}
+	if LessInternal(nil, ev) {
+		t.Fatalf("expected nil not to sort before non-nil")
+	}
+	if LessInternal(nil, nil) {
+		t.Fatalf("expected nil/nil comparison to be false")
+	}
+}
+
 func stringsJoin(parts ...string) string {
 	out := ""
 	for i, p := range parts {
