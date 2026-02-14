@@ -88,3 +88,30 @@ TUI:
 詳細は以下を参照:
 - `docs/metrics-definition.md`
 - `docs/macos-launchd.md`
+
+## MVP 完了チェック（実装済み）
+
+### 必須要件（A〜G）
+
+- A. `docksphinxd`（start/stop/status）: ✅
+- B. `docksphinx`（snapshot/tail/tui）: ✅
+- C. event history（in-memory ring）: ✅
+- D. tail 再接続・backoff・停止規律: ✅
+- E. TUI 4-pane + 必須キー操作: ✅
+- F. containers/images/networks/volumes/groups の表示: ✅
+- G. uptime / 欠損値 `N/A` 表示規約: ✅
+
+### 高難度要件（H1〜H6）
+
+- H1. launchd 運用ドキュメント: ✅ (`docs/macos-launchd.md`)
+- H2. stream backpressure（bounded + drop policy）: ✅
+- H3. threshold noise 抑止（cooldown）: ✅
+- H4. compose grouping（labels優先 + network fallback）: ✅
+- H5. metrics 定義の明文化: ✅ (`docs/metrics-definition.md`)
+- H6. テスト戦略実施（unit/race/security/manual証跡）: ✅ (`docs/validation-log.md`)
+
+### 既知の制約（2026-02-14時点）
+
+- `govulncheck ./...` は環境依存の internal error を起こす場合があります。
+  - 対策として binary mode (`-mode=binary`) を必須実行し、source mode internal error は warning 扱い。
+  - 詳細: `docs/security-check-summary.md`
