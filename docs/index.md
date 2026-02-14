@@ -20,6 +20,7 @@
 - `security-check-summary.md`
 - `command-output-samples.md`
 - `security-baseline-checklist.md`
+- `minimal-regression-suite.md`
 - `ci-gate-template.md`
 - `reviewer-checklist.md`
 - `link-audit.md`
