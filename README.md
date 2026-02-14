@@ -40,6 +40,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 受け入れサインオフテンプレート: `docs/acceptance-signoff-template.md`
 - レビューシーケンス: `docs/review-sequence.md`
 - ドキュメント導線マップ: `docs/navigation-map.md`
+- 定期メンテナンス運用: `docs/maintenance-routine.md`
 
 ## 補足
 
