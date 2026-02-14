@@ -1,6 +1,7 @@
 package snapshotorder
 
 import (
+	"sort"
 	"strings"
 
 	pb "docksphinx/api/docksphinx/v1"
@@ -26,12 +27,17 @@ func LessComposeGroup(a, b *pb.ComposeGroup) bool {
 	if a.GetService() != b.GetService() {
 		return a.GetService() < b.GetService()
 	}
-	li := strings.Join(a.GetContainerIds(), ",")
-	lj := strings.Join(b.GetContainerIds(), ",")
+	li := sortedJoined(a.GetContainerIds())
+	lj := sortedJoined(b.GetContainerIds())
 	if li != lj {
 		return li < lj
 	}
-	return strings.Join(a.GetNetworkNames(), ",") < strings.Join(b.GetNetworkNames(), ",")
+	ni := sortedJoined(a.GetNetworkNames())
+	nj := sortedJoined(b.GetNetworkNames())
+	if ni != nj {
+		return ni < nj
+	}
+	return sortedJoined(a.GetContainerNames()) < sortedJoined(b.GetContainerNames())
 }
 
 func LessNetworkInfo(a, b *pb.NetworkInfo) bool {
@@ -80,4 +86,13 @@ func LessImageInfo(a, b *pb.ImageInfo) bool {
 		return a.GetTag() < b.GetTag()
 	}
 	return a.GetImageId() < b.GetImageId()
+}
+
+func sortedJoined(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	copied := append([]string(nil), values...)
+	sort.Strings(copied)
+	return strings.Join(copied, ",")
 }

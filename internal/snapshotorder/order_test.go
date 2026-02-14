@@ -176,6 +176,44 @@ func TestLessImageInfoNilSafety(t *testing.T) {
 	}
 }
 
+func TestLessComposeGroupCanonicalizesSlicesAndKeepsInputsUnchanged(t *testing.T) {
+	gA := &pb.ComposeGroup{
+		Project:        "same",
+		Service:        "svc",
+		ContainerIds:   []string{"b", "a"},
+		NetworkNames:   []string{"n2", "n1"},
+		ContainerNames: []string{"web-2", "web-1"},
+	}
+	gB := &pb.ComposeGroup{
+		Project:        "same",
+		Service:        "svc",
+		ContainerIds:   []string{"a", "b"},
+		NetworkNames:   []string{"n1", "n2"},
+		ContainerNames: []string{"api-2", "api-1"},
+	}
+
+	beforeAIDs := append([]string(nil), gA.GetContainerIds()...)
+	beforeANets := append([]string(nil), gA.GetNetworkNames()...)
+	beforeANames := append([]string(nil), gA.GetContainerNames()...)
+	beforeBIDs := append([]string(nil), gB.GetContainerIds()...)
+	beforeBNets := append([]string(nil), gB.GetNetworkNames()...)
+	beforeBNames := append([]string(nil), gB.GetContainerNames()...)
+
+	items := []*pb.ComposeGroup{gA, gB}
+	sort.Slice(items, func(i, j int) bool { return LessComposeGroup(items[i], items[j]) })
+
+	if items[0] != gB || items[1] != gA {
+		t.Fatalf("expected container_names tie-break to place gB before gA")
+	}
+
+	if !reflect.DeepEqual(beforeAIDs, gA.GetContainerIds()) || !reflect.DeepEqual(beforeANets, gA.GetNetworkNames()) || !reflect.DeepEqual(beforeANames, gA.GetContainerNames()) {
+		t.Fatalf("expected gA slices unchanged, ids=%v nets=%v names=%v", gA.GetContainerIds(), gA.GetNetworkNames(), gA.GetContainerNames())
+	}
+	if !reflect.DeepEqual(beforeBIDs, gB.GetContainerIds()) || !reflect.DeepEqual(beforeBNets, gB.GetNetworkNames()) || !reflect.DeepEqual(beforeBNames, gB.GetContainerNames()) {
+		t.Fatalf("expected gB slices unchanged, ids=%v nets=%v names=%v", gB.GetContainerIds(), gB.GetNetworkNames(), gB.GetContainerNames())
+	}
+}
+
 func join(parts []string) string {
 	out := ""
 	for i, p := range parts {
