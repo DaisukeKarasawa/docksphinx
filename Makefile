@@ -84,10 +84,20 @@ security:
 	"$(shell go env GOPATH)/bin/gosec" -exclude-dir=api ./...
 	@echo "Running govulncheck..."
 	@command -v govulncheck >/dev/null 2>&1 || { echo "Installing govulncheck..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
-	@"$(shell go env GOPATH)/bin/govulncheck" ./... || { \
-		echo "WARNING: govulncheck failed (tool/environment issue possible). See docs/security-check-summary.md"; \
-		exit 1; \
-	}
+	@out=$$(mktemp); \
+	if "$(shell go env GOPATH)/bin/govulncheck" ./... >$$out 2>&1; then \
+		cat $$out; \
+	else \
+		cat $$out; \
+		if rg -q "internal error:" $$out; then \
+			echo "WARNING: govulncheck internal error detected. See docs/security-check-summary.md"; \
+		else \
+			echo "ERROR: govulncheck failed with non-internal error"; \
+			rm -f $$out; \
+			exit 1; \
+		fi; \
+	fi; \
+	rm -f $$out
 
 # インストール（GOPATH/binにインストール）
 install: build
