@@ -88,6 +88,7 @@ TUI:
 詳細は以下を参照:
 - `docs/metrics-definition.md`
 - `docs/macos-launchd.md`
+- `docs/mvp-completion-report.md`
 
 ## MVP 完了チェック（実装済み）
 
