@@ -205,6 +205,10 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("expected 1 event, got %d", len(got))
 	}
+	firstStructuredPtr, ok := got[0].Data["structuredPtr"].(*structuredPayload)
+	if !ok || firstStructuredPtr == nil {
+		t.Fatalf("expected first structuredPtr payload, got %#v", got[0].Data["structuredPtr"])
+	}
 	if got[0].ID != "e1" || got[0].Message != "high cpu" {
 		t.Fatalf("expected stored event to keep original values, got id=%q message=%q", got[0].ID, got[0].Message)
 	}
@@ -275,6 +279,9 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	}
 
 	gotAgain := h.Recent(1)
+	if got[0] == gotAgain[0] {
+		t.Fatalf("expected Recent() to return independent event instances")
+	}
 	if gotAgain[0].ID != "e1" {
 		t.Fatalf("expected history to be immune from output mutation, got id=%q", gotAgain[0].ID)
 	}
@@ -310,6 +317,8 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 		len(gotStructuredPtr.Items) != 2 || gotStructuredPtr.Items[0] != "pit-1" ||
 		gotStructuredPtr.Meta["pk"] != "pv" {
 		t.Fatalf("expected struct pointer payload in history to stay unchanged, got %#v", gotAgain[0].Data["structuredPtr"])
+	} else if gotStructuredPtr == firstStructuredPtr {
+		t.Fatalf("expected Recent() to deep-copy pointer payloads across calls")
 	}
 }
 
