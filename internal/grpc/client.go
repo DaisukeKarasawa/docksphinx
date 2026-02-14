@@ -22,6 +22,9 @@ func NewClient(ctx context.Context, address string) (*Client, error) {
 	if address == "" {
 		return nil, fmt.Errorf("address cannot be empty")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	dialCtx, cancel := context.WithTimeout(ctx, defaultDialTimeout)
 	defer cancel()
@@ -55,6 +58,9 @@ func (c *Client) GetSnapshot(ctx context.Context) (*pb.Snapshot, error) {
 	if c == nil || c.client == nil {
 		return nil, fmt.Errorf("client is nil")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	return c.client.GetSnapshot(ctx, &pb.GetSnapshotRequest{})
 }
 
@@ -62,12 +68,21 @@ func (c *Client) Stream(ctx context.Context, includeInitialSnapshot bool) (pb.Do
 	if c == nil || c.client == nil {
 		return nil, fmt.Errorf("client is nil")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	return c.client.Stream(ctx, &pb.StreamRequest{
 		IncludeInitialSnapshot: includeInitialSnapshot,
 	})
 }
 
 func waitUntilReady(ctx context.Context, conn *ggrpc.ClientConn) error {
+	if conn == nil {
+		return fmt.Errorf("connection is nil")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	conn.Connect()
 	for {
 		state := conn.GetState()
