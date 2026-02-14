@@ -3181,3 +3181,31 @@ make quality
 - 回帰テストを追加:
   - `TestConsumeStreamNilStream`
   - `TestTUIConsumeStreamNilGuards`
+
+---
+
+## 2026-02-14 (TUI container comparator nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.lessContainerForMode` / `lessContainerNameID` に nil ガードを追加し、`*pb.ContainerInfo` が nil 混在でも panic せず `non-nil < nil` の比較契約で安定動作するよう強化。
+- `cmd/docksphinx/tui_test.go` に以下を追加し、比較ヘルパーの nil 混在境界を回帰固定:
+  - `TestLessContainerNameIDNilSafety`
+  - `TestLessContainerForModeNilSafety`
