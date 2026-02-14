@@ -14,6 +14,7 @@
 
 ## 3. 品質・セキュリティ
 - `security-check-summary.md`
+- `command-output-samples.md`
 - `ci-gate-template.md`
 - `reviewer-checklist.md`
 - `link-audit.md`
