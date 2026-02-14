@@ -398,7 +398,7 @@ func isLoopback(address string) bool {
 	if err != nil {
 		host = address
 	}
-	if host == "localhost" {
+	if strings.EqualFold(host, "localhost") {
 		return true
 	}
 	ip := net.ParseIP(host)

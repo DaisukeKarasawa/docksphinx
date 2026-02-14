@@ -260,6 +260,7 @@ func TestIsLoopback(t *testing.T) {
 	}{
 		{addr: "127.0.0.1:50051", want: true},
 		{addr: "localhost:50051", want: true},
+		{addr: "LOCALHOST:50051", want: true},
 		{addr: "[::1]:50051", want: true},
 		{addr: "0.0.0.0:50051", want: false},
 		{addr: "192.168.1.10:50051", want: false},
