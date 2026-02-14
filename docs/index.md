@@ -12,6 +12,7 @@
 - `handover-checklist.md`
 - `contribution-workflow.md`
 - `incident-playbook.md`
+- `macos-launchd-checklist.md`
 - `patch-application-procedure.md`
 - `command-reference.md`
 
