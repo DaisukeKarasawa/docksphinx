@@ -4,6 +4,7 @@
 - `requirements.md`
 - `mvp-spec-freeze.md`
 - `mvp-acceptance-matrix.md`
+- `requirements-traceability.md`
 
 ## 2. 実行・適用ガイド
 - `quickstart.md`
