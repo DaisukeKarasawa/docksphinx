@@ -8,7 +8,8 @@
 ## 0. 先に読む
 1. `docs/requirements.md`
 2. `docs/mvp-acceptance-matrix.md`
-3. `docs/final-status.md`
+3. `docs/requirements-traceability.md`
+4. `docs/final-status.md`
 
 ---
 
@@ -53,3 +54,10 @@ gosec ./...
 
 ## 5. 記録テンプレート
 - `docs/validation-log-template.md` をコピーして実行ログを残す。
+
+---
+
+## 6. 最終判定
+1. `docs/master-checklist.md` を確認
+2. `docs/review-sequence.md` の順でレビュー
+3. `docs/acceptance-signoff-template.md` に判定を記録
