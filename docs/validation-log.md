@@ -2505,3 +2505,31 @@ make quality
 
 - `internal/config.Config.EngineConfig` に nil receiver ガードを追加し、`(*Config)(nil)` でも panic せず default config の変換結果へフォールバック。
 - `TestEngineConfigNilReceiverUsesDefaults` を追加し、interval/resource_interval/thresholds が default 相当になることを回帰固定。
+
+---
+
+## 2026-02-14 (config-save boundary contract coverage pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/config/config_test.go` に以下を追加:
+  - `TestSaveRejectsWhitespacePath`: `Save("   ")` は `save path is empty` を返す
+  - `TestSaveNilConfigReturnsExplicitError`: `(*Config)(nil).Save(...)` は `config is nil` を返す
+- 既存実装の境界契約（path trim 後の空判定 / nil receiver 明示エラー）を回帰固定。
