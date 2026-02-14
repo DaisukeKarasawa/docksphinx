@@ -19,7 +19,11 @@ type Network struct {
 
 // ListNetworks lists all Docker networks
 func (c *Client) ListNetworks(ctx context.Context) ([]Network, error) {
-	networks, err := c.apiClient.NetworkList(ctx, network.ListOptions{})
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	networks, err := apiClient.NetworkList(normalizeContext(ctx), network.ListOptions{})
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
@@ -41,7 +45,11 @@ func (c *Client) ListNetworks(ctx context.Context) ([]Network, error) {
 
 // GetNetwork retrieves detailed information about a specific network
 func (c *Client) GetNetwork(ctx context.Context, networkID string) (*network.Inspect, error) {
-	network, err := c.apiClient.NetworkInspect(ctx, networkID, network.InspectOptions{
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	network, err := apiClient.NetworkInspect(normalizeContext(ctx), networkID, network.InspectOptions{
 		Verbose: true, // Include detailed information
 	})
 	if err != nil {

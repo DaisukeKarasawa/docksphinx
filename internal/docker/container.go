@@ -37,6 +37,12 @@ type ListContainersOptions struct {
 // ListContainers lists all containers matching the given options
 // This is the main function for getting container information
 func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions) ([]Container, error) {
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx = normalizeContext(ctx)
+
 	// Build filter arguments
 	filterArgs := filters.NewArgs()
 
@@ -46,7 +52,7 @@ func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions)
 	}
 
 	// Get container list from Docker API
-	containers, err := c.apiClient.ContainerList(ctx, container.ListOptions{
+	containers, err := apiClient.ContainerList(ctx, container.ListOptions{
 		All:     opts.All,
 		Filters: filterArgs,
 	})
@@ -109,7 +115,11 @@ func (c *Client) ListContainers(ctx context.Context, opts ListContainersOptions)
 // GetContainer retrieves detailed information about a specific container
 // containerID can be either the full ID or a short ID prefix
 func (c *Client) GetContainer(ctx context.Context, containerID string) (*container.InspectResponse, error) {
-	containerInspect, err := c.apiClient.ContainerInspect(ctx, containerID)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	containerInspect, err := apiClient.ContainerInspect(normalizeContext(ctx), containerID)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}

@@ -27,7 +27,11 @@ type ContainerStats struct {
 // GetContainerStats retrieves current statistics for a container
 // This is a snapshot, not a stream
 func (c *Client) GetContainerStats(ctx context.Context, containerID string) (*ContainerStats, error) {
-	stats, err := c.apiClient.ContainerStats(ctx, containerID, false)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	stats, err := apiClient.ContainerStats(normalizeContext(ctx), containerID, false)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}

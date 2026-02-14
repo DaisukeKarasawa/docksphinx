@@ -18,7 +18,11 @@ type Image struct {
 
 // ListImages lists all Docker images including intermediate images.
 func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
-	images, err := c.apiClient.ImageList(ctx, image.ListOptions{
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	images, err := apiClient.ImageList(normalizeContext(ctx), image.ListOptions{
 		All: true, // Include intermediate images
 	})
 	if err != nil {
@@ -51,7 +55,11 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 
 // GetImage retrieves detailed information about a specific image
 func (c *Client) GetImage(ctx context.Context, imageID string) (*image.InspectResponse, error) {
-	imageInspect, err := c.apiClient.ImageInspect(ctx, imageID)
+	apiClient, err := c.getAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	imageInspect, err := apiClient.ImageInspect(normalizeContext(ctx), imageID)
 	if err != nil {
 		return nil, HandleAPIError(err)
 	}
