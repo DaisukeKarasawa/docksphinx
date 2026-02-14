@@ -16,6 +16,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - レビュアーチェックリスト: `docs/reviewer-checklist.md`
 - コマンドリファレンス: `docs/command-reference.md`
 - 成果物マニフェスト: `docs/delivery-manifest.md`
+- ADR-0001（outputsベース実装提供方針）: `docs/adr-0001-mvp-delivery-mode.md`
 
 ## 補足
 
