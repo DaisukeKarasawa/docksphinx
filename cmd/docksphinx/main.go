@@ -212,6 +212,21 @@ func printSnapshot(snapshot *pb.Snapshot) {
 			c.GetImageName(),
 		)
 	}
+
+	recent := selectRecentEvents(snapshot.GetRecentEvents(), 10)
+	if len(recent) == 0 {
+		return
+	}
+	fmt.Println("\nRECENT EVENTS")
+	for _, ev := range recent {
+		fmt.Printf(
+			"[%s] %-14s %-24s %s\n",
+			time.Unix(ev.GetTimestampUnix(), 0).Format("15:04:05"),
+			ev.GetType(),
+			trimContainerName(ev.GetContainerName()),
+			ev.GetMessage(),
+		)
+	}
 }
 
 func printEvent(ev *pb.Event) {
@@ -246,6 +261,16 @@ func formatUptimeOrNA(c *pb.ContainerInfo) string {
 		return "N/A"
 	}
 	return fmt.Sprintf("%d", c.GetUptimeSeconds())
+}
+
+func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
+	if len(events) == 0 || limit <= 0 {
+		return nil
+	}
+	if len(events) <= limit {
+		return events
+	}
+	return events[:limit]
 }
 
 func waitOrDone(ctx context.Context, d time.Duration) error {

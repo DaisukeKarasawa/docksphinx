@@ -52,3 +52,29 @@ func TestFormatUptimeOrNA(t *testing.T) {
 		})
 	}
 }
+
+func TestSelectRecentEvents(t *testing.T) {
+	makeEvents := func(n int) []*pb.Event {
+		out := make([]*pb.Event, 0, n)
+		for i := 0; i < n; i++ {
+			out = append(out, &pb.Event{Id: string(rune('a' + i))})
+		}
+		return out
+	}
+
+	if got := selectRecentEvents(nil, 10); got != nil {
+		t.Fatalf("expected nil for empty input, got %#v", got)
+	}
+	if got := selectRecentEvents(makeEvents(3), 0); got != nil {
+		t.Fatalf("expected nil for non-positive limit, got %#v", got)
+	}
+	events := makeEvents(3)
+	if got := selectRecentEvents(events, 10); len(got) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(got))
+	}
+	events = makeEvents(5)
+	got := selectRecentEvents(events, 2)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(got))
+	}
+}
