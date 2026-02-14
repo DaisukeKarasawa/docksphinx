@@ -99,9 +99,14 @@ func TestSelectRecentEvents(t *testing.T) {
 		{Id: "a", TimestampUnix: 200},
 		{Id: "c", TimestampUnix: 150},
 	}
+	before := []string{unsorted[0].GetId(), unsorted[1].GetId(), unsorted[2].GetId()}
 	got = selectRecentEvents(unsorted, 3)
 	if got[0].GetId() != "a" || got[1].GetId() != "c" || got[2].GetId() != "b" {
 		t.Fatalf("expected timestamp-desc order [a c b], got [%s %s %s]", got[0].GetId(), got[1].GetId(), got[2].GetId())
+	}
+	after := []string{unsorted[0].GetId(), unsorted[1].GetId(), unsorted[2].GetId()}
+	if before[0] != after[0] || before[1] != after[1] || before[2] != after[2] {
+		t.Fatalf("expected input ordering to remain unchanged, before=%v after=%v", before, after)
 	}
 
 	sameTimestamp := []*pb.Event{
@@ -140,6 +145,11 @@ func TestSelectRecentEvents(t *testing.T) {
 	}
 	if got[0].GetId() != "a" || got[1].GetId() != "m" {
 		t.Fatalf("expected filtered/sorted/capped order [a m], got [%s %s]", got[0].GetId(), got[1].GetId())
+	}
+
+	allNil := []*pb.Event{nil, nil}
+	if got := selectRecentEvents(allNil, 5); got != nil {
+		t.Fatalf("expected nil when all events are nil, got %#v", got)
 	}
 }
 
