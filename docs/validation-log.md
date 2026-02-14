@@ -3640,3 +3640,35 @@ make quality
   - `nil receiver` / `nil center` / `targetOrder` 空の no-op return
   - `targetIdx` 範囲外時の `0` クランプ
 - `cmd/docksphinx/tui_test.go` の `TestSetTargetAndRefreshCenterNilSafety` で、nil receiver / zero-value / out-of-range index 回復契約を回帰固定。
+
+---
+
+## 2026-02-14 (TUI refreshAll/toggleSort nil-receiver hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./cmd/docksphinx -run TestRefreshAllAndToggleSortNilSafety
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./cmd/docksphinx -run TestRefreshAllAndToggleSortNilSafety`: PASS（修正前は `toggleSort` の nil receiver で panic を再現）
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.tuiModel.refreshAll` に `nil receiver` no-op guard を追加し、部分初期化経路でも安全に再描画要求を無視できるよう修正。
+- `cmd/docksphinx.tuiModel.toggleSort` に `nil receiver` no-op guard を追加し、nil model 注入時の sort 切替 panic を防止。
+- `cmd/docksphinx/tui_test.go` に `TestRefreshAllAndToggleSortNilSafety` を追加し、以下を回帰固定:
+  - `refreshAll` の nil receiver / zero-value safety
+  - `toggleSort` の nil receiver / zero-value safety
+  - sort mode 循環契約（CPU→MEM→UPTIME→NAME→CPU）
