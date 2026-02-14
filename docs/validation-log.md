@@ -2983,3 +2983,32 @@ make quality
   - `TestClientCloseClearsClientForPostCloseCalls`
   - `TestClientCloseIsIdempotent`
 - close 後再利用時の挙動を下流 gRPC 実装依存から切り離し、決定的エラー契約を回帰固定。
+
+---
+
+## 2026-02-14 (daemon CLI PID path trim hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinxd.readPID` で入力 path を trim してから参照するよう修正し、前後空白付き PID file path を受理可能化。
+- `cmd/docksphinxd.removePIDFileIfExists` で trim 後 path を `os.Remove` に渡すよう修正し、空白付き設定時の stale PID file 削除失敗を防止。
+- `main_test.go` に以下を追加:
+  - `TestRemovePIDFileIfExistsTrimsPath`
+  - `TestReadPID` 内 `trimmed path is accepted` サブケース
