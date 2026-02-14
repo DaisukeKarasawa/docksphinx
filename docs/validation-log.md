@@ -1366,3 +1366,28 @@ make quality
 ### Focused regression assertion
 
 - `cmd/docksphinx.TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields` を追加し、`printSnapshotTo` 実行後も `Snapshot` の `Groups/Networks/Volumes/Images` の順序および group 内 `NetworkNames` 順序が入力のまま維持されることを確認。
+
+---
+
+## 2026-02-14 (snapshot rendering non-mutating containers/events regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields` を拡張し、`printSnapshotTo` 実行後も `Snapshot.Containers` および `Snapshot.RecentEvents` の入力順序が変化しないことを確認。
