@@ -70,6 +70,7 @@ This file defines instructions for coding agents working on this project.
 
 - **`docs/` directory**: Place information about project specifications (implemented content and requirements)
 - **`outputs/` directory**: Place all information other than project specifications (Markdown format, not included in git history)
+- **`.gitignore` binary patterns**: When ignoring root binaries (e.g., `docksphinx`, `docksphinxd`), always use root-anchored patterns (`/docksphinx`, `/docksphinxd`) to avoid accidentally ignoring source directories like `cmd/docksphinx` or `cmd/docksphinxd`.
 
 ## Maintenance Policy
 
