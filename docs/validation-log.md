@@ -64,3 +64,20 @@ timeout 5s ./bin/docksphinx tail --config ./configs/docksphinx.yaml.example
 結果:
 - 実行環境に Docker daemon/CLI が存在しないため、daemon 起動は期待どおり安全失敗。
 - status/snapshot/tail のエラー経路は健全動作を確認。
+
+---
+
+## 2026-02-14 (additional hardening pass)
+
+### Re-run gates after daemon stop + TUI reconnect + grouping tests
+
+```bash
+make test-race
+make security
+```
+
+結果:
+- `go test -race ./...` : PASS
+- `staticcheck` : PASS
+- `gosec -exclude-dir=api ./...` : PASS (Issues: 0)
+- `govulncheck ./...` : internal error（既知、warning扱い）
