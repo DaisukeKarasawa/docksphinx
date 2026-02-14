@@ -37,6 +37,7 @@ PID ファイルが破損している場合は誤動作防止のためエラー�
 ./bin/docksphinxd status --config ./configs/docksphinx.yaml.example
 ```
 `status` は stale PID を検知した場合、PID ファイルを自動で掃除します。
+PID ファイルが破損している場合は `status` もエラー終了します（fail-safe）。
 
 停止:
 ```bash
