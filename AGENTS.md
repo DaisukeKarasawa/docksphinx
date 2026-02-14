@@ -58,6 +58,7 @@ This file defines instructions for coding agents working on this project.
 - Backoff helpers should treat non-positive durations as invalid input and clamp to an explicit minimum retry interval to avoid zero-delay retry loops.
 - gRPC server constructors should trim/validate listen addresses and reject whitespace-only inputs before net.Listen.
 - Constructors accepting options structs should normalize on local copies to avoid mutating caller-provided option objects.
+- After resolving options into a local normalized copy, constructor logic should consistently read from the resolved copy (not the original pointer) to avoid nil-dereference regressions.
 - Stop/cleanup methods should release auxiliary resources as well (cancel funcs, listeners/channels) even in partially initialized states.
 - Cleanup routines should not rely solely on running flags; release any owned resources even when not running, then nil them for idempotent re-entry.
 - Close methods should invalidate internal handles after release so post-close calls fail deterministically via explicit guard errors.
