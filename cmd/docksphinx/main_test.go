@@ -81,6 +81,9 @@ func TestSelectRecentEvents(t *testing.T) {
 	if got := selectRecentEvents(makeEvents(3), 0); got != nil {
 		t.Fatalf("expected nil for non-positive limit, got %#v", got)
 	}
+	if got := selectRecentEvents(makeEvents(3), -1); got != nil {
+		t.Fatalf("expected nil for negative limit, got %#v", got)
+	}
 	events := makeEvents(3)
 	if got := selectRecentEvents(events, 10); len(got) != 3 {
 		t.Fatalf("expected 3 events, got %d", len(got))
@@ -123,6 +126,20 @@ func TestSelectRecentEvents(t *testing.T) {
 	}
 	if got[0].GetId() != "a" || got[1].GetId() != "z" {
 		t.Fatalf("expected filtered/sorted order [a z], got [%s %s]", got[0].GetId(), got[1].GetId())
+	}
+
+	withNilAndCap := []*pb.Event{
+		nil,
+		{Id: "z", TimestampUnix: 10},
+		{Id: "a", TimestampUnix: 20},
+		{Id: "m", TimestampUnix: 15},
+	}
+	got = selectRecentEvents(withNilAndCap, 2)
+	if len(got) != 2 {
+		t.Fatalf("expected capped result length=2, got len=%d", len(got))
+	}
+	if got[0].GetId() != "a" || got[1].GetId() != "m" {
+		t.Fatalf("expected filtered/sorted/capped order [a m], got [%s %s]", got[0].GetId(), got[1].GetId())
 	}
 }
 
