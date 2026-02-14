@@ -51,6 +51,7 @@ This file defines instructions for coding agents working on this project.
 - Normalize user-provided address/path strings with trim operations before emptiness validation to reject whitespace-only inputs deterministically.
 - Shared state-manager methods should be nil-safe (receiver and critical pointer inputs) and define no-op/empty-return contracts instead of panicking.
 - Detection/evaluation helpers (e.g., detector paths) should also be nil-safe and prefer empty-result contracts over panics when dependencies are missing.
+- Monitoring helpers with internal maps should lazily initialize map fields so zero-value construction paths remain panic-safe.
 - When implementing defensive deep-copy logic for mutable runtime data, preserve map key identity/semantics (clone mutable values, not keys) and add regression tests for key-sensitive cases (e.g., pointer keys).
 - When sorting data for display/snapshot output, avoid mutating source slices; sort copied data and add regression tests that assert non-mutating behavior.
 - When sorting during proto/snapshot conversion, ensure source monitor/state data remains unmodified and add regression tests that assert source-order non-mutation.
