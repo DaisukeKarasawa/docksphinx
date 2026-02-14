@@ -19,6 +19,9 @@ func (c *Config) Validate() error {
 	if c == nil {
 		return fmt.Errorf("config is nil")
 	}
+	logLevel := strings.TrimSpace(strings.ToLower(c.Log.Level))
+	logFile := strings.TrimSpace(c.Log.File)
+	pidFile := strings.TrimSpace(c.Daemon.PIDFile)
 
 	if c.Monitor.Interval < minIntervalSeconds {
 		return fmt.Errorf("monitor.interval must be >= %d", minIntervalSeconds)
@@ -49,25 +52,25 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("event.max_history must be between %d and %d", minHistory, maxHistory)
 	}
 
-	if c.Log.Level == "" {
+	if logLevel == "" {
 		return fmt.Errorf("log.level must not be empty")
 	}
-	switch c.Log.Level {
+	switch logLevel {
 	case "debug", "info", "warn", "warning", "error":
 	default:
 		return fmt.Errorf("unsupported log.level %q", c.Log.Level)
 	}
 
-	if c.Log.File != "" {
-		if !filepath.IsAbs(c.Log.File) {
+	if logFile != "" {
+		if !filepath.IsAbs(logFile) {
 			return fmt.Errorf("log.file must be an absolute path: %s", c.Log.File)
 		}
 	}
 
-	if c.Daemon.PIDFile == "" {
+	if pidFile == "" {
 		return fmt.Errorf("daemon.pid_file must not be empty")
 	}
-	if !filepath.IsAbs(c.Daemon.PIDFile) {
+	if !filepath.IsAbs(pidFile) {
 		return fmt.Errorf("daemon.pid_file must be an absolute path: %s", c.Daemon.PIDFile)
 	}
 	return nil

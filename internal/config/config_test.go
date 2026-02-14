@@ -225,3 +225,22 @@ func TestSaveNilConfigReturnsExplicitError(t *testing.T) {
 		t.Fatalf("expected nil config error, got %q", got)
 	}
 }
+
+func TestValidateAcceptsTrimmedCaseInsensitiveLogLevel(t *testing.T) {
+	cfg := Default()
+	cfg.Log.Level = "  INFO  "
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected validate to accept trimmed uppercase log level, got %v", err)
+	}
+}
+
+func TestValidateAcceptsTrimmedAbsolutePaths(t *testing.T) {
+	cfg := Default()
+	cfg.Log.File = "   /tmp/docksphinx.log  "
+	cfg.Daemon.PIDFile = "   /tmp/docksphinxd.pid  "
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected validate to accept trimmed absolute paths, got %v", err)
+	}
+}
