@@ -100,6 +100,16 @@ func TestSelectRecentEvents(t *testing.T) {
 	if got[0].GetId() != "a" || got[1].GetId() != "c" || got[2].GetId() != "b" {
 		t.Fatalf("expected timestamp-desc order [a c b], got [%s %s %s]", got[0].GetId(), got[1].GetId(), got[2].GetId())
 	}
+
+	sameTimestamp := []*pb.Event{
+		{Id: "c", TimestampUnix: 300},
+		{Id: "a", TimestampUnix: 300},
+		{Id: "b", TimestampUnix: 300},
+	}
+	got = selectRecentEvents(sameTimestamp, 3)
+	if got[0].GetId() != "a" || got[1].GetId() != "b" || got[2].GetId() != "c" {
+		t.Fatalf("expected id-asc tie-break [a b c], got [%s %s %s]", got[0].GetId(), got[1].GetId(), got[2].GetId())
+	}
 }
 
 func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
