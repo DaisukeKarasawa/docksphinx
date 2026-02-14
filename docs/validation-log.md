@@ -434,6 +434,24 @@ make quality
 
 判定: PASS（`Error:` 行の重複出力なしを維持）
 
+---
+
+## 2026-02-14 (readPID contract test expansion pass)
+
+### Unified gate run
+
+```bash
+make quality
+```
+
+結果:
+- `make test`: PASS
+- `make test-race`: PASS
+- `make security`: PASS
+  - `gosec`: PASS (Issues: 0)
+  - `govulncheck -mode=binary`: PASS
+  - `govulncheck ./...`: known internal error (warning)
+
 ### Additional security hardening
 
 - `grpc.allow_non_loopback=false`（既定）時に、`grpc.address` が loopback 以外なら設定バリデーションで拒否することを追加。
