@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"strings"
 	"testing"
+	"time"
 
 	pb "docksphinx/api/docksphinx/v1"
 )
@@ -76,5 +79,67 @@ func TestSelectRecentEvents(t *testing.T) {
 	got := selectRecentEvents(events, 2)
 	if len(got) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(got))
+	}
+}
+
+func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
+	snapshot := &pb.Snapshot{
+		AtUnix: time.Now().Unix(),
+		Containers: []*pb.ContainerInfo{
+			{
+				ContainerId:   "abcdef1234567890",
+				ContainerName: "web",
+				ImageName:     "nginx:latest",
+				State:         "running",
+				UptimeSeconds: 0,
+			},
+		},
+		Metrics: map[string]*pb.ContainerMetrics{
+			// intentionally empty for the container -> expect N/A rendering
+		},
+		RecentEvents: []*pb.Event{
+			{
+				Type:          "restarted",
+				TimestampUnix: time.Now().Unix(),
+				ContainerName: "web",
+				Message:       "container restarted",
+			},
+		},
+		Groups: []*pb.ComposeGroup{
+			{
+				Project:      "proj",
+				Service:      "web",
+				ContainerIds: []string{"abcdef1234567890"},
+				NetworkNames: []string{"proj_default"},
+			},
+		},
+		Networks: []*pb.NetworkInfo{
+			{Name: "proj_default", Driver: "bridge", Scope: "local", ContainerCount: 1},
+		},
+		Volumes: []*pb.VolumeInfo{
+			{Name: "data", Driver: "local", RefCount: 1, UsageNote: "metadata-only"},
+		},
+		Images: []*pb.ImageInfo{
+			{Repository: "nginx", Tag: "latest", Size: 1234, CreatedUnix: time.Now().Unix()},
+		},
+	}
+
+	var buf bytes.Buffer
+	printSnapshotTo(snapshot, &buf)
+	out := buf.String()
+
+	required := []string{
+		"CONTAINER ID",
+		"RECENT EVENTS",
+		"GROUPS",
+		"NETWORKS",
+		"VOLUMES",
+		"IMAGES",
+		"N/A",
+	}
+	for _, want := range required {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected output to contain %q, got:\n%s", want, out)
+		}
 	}
 }

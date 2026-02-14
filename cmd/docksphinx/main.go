@@ -181,13 +181,20 @@ func consumeStream(ctx context.Context, stream pb.DocksphinxService_StreamClient
 }
 
 func printSnapshot(snapshot *pb.Snapshot) {
+	printSnapshotTo(snapshot, os.Stdout)
+}
+
+func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
+	if out == nil {
+		out = io.Discard
+	}
 	if snapshot == nil {
-		fmt.Println("Snapshot is empty")
+		fmt.Fprintln(out, "Snapshot is empty")
 		return
 	}
 
-	fmt.Printf("\nSnapshot at %s\n", time.Unix(snapshot.GetAtUnix(), 0).Format(time.RFC3339))
-	fmt.Println("CONTAINER ID\tNAME\tSTATE\tCPU%\tMEM%\tUPTIME(s)\tIMAGE")
+	fmt.Fprintf(out, "\nSnapshot at %s\n", time.Unix(snapshot.GetAtUnix(), 0).Format(time.RFC3339))
+	fmt.Fprintln(out, "CONTAINER ID\tNAME\tSTATE\tCPU%\tMEM%\tUPTIME(s)\tIMAGE")
 	containers := append([]*pb.ContainerInfo(nil), snapshot.GetContainers()...)
 	sort.Slice(containers, func(i, j int) bool {
 		return containers[i].GetContainerName() < containers[j].GetContainerName()
@@ -201,7 +208,8 @@ func printSnapshot(snapshot *pb.Snapshot) {
 			mem = fmt.Sprintf("%.2f", m.GetMemoryPercent())
 		}
 		uptime := formatUptimeOrNA(c)
-		fmt.Printf(
+		fmt.Fprintf(
+			out,
 			"%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			shortContainerID(c.GetContainerId()),
 			trimContainerName(c.GetContainerName()),
@@ -216,9 +224,10 @@ func printSnapshot(snapshot *pb.Snapshot) {
 	recent := selectRecentEvents(snapshot.GetRecentEvents(), 10)
 	if len(recent) == 0 {
 	} else {
-		fmt.Println("\nRECENT EVENTS")
+		fmt.Fprintln(out, "\nRECENT EVENTS")
 		for _, ev := range recent {
-			fmt.Printf(
+			fmt.Fprintf(
+				out,
 				"[%s] %-14s %-24s %s\n",
 				time.Unix(ev.GetTimestampUnix(), 0).Format("15:04:05"),
 				ev.GetType(),
@@ -229,9 +238,10 @@ func printSnapshot(snapshot *pb.Snapshot) {
 	}
 
 	if len(snapshot.GetGroups()) > 0 {
-		fmt.Println("\nGROUPS")
+		fmt.Fprintln(out, "\nGROUPS")
 		for _, g := range snapshot.GetGroups() {
-			fmt.Printf(
+			fmt.Fprintf(
+				out,
 				"%s/%s\tcontainers=%d\tnetworks=%s\n",
 				g.GetProject(),
 				g.GetService(),
@@ -242,9 +252,10 @@ func printSnapshot(snapshot *pb.Snapshot) {
 	}
 
 	if len(snapshot.GetNetworks()) > 0 {
-		fmt.Println("\nNETWORKS")
+		fmt.Fprintln(out, "\nNETWORKS")
 		for _, n := range snapshot.GetNetworks() {
-			fmt.Printf(
+			fmt.Fprintf(
+				out,
 				"%s\tdriver=%s\tscope=%s\tcontainers=%d\n",
 				n.GetName(),
 				n.GetDriver(),
@@ -255,9 +266,10 @@ func printSnapshot(snapshot *pb.Snapshot) {
 	}
 
 	if len(snapshot.GetVolumes()) > 0 {
-		fmt.Println("\nVOLUMES")
+		fmt.Fprintln(out, "\nVOLUMES")
 		for _, v := range snapshot.GetVolumes() {
-			fmt.Printf(
+			fmt.Fprintf(
+				out,
 				"%s\tdriver=%s\trefs=%d\tnote=%s\n",
 				v.GetName(),
 				v.GetDriver(),
@@ -268,9 +280,10 @@ func printSnapshot(snapshot *pb.Snapshot) {
 	}
 
 	if len(snapshot.GetImages()) > 0 {
-		fmt.Println("\nIMAGES")
+		fmt.Fprintln(out, "\nIMAGES")
 		for _, img := range snapshot.GetImages() {
-			fmt.Printf(
+			fmt.Fprintf(
+				out,
 				"%s:%s\tsize=%d\tcreated=%s\n",
 				img.GetRepository(),
 				img.GetTag(),
