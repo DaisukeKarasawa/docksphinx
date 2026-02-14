@@ -748,6 +748,69 @@ func TestSetTargetAndRefreshCenterNilSafety(t *testing.T) {
 	})
 }
 
+func TestRefreshAllAndToggleSortNilSafety(t *testing.T) {
+	t.Run("refreshAll nil receiver no panic", func(t *testing.T) {
+		var m *tuiModel
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected nil receiver refreshAll to be safe, got panic %v", r)
+			}
+		}()
+		m.refreshAll()
+	})
+
+	t.Run("refreshAll zero-value model no panic", func(t *testing.T) {
+		m := &tuiModel{}
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected zero-value refreshAll to be safe, got panic %v", r)
+			}
+		}()
+		m.refreshAll()
+	})
+
+	t.Run("toggleSort nil receiver no panic", func(t *testing.T) {
+		var m *tuiModel
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected nil receiver toggleSort to be safe, got panic %v", r)
+			}
+		}()
+		m.toggleSort()
+	})
+
+	t.Run("toggleSort zero-value model no panic", func(t *testing.T) {
+		m := &tuiModel{}
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("expected zero-value toggleSort to be safe, got panic %v", r)
+			}
+		}()
+		m.toggleSort()
+	})
+
+	t.Run("toggleSort cycles through known modes", func(t *testing.T) {
+		m := newTUIModel()
+		m.sortMode = sortCPU
+		m.toggleSort()
+		if m.sortMode != sortMemory {
+			t.Fatalf("expected sortCPU -> sortMemory, got %v", m.sortMode)
+		}
+		m.toggleSort()
+		if m.sortMode != sortUptime {
+			t.Fatalf("expected sortMemory -> sortUptime, got %v", m.sortMode)
+		}
+		m.toggleSort()
+		if m.sortMode != sortName {
+			t.Fatalf("expected sortUptime -> sortName, got %v", m.sortMode)
+		}
+		m.toggleSort()
+		if m.sortMode != sortCPU {
+			t.Fatalf("expected sortName -> sortCPU, got %v", m.sortMode)
+		}
+	})
+}
+
 func TestLessContainerNameIDNilSafety(t *testing.T) {
 	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
 

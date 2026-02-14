@@ -431,6 +431,9 @@ func (m *tuiModel) setTarget(target string) {
 }
 
 func (m *tuiModel) refreshAll() {
+	if m == nil {
+		return
+	}
 	m.refreshCenter()
 	m.renderRight()
 	m.renderStatus("")
@@ -807,6 +810,9 @@ func (m *tuiModel) renderStatus(message string) {
 }
 
 func (m *tuiModel) toggleSort() {
+	if m == nil {
+		return
+	}
 	m.sortMode = (m.sortMode + 1) % 4
 	m.refreshCenter()
 }
