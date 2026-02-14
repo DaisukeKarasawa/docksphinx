@@ -3149,3 +3149,35 @@ make quality
 - `main_test.go` に以下を追加し、nil checker 境界を回帰固定:
   - `TestDescribePIDStatusNilCheckerReturnsError`
   - `TestInspectPIDNilCheckerReturnsError`
+
+---
+
+## 2026-02-14 (CLI/TUI stream consumer nil-argument guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.consumeStream` に `stream==nil` ガードを追加し、nil stream client 呼び出しを panic ではなく明示エラー（`stream client is nil`）へ変更。
+- `cmd/docksphinx.tuiModel.consumeStream` に以下を追加:
+  - `stream==nil` ガード（明示エラー）
+  - `app==nil` ガード（明示エラー）
+  - `ctx==nil` の `context.Background()` 正規化
+- 回帰テストを追加:
+  - `TestConsumeStreamNilStream`
+  - `TestTUIConsumeStreamNilGuards`
