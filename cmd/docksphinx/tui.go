@@ -519,9 +519,19 @@ func (m *tuiModel) renderImages() {
 	if m.snapshot == nil {
 		return
 	}
+	images := append([]*pb.ImageInfo(nil), m.snapshot.GetImages()...)
+	sort.Slice(images, func(i, j int) bool {
+		if images[i].GetRepository() != images[j].GetRepository() {
+			return images[i].GetRepository() < images[j].GetRepository()
+		}
+		if images[i].GetTag() != images[j].GetTag() {
+			return images[i].GetTag() < images[j].GetTag()
+		}
+		return images[i].GetImageId() < images[j].GetImageId()
+	})
 
 	row := 1
-	for _, img := range m.snapshot.GetImages() {
+	for _, img := range images {
 		if !m.matchesFilter(img.GetRepository() + " " + img.GetTag()) {
 			continue
 		}
@@ -546,8 +556,21 @@ func (m *tuiModel) renderNetworks() {
 	if m.snapshot == nil {
 		return
 	}
+	networks := append([]*pb.NetworkInfo(nil), m.snapshot.GetNetworks()...)
+	sort.Slice(networks, func(i, j int) bool {
+		if networks[i].GetName() != networks[j].GetName() {
+			return networks[i].GetName() < networks[j].GetName()
+		}
+		if networks[i].GetDriver() != networks[j].GetDriver() {
+			return networks[i].GetDriver() < networks[j].GetDriver()
+		}
+		if networks[i].GetScope() != networks[j].GetScope() {
+			return networks[i].GetScope() < networks[j].GetScope()
+		}
+		return networks[i].GetNetworkId() < networks[j].GetNetworkId()
+	})
 	row := 1
-	for _, n := range m.snapshot.GetNetworks() {
+	for _, n := range networks {
 		if !m.matchesFilter(n.GetName() + " " + n.GetDriver()) {
 			continue
 		}
@@ -573,8 +596,24 @@ func (m *tuiModel) renderVolumes() {
 	if m.snapshot == nil {
 		return
 	}
+	volumes := append([]*pb.VolumeInfo(nil), m.snapshot.GetVolumes()...)
+	sort.Slice(volumes, func(i, j int) bool {
+		if volumes[i].GetName() != volumes[j].GetName() {
+			return volumes[i].GetName() < volumes[j].GetName()
+		}
+		if volumes[i].GetDriver() != volumes[j].GetDriver() {
+			return volumes[i].GetDriver() < volumes[j].GetDriver()
+		}
+		if volumes[i].GetMountpoint() != volumes[j].GetMountpoint() {
+			return volumes[i].GetMountpoint() < volumes[j].GetMountpoint()
+		}
+		if volumes[i].GetUsageNote() != volumes[j].GetUsageNote() {
+			return volumes[i].GetUsageNote() < volumes[j].GetUsageNote()
+		}
+		return volumes[i].GetRefCount() < volumes[j].GetRefCount()
+	})
 	row := 1
-	for _, v := range m.snapshot.GetVolumes() {
+	for _, v := range volumes {
 		if !m.matchesFilter(v.GetName() + " " + v.GetDriver()) {
 			continue
 		}
@@ -600,10 +639,29 @@ func (m *tuiModel) renderGroups() {
 	if m.snapshot == nil {
 		return
 	}
+	groups := append([]*pb.ComposeGroup(nil), m.snapshot.GetGroups()...)
+	sort.Slice(groups, func(i, j int) bool {
+		if groups[i].GetProject() != groups[j].GetProject() {
+			return groups[i].GetProject() < groups[j].GetProject()
+		}
+		if groups[i].GetService() != groups[j].GetService() {
+			return groups[i].GetService() < groups[j].GetService()
+		}
+		li := strings.Join(groups[i].GetContainerIds(), ",")
+		lj := strings.Join(groups[j].GetContainerIds(), ",")
+		if li != lj {
+			return li < lj
+		}
+		return strings.Join(groups[i].GetNetworkNames(), ",") < strings.Join(groups[j].GetNetworkNames(), ",")
+	})
 	row := 1
-	for _, g := range m.snapshot.GetGroups() {
-		c := strings.Join(g.GetContainerNames(), ",")
-		n := strings.Join(g.GetNetworkNames(), ",")
+	for _, g := range groups {
+		containerNames := append([]string(nil), g.GetContainerNames()...)
+		networkNames := append([]string(nil), g.GetNetworkNames()...)
+		sort.Strings(containerNames)
+		sort.Strings(networkNames)
+		c := strings.Join(containerNames, ",")
+		n := strings.Join(networkNames, ",")
 		if !m.matchesFilter(g.GetProject() + " " + g.GetService() + " " + c + " " + n) {
 			continue
 		}

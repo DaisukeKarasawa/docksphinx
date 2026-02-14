@@ -177,3 +177,173 @@ func TestFilteredContainerRowsForDetailUsesContainerIDTieBreakWhenNamesEqual(t *
 	assertOrder(sortUptime, []string{"id-a", "id-b"})
 	assertOrder(sortName, []string{"id-a", "id-b"})
 }
+
+func TestRenderImagesUsesDeterministicTieBreakersAndNonMutating(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Images: []*pb.ImageInfo{
+			{ImageId: "img-b", Repository: "same", Tag: "latest", Size: 20, CreatedUnix: 2},
+			{ImageId: "img-a", Repository: "same", Tag: "latest", Size: 10, CreatedUnix: 1},
+			{ImageId: "img-z", Repository: "alpha", Tag: "latest", Size: 30, CreatedUnix: 3},
+		},
+	}
+	before := []string{
+		m.snapshot.Images[0].GetImageId(),
+		m.snapshot.Images[1].GetImageId(),
+		m.snapshot.Images[2].GetImageId(),
+	}
+
+	m.renderImages()
+	gotOrder := []string{
+		m.center.GetCell(1, 0).Text + ":" + m.center.GetCell(1, 1).Text + ":" + m.center.GetCell(1, 2).Text,
+		m.center.GetCell(2, 0).Text + ":" + m.center.GetCell(2, 1).Text + ":" + m.center.GetCell(2, 2).Text,
+		m.center.GetCell(3, 0).Text + ":" + m.center.GetCell(3, 1).Text + ":" + m.center.GetCell(3, 2).Text,
+	}
+	wantOrder := []string{
+		"alpha:latest:30",
+		"same:latest:10",
+		"same:latest:20",
+	}
+	if !reflect.DeepEqual(gotOrder, wantOrder) {
+		t.Fatalf("unexpected rendered image row order: got=%v want=%v", gotOrder, wantOrder)
+	}
+
+	after := []string{
+		m.snapshot.Images[0].GetImageId(),
+		m.snapshot.Images[1].GetImageId(),
+		m.snapshot.Images[2].GetImageId(),
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("expected source image order unchanged, before=%v after=%v", before, after)
+	}
+}
+
+func TestRenderNetworksUsesDeterministicTieBreakersAndNonMutating(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Networks: []*pb.NetworkInfo{
+			{NetworkId: "n2", Name: "same", Driver: "bridge", Scope: "local", ContainerCount: 2},
+			{NetworkId: "n1", Name: "same", Driver: "bridge", Scope: "local", ContainerCount: 1},
+			{NetworkId: "n0", Name: "alpha", Driver: "bridge", Scope: "local", ContainerCount: 3},
+		},
+	}
+	before := []string{
+		m.snapshot.Networks[0].GetNetworkId(),
+		m.snapshot.Networks[1].GetNetworkId(),
+		m.snapshot.Networks[2].GetNetworkId(),
+	}
+
+	m.renderNetworks()
+	gotOrder := []string{
+		m.center.GetCell(1, 0).Text + ":" + m.center.GetCell(1, 4).Text,
+		m.center.GetCell(2, 0).Text + ":" + m.center.GetCell(2, 4).Text,
+		m.center.GetCell(3, 0).Text + ":" + m.center.GetCell(3, 4).Text,
+	}
+	wantOrder := []string{
+		"alpha:3",
+		"same:1",
+		"same:2",
+	}
+	if !reflect.DeepEqual(gotOrder, wantOrder) {
+		t.Fatalf("unexpected rendered network row order: got=%v want=%v", gotOrder, wantOrder)
+	}
+
+	after := []string{
+		m.snapshot.Networks[0].GetNetworkId(),
+		m.snapshot.Networks[1].GetNetworkId(),
+		m.snapshot.Networks[2].GetNetworkId(),
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("expected source network order unchanged, before=%v after=%v", before, after)
+	}
+}
+
+func TestRenderVolumesUsesDeterministicTieBreakersAndNonMutating(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Volumes: []*pb.VolumeInfo{
+			{Name: "same", Driver: "local", Mountpoint: "/m", RefCount: 2, UsageNote: "metadata-only"},
+			{Name: "same", Driver: "local", Mountpoint: "/m", RefCount: 1, UsageNote: "metadata-only"},
+			{Name: "alpha", Driver: "local", Mountpoint: "/a", RefCount: 3, UsageNote: "metadata-only"},
+		},
+	}
+	before := []int32{
+		m.snapshot.Volumes[0].GetRefCount(),
+		m.snapshot.Volumes[1].GetRefCount(),
+		m.snapshot.Volumes[2].GetRefCount(),
+	}
+
+	m.renderVolumes()
+	gotOrder := []string{
+		m.center.GetCell(1, 0).Text + ":" + m.center.GetCell(1, 2).Text,
+		m.center.GetCell(2, 0).Text + ":" + m.center.GetCell(2, 2).Text,
+		m.center.GetCell(3, 0).Text + ":" + m.center.GetCell(3, 2).Text,
+	}
+	wantOrder := []string{
+		"alpha:3",
+		"same:1",
+		"same:2",
+	}
+	if !reflect.DeepEqual(gotOrder, wantOrder) {
+		t.Fatalf("unexpected rendered volume row order: got=%v want=%v", gotOrder, wantOrder)
+	}
+
+	after := []int32{
+		m.snapshot.Volumes[0].GetRefCount(),
+		m.snapshot.Volumes[1].GetRefCount(),
+		m.snapshot.Volumes[2].GetRefCount(),
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("expected source volume order unchanged, before=%v after=%v", before, after)
+	}
+}
+
+func TestRenderGroupsUsesDeterministicTieBreakersAndNonMutating(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Groups: []*pb.ComposeGroup{
+			{Project: "same", Service: "svc", ContainerIds: []string{"b", "a"}, ContainerNames: []string{"web-2", "web-1"}, NetworkNames: []string{"net-b", "net-a"}},
+			{Project: "same", Service: "svc", ContainerIds: []string{"a"}, ContainerNames: []string{"api-1"}, NetworkNames: []string{"net-c", "net-a"}},
+			{Project: "alpha", Service: "svc", ContainerIds: []string{"z"}, ContainerNames: []string{"alpha-1"}, NetworkNames: []string{"net-z"}},
+		},
+	}
+	beforeGroupOrder := []string{
+		m.snapshot.Groups[0].GetProject() + "/" + m.snapshot.Groups[0].GetService(),
+		m.snapshot.Groups[1].GetProject() + "/" + m.snapshot.Groups[1].GetService(),
+		m.snapshot.Groups[2].GetProject() + "/" + m.snapshot.Groups[2].GetService(),
+	}
+	beforeNames := append([]string(nil), m.snapshot.Groups[0].GetContainerNames()...)
+	beforeNets := append([]string(nil), m.snapshot.Groups[0].GetNetworkNames()...)
+
+	m.renderGroups()
+	gotOrder := []string{
+		m.center.GetCell(1, 0).Text + "/" + m.center.GetCell(1, 1).Text + ":" + m.center.GetCell(1, 2).Text + ":" + m.center.GetCell(1, 3).Text,
+		m.center.GetCell(2, 0).Text + "/" + m.center.GetCell(2, 1).Text + ":" + m.center.GetCell(2, 2).Text + ":" + m.center.GetCell(2, 3).Text,
+		m.center.GetCell(3, 0).Text + "/" + m.center.GetCell(3, 1).Text + ":" + m.center.GetCell(3, 2).Text + ":" + m.center.GetCell(3, 3).Text,
+	}
+	wantOrder := []string{
+		"alpha/svc:alpha-1:net-z",
+		"same/svc:api-1:net-a,net-c",
+		"same/svc:web-1,web-2:net-a,net-b",
+	}
+	if !reflect.DeepEqual(gotOrder, wantOrder) {
+		t.Fatalf("unexpected rendered group row order: got=%v want=%v", gotOrder, wantOrder)
+	}
+
+	afterGroupOrder := []string{
+		m.snapshot.Groups[0].GetProject() + "/" + m.snapshot.Groups[0].GetService(),
+		m.snapshot.Groups[1].GetProject() + "/" + m.snapshot.Groups[1].GetService(),
+		m.snapshot.Groups[2].GetProject() + "/" + m.snapshot.Groups[2].GetService(),
+	}
+	afterNames := m.snapshot.Groups[0].GetContainerNames()
+	afterNets := m.snapshot.Groups[0].GetNetworkNames()
+	if !reflect.DeepEqual(beforeGroupOrder, afterGroupOrder) {
+		t.Fatalf("expected source group order unchanged, before=%v after=%v", beforeGroupOrder, afterGroupOrder)
+	}
+	if !reflect.DeepEqual(beforeNames, afterNames) {
+		t.Fatalf("expected source group container names unchanged, before=%v after=%v", beforeNames, afterNames)
+	}
+	if !reflect.DeepEqual(beforeNets, afterNets) {
+		t.Fatalf("expected source group network names unchanged, before=%v after=%v", beforeNets, afterNets)
+	}
+}
