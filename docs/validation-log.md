@@ -3012,3 +3012,29 @@ make quality
 - `main_test.go` に以下を追加:
   - `TestRemovePIDFileIfExistsTrimsPath`
   - `TestReadPID` 内 `trimmed path is accepted` サブケース
+
+---
+
+## 2026-02-14 (daemon logger nil-config fallback hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/daemon.newLogger` に `cfg==nil` ガードを追加し、nil 入力時は `config.Default()` を使用する fallback 契約へ強化。
+- `daemon_test.go` に `TestNewLoggerNilConfigUsesDefaults` を追加し、`newLogger(nil)` が panic せず既定 logger（stdout / info レベル）を返すことを回帰固定。
