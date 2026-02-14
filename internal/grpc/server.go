@@ -105,7 +105,9 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 		if sm != nil {
 			snapshot := StateToSnapshot(sm)
 			snapshot.RecentEvents = EventsToProto(s.engine.GetRecentEvents(s.opts.RecentEventLimit))
-			_ = stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: snapshot}})
+			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Snapshot{Snapshot: snapshot}}); err != nil {
+				return err
+			}
 		}
 	}
 	sub, unsub := s.bcast.Subscribe()
@@ -118,7 +120,11 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 			if !ok {
 				return nil
 			}
-			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Event{Event: EventToProto(ev)}}); err != nil {
+			protoEv := EventToProto(ev)
+			if protoEv == nil {
+				continue
+			}
+			if err := stream.Send(&pb.StreamUpdate{Payload: &pb.StreamUpdate_Event{Event: protoEv}}); err != nil {
 				return err
 			}
 		}
