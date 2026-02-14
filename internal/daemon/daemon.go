@@ -193,7 +193,9 @@ func (d *Daemon) cleanup() {
 
 func newLogger(cfg *config.Config) (*slog.Logger, io.Closer, error) {
 	level := slog.LevelInfo
-	switch strings.ToLower(cfg.Log.Level) {
+	logLevel := strings.ToLower(strings.TrimSpace(cfg.Log.Level))
+	logFile := strings.TrimSpace(cfg.Log.File)
+	switch logLevel {
 	case "debug":
 		level = slog.LevelDebug
 	case "warn", "warning":
@@ -202,18 +204,19 @@ func newLogger(cfg *config.Config) (*slog.Logger, io.Closer, error) {
 		level = slog.LevelError
 	}
 
-	if cfg.Log.File == "" {
+	if logFile == "" {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 		return logger, nil, nil
 	}
 
-	dir := filepath.Dir(cfg.Log.File)
+	dir := filepath.Dir(logFile)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, nil, fmt.Errorf("create log directory %q: %w", dir, err)
 	}
-	f, err := os.OpenFile(cfg.Log.File, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	// #nosec G304 -- path is validated as absolute via config validation before daemon startup.
+	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		return nil, nil, fmt.Errorf("open log file %q: %w", cfg.Log.File, err)
+		return nil, nil, fmt.Errorf("open log file %q: %w", logFile, err)
 	}
 	logger := slog.New(slog.NewTextHandler(f, &slog.HandlerOptions{Level: level}))
 	return logger, f, nil
@@ -223,7 +226,7 @@ func (d *Daemon) writePID() error {
 	if d == nil || d.cfg == nil {
 		return nil
 	}
-	path := d.cfg.Daemon.PIDFile
+	path := strings.TrimSpace(d.cfg.Daemon.PIDFile)
 	if path == "" {
 		return nil
 	}
@@ -237,7 +240,7 @@ func (d *Daemon) removePID() error {
 	if d == nil || d.cfg == nil {
 		return nil
 	}
-	path := d.cfg.Daemon.PIDFile
+	path := strings.TrimSpace(d.cfg.Daemon.PIDFile)
 	if path == "" {
 		return nil
 	}
