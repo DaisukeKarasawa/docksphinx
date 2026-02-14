@@ -845,6 +845,9 @@ func formatInt64OrNA(value int64, ok bool) string {
 }
 
 func lessContainerForMode(mode sortMode, a, b *pb.ContainerInfo, cpuA, cpuB, memA, memB float64) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	switch mode {
 	case sortCPU:
 		if cpuA == cpuB {
@@ -867,6 +870,9 @@ func lessContainerForMode(mode sortMode, a, b *pb.ContainerInfo, cpuA, cpuB, mem
 }
 
 func lessContainerNameID(a, b *pb.ContainerInfo) bool {
+	if a == nil || b == nil {
+		return a != nil && b == nil
+	}
 	if a.GetContainerName() == b.GetContainerName() {
 		return a.GetContainerId() < b.GetContainerId()
 	}

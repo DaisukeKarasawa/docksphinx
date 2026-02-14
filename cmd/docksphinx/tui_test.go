@@ -512,3 +512,44 @@ func TestTUIConsumeStreamNilGuards(t *testing.T) {
 		}
 	})
 }
+
+func TestLessContainerNameIDNilSafety(t *testing.T) {
+	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a"}
+
+	if !lessContainerNameID(nonNil, nil) {
+		t.Fatal("expected non-nil container to sort before nil")
+	}
+	if lessContainerNameID(nil, nonNil) {
+		t.Fatal("expected nil container to sort after non-nil")
+	}
+	if lessContainerNameID(nil, nil) {
+		t.Fatal("expected nil-vs-nil to be non-less")
+	}
+}
+
+func TestLessContainerForModeNilSafety(t *testing.T) {
+	nonNil := &pb.ContainerInfo{ContainerId: "id-a", ContainerName: "a", UptimeSeconds: 1}
+	modes := []struct {
+		name string
+		mode sortMode
+	}{
+		{name: "cpu", mode: sortCPU},
+		{name: "memory", mode: sortMemory},
+		{name: "uptime", mode: sortUptime},
+		{name: "name", mode: sortName},
+	}
+
+	for _, tt := range modes {
+		t.Run(tt.name, func(t *testing.T) {
+			if !lessContainerForMode(tt.mode, nonNil, nil, 10, 5, 10, 5) {
+				t.Fatalf("expected non-nil container to sort before nil for mode=%v", tt.mode)
+			}
+			if lessContainerForMode(tt.mode, nil, nonNil, 10, 5, 10, 5) {
+				t.Fatalf("expected nil container to sort after non-nil for mode=%v", tt.mode)
+			}
+			if lessContainerForMode(tt.mode, nil, nil, 10, 10, 10, 10) {
+				t.Fatalf("expected nil-vs-nil to be non-less for mode=%v", tt.mode)
+			}
+		})
+	}
+}
