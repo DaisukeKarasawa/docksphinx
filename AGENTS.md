@@ -58,6 +58,7 @@ This file defines instructions for coding agents working on this project.
 - When mapping Docker inspect responses, treat nested pointer sections (e.g., `State`, `Config`) as optional and build output fields with nil-safe fallbacks.
 - Shared conversion helpers (e.g., state/proto builders) should be nil-safe and return explicit empty results instead of panicking on nil inputs.
 - Config-to-runtime conversion helpers (e.g., `Config.EngineConfig`) should be nil-receiver safe and fall back to explicit defaults.
+- Runtime helper builders that consume config (e.g., logger constructors) should also handle nil config inputs via explicit default fallback.
 - Config persistence helpers (e.g., `Config.Save`) should reject whitespace-only paths after trim and return explicit errors on nil receivers.
 - Normalize user-provided address/path strings with trim operations before emptiness validation to reject whitespace-only inputs deterministically.
 - Validation helpers should remain robust even when called before normalization (apply local trim/case-normalization for comparisons without requiring caller order).
