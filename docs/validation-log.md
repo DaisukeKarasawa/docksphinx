@@ -3607,3 +3607,36 @@ make quality
   - zero-value model で panic しない
   - nil bottom widget で panic しない
   - out-of-range `targetIdx` で fallback label を表示し panic しない
+
+---
+
+## 2026-02-14 (TUI target-refresh nil/index boundary hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./cmd/docksphinx -run TestSetTargetAndRefreshCenterNilSafety
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./cmd/docksphinx -run TestSetTargetAndRefreshCenterNilSafety`: PASS（修正前は nil-pointer panic / index out of range を再現）
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.tuiModel.setTarget` に以下の防御ガードを追加:
+  - `nil receiver` / `targetOrder` 空の no-op return
+  - 未知 target 入力かつ `targetIdx` 不正時に index を `0` へ復旧
+- `cmd/docksphinx.tuiModel.refreshCenter` に以下を追加:
+  - `nil receiver` / `nil center` / `targetOrder` 空の no-op return
+  - `targetIdx` 範囲外時の `0` クランプ
+- `cmd/docksphinx/tui_test.go` の `TestSetTargetAndRefreshCenterNilSafety` で、nil receiver / zero-value / out-of-range index 回復契約を回帰固定。
