@@ -453,3 +453,41 @@ func TestDidStateChangeHandlesNilOldState(t *testing.T) {
 		}
 	})
 }
+
+func TestEngineCollectAndDetectHandlesNilContext(t *testing.T) {
+	engine := &Engine{
+		dockerClient: &docker.Client{}, // zero-value client returns explicit errors
+		logger:       nil,
+		ctx:          nil, // partial initialization edge case
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("collectAndDetect should not panic when context is nil: %v", r)
+		}
+	}()
+
+	engine.collectAndDetect()
+}
+
+func TestEngineStopHandlesNilCancelAndEventChannel(t *testing.T) {
+	engine := &Engine{
+		running:   true,
+		cancel:    nil,
+		eventChan: nil,
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("Stop should not panic for partially initialized engine: %v", r)
+		}
+	}()
+
+	engine.Stop()
+	if engine.running {
+		t.Fatal("expected running=false after Stop")
+	}
+	if !engine.terminated {
+		t.Fatal("expected terminated=true after Stop")
+	}
+}

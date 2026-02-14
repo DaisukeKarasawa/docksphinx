@@ -128,11 +128,15 @@ func (e *Engine) Stop() {
 
 	e.running = false
 	e.terminated = true
-	e.cancel()
+	if e.cancel != nil {
+		e.cancel()
+	}
 	e.mu.Unlock()
 
 	e.wg.Wait()
-	close(e.eventChan)
+	if e.eventChan != nil {
+		close(e.eventChan)
+	}
 }
 
 // monitorLoop is the main monitoring loop
@@ -162,7 +166,7 @@ func (e *Engine) collectAndDetect() {
 		}
 		return
 	}
-	ctx, cancel := context.WithTimeout(e.ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(normalizeContext(e.ctx), 30*time.Second)
 	defer cancel()
 	now := time.Now()
 
@@ -278,6 +282,13 @@ func didStateChange(exists bool, oldState *ContainerState, currentState string) 
 		return currentState == "running"
 	}
 	return oldState.State != currentState
+}
+
+func normalizeContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 // GetEventChannel returns the event channel
