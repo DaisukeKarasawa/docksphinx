@@ -60,6 +60,7 @@ PID ファイルが破損している場合は `status` もエラー終了しま
 ./bin/docksphinx tail --config ./configs/docksphinx.yaml.example
 ```
 接続断（EOF/一時エラー）時は自動で再接続します（Ctrl+C で終了）。
+再接続中は接続失敗理由と再試行待機時間を stderr に表示します。
 
 TUI:
 ```bash
