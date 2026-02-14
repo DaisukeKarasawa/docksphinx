@@ -1664,3 +1664,38 @@ make quality
   - `container_id asc`
   - `image_name asc`
 - `TestEventsToProtoSortsDeterministicallyWithoutMutatingInput` を追加し、同 timestamp/id 衝突ケースでの順序固定と input non-mutation を確認。
+
+---
+
+## 2026-02-14 (tui resource panel deterministic ordering pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx/tui.go` の `renderImages` / `renderNetworks` / `renderVolumes` / `renderGroups` を copy-on-sort 化し、表示順の決定性を強化（入力 snapshot は非破壊）。
+- 同値キー時の tie-break を追加:
+  - images: `repository/tag` tie `image_id`
+  - networks: `name` tie `driver/scope/network_id`
+  - volumes: `name` tie `driver/mountpoint/usage_note/ref_count`
+  - groups: `project/service` tie `container_ids/network_names`
+- 追加テスト:
+  - `TestRenderImagesUsesDeterministicTieBreakersAndNonMutating`
+  - `TestRenderNetworksUsesDeterministicTieBreakersAndNonMutating`
+  - `TestRenderVolumesUsesDeterministicTieBreakersAndNonMutating`
+  - `TestRenderGroupsUsesDeterministicTieBreakersAndNonMutating`
