@@ -3479,3 +3479,32 @@ make quality
 
 - `cmd/docksphinx.captureInput` のハンドラ先頭で `event==nil` を no-op return するよう変更し、`event.Key()` 参照 panic を防止。
 - `cmd/docksphinx/tui_test.go` に `TestCaptureInputHandlesNilEvent` を追加し、nil key event 入力でも panic せず `nil` 返却で処理終了する契約を回帰固定。
+
+---
+
+## 2026-02-14 (gRPC handler nil-stream-context normalization hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.Stream` で `stream.Context()` を正規化し、`Err()` / `Done()` 参照時の nil context panic を防止。
+- `internal/grpc.Server.GetSnapshot` でも同一の context 正規化を適用し、handler 境界での挙動を統一。
+- `internal/grpc/server_test.go` に以下を追加し、panic せず `Unavailable` へ収束する契約を回帰固定:
+  - `TestServerGetSnapshotHandlesNilLikeContext`
+  - `TestServerStreamHandlesNilStreamContext`
