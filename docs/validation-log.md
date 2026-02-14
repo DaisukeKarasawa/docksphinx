@@ -3572,3 +3572,38 @@ make quality
 - `cmd/docksphinx/tui_test.go` に以下を追加し、境界契約を回帰固定:
   - `TestMoveSelectionNilSafety`
   - `TestCaptureInputMoveKeysHandleEmptyCenterTable`
+
+---
+
+## 2026-02-14 (TUI renderStatus nil/invalid-index hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./cmd/docksphinx -run TestRenderStatusNilSafety
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./cmd/docksphinx -run TestRenderStatusNilSafety`: PASS（修正前は nil-pointer panic / index out of range を再現）
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.tuiModel.renderStatus` に以下の防御ガードを追加:
+  - `nil receiver` / `nil bottom` は no-op return
+  - `sortMode` 範囲外時は `"UNKNOWN"` へフォールバック
+  - `targetIdx` 範囲外時は `"unknown"` target label へフォールバック
+- `cmd/docksphinx/tui_test.go` に `TestRenderStatusNilSafety` を追加し、以下契約を回帰固定:
+  - nil receiver で panic しない
+  - zero-value model で panic しない
+  - nil bottom widget で panic しない
+  - out-of-range `targetIdx` で fallback label を表示し panic しない
