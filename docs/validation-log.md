@@ -2394,3 +2394,31 @@ make quality
 - `internal/grpc.Broadcaster` の `Subscribe` / `Unsubscribe` / `Send` / `Run` に nil receiver ガードを追加し、panic を回避。
 - `Subscribe` は nil receiver 時に即時 close 済み channel と no-op unsubscribe を返し、呼び出し側ブロックを防止。
 - `TestBroadcasterNilSafetyContracts` を追加し、nil receiver 各操作の契約（no panic / 即時終了）を回帰固定。
+
+---
+
+## 2026-02-14 (docker client wrapper nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/docker.Client` に共通ガード（`getAPIClient` / `normalizeContext`）を追加し、`nil receiver`・`nil apiClient` で panic せず明示エラー (`docker client is nil` / `docker api client is nil`) を返すよう統一。
+- `Ping` / `ListContainers` / `GetContainer` / `ListImages` / `ListNetworks` / `ListVolumes` / `GetContainerStats` など公開ラッパー全体にガード適用。
+- `Close` は nil receiver / nil apiClient で no-op、`GetAPIClient` は nil receiver で nil 返却へ hardening。
+- `internal/docker/client_nil_safety_test.go` を追加し、主要公開メソッドの nil receiver / zero-value client 契約を回帰固定。
