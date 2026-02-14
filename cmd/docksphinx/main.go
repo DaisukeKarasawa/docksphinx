@@ -125,6 +125,7 @@ func runTail(parent context.Context, address string) error {
 
 		client, err := dgrpc.NewClient(ctx, address)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "tail connect failed: %v (retrying in %s)\n", err, backoff)
 			if err := waitOrDone(ctx, backoff); err != nil {
 				return nil
 			}
@@ -135,6 +136,7 @@ func runTail(parent context.Context, address string) error {
 		stream, err := client.Stream(ctx, true)
 		if err != nil {
 			_ = client.Close()
+			fmt.Fprintf(os.Stderr, "tail subscribe failed: %v (retrying in %s)\n", err, backoff)
 			if err := waitOrDone(ctx, backoff); err != nil {
 				return nil
 			}
