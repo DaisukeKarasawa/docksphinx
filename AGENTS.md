@@ -54,6 +54,7 @@ This file defines instructions for coding agents working on this project.
 - Helpers that derive child contexts (e.g., `context.WithTimeout` / `context.WithCancel`) should normalize nil parent contexts before derivation to prevent runtime panics.
 - CLI entrypoints that call `signal.NotifyContext` or derive timeout contexts should normalize incoming parent contexts first, even when callers are expected to provide non-nil contexts.
 - Polling/wait helpers that invoke callback checkers should validate non-nil callback inputs and return explicit errors instead of risking nil-function panics.
+- Polling/wait helpers that `select` on `ctx.Done()` should normalize nil contexts before entering the loop to avoid nil-channel dereference panics.
 - Backoff helpers should treat non-positive durations as invalid input and clamp to an explicit minimum retry interval to avoid zero-delay retry loops.
 - gRPC server constructors should trim/validate listen addresses and reject whitespace-only inputs before net.Listen.
 - Constructors accepting options structs should normalize on local copies to avoid mutating caller-provided option objects.
