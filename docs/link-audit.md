@@ -40,6 +40,10 @@ README の「主要ドキュメント」節にある以下リンク:
 - `docs/command-output-samples.md`
 - `docs/requirements-traceability.md`
 - `docs/contribution-workflow.md`
+- `docs/incident-playbook.md`
+- `docs/macos-launchd-checklist.md`
+- `docs/security-baseline-checklist.md`
+- `docs/minimal-regression-suite.md`
 
 ---
 
