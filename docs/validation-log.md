@@ -802,3 +802,30 @@ make quality
 ### Focused regression assertion
 
 - `cmd/docksphinx` の `TestSelectRecentEvents` に、`nil` イベントを含む入力でも `nil` を除去しつつ順序を維持して返却するケースを追加。
+
+---
+
+## 2026-02-14 (grpc event conversion contract test pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc` に以下の契約テストを追加:
+  - `TestEventsToProtoSkipsNilAndConvertsFields`
+  - `TestEventToProtoNil`
