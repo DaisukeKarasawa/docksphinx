@@ -2061,3 +2061,29 @@ make quality
 - 追加テスト:
   - `TestServerGetSnapshotReturnsUnavailableWhenEngineMissing`
   - `TestServerStreamReturnsUnavailableWhenDependenciesMissing`
+
+---
+
+## 2026-02-14 (grpc stream nil-argument guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.Stream` 冒頭で `stream==nil` を `codes.InvalidArgument` として明示拒否し、`stream.Context()` 参照時 panic を予防。
+- `TestServerStreamReturnsUnavailableWhenDependenciesMissing` を拡張し、`engine/bcast` が揃っていても `stream=nil` の場合は `InvalidArgument` が返ることを回帰固定。
