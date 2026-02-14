@@ -829,3 +829,28 @@ make quality
 - `internal/grpc` に以下の契約テストを追加:
   - `TestEventsToProtoSkipsNilAndConvertsFields`
   - `TestEventToProtoNil`
+
+---
+
+## 2026-02-14 (event history deep-copy hardening for nested data pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` の `TestHistoryAddAndRecentAreMutationSafe` を拡張し、`Data` 内のネストした map/slice 変更が履歴へ波及しないことを確認。
