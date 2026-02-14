@@ -1109,3 +1109,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/event` に `TestHistoryPreservesTypedNilDataValues` を追加し、`Event.Data` 内の typed nil（`map[string]string(nil)`, `[]string(nil)`, `*structuredPayload(nil)`）が deep-copy 後も nil 性を保持することを確認。
+
+---
+
+## 2026-02-14 (event history nested typed-nil preservation pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/event` に `TestHistoryPreservesTypedNilInNestedContainers` を追加し、`Event.Data` のネストした `map`/`slice` 内でも typed nil が保持されることを確認。
