@@ -343,13 +343,14 @@ func (m *tuiModel) consumeStream(
 			switch payload := update.GetPayload().(type) {
 			case *pb.StreamUpdate_Snapshot:
 				m.snapshot = payload.Snapshot
-				m.events = append([]*pb.Event(nil), payload.Snapshot.GetRecentEvents()...)
+				if payload.Snapshot != nil {
+					m.events = compactEvents(payload.Snapshot.GetRecentEvents(), 200)
+				} else {
+					m.events = nil
+				}
 				m.refreshAll()
 			case *pb.StreamUpdate_Event:
-				m.events = append([]*pb.Event{payload.Event}, m.events...)
-				if len(m.events) > 200 {
-					m.events = m.events[:200]
-				}
+				m.events = compactEvents(append([]*pb.Event{payload.Event}, m.events...), 200)
 				m.renderRight()
 				m.renderStatus("")
 			}
@@ -680,8 +681,12 @@ func (m *tuiModel) renderRight() {
 	}
 
 	builder.WriteString("\n[green]Recent Events[white]\n")
-	for i, ev := range m.events {
-		if i >= 10 {
+	shown := 0
+	for _, ev := range m.events {
+		if ev == nil {
+			continue
+		}
+		if shown >= 10 {
 			break
 		}
 		builder.WriteString(fmt.Sprintf(
@@ -691,6 +696,7 @@ func (m *tuiModel) renderRight() {
 			trimContainerName(ev.GetContainerName()),
 			ev.GetMessage(),
 		))
+		shown++
 	}
 	m.right.SetText(builder.String())
 }
@@ -734,6 +740,9 @@ func (m *tuiModel) matchesFilter(value string) bool {
 
 func (m *tuiModel) lastEventType(containerID string) string {
 	for _, ev := range m.events {
+		if ev == nil {
+			continue
+		}
 		if ev.GetContainerId() == containerID {
 			return ev.GetType()
 		}
@@ -853,6 +862,29 @@ func lessContainerNameID(a, b *pb.ContainerInfo) bool {
 		return a.GetContainerId() < b.GetContainerId()
 	}
 	return a.GetContainerName() < b.GetContainerName()
+}
+
+func compactEvents(events []*pb.Event, max int) []*pb.Event {
+	if len(events) == 0 || max == 0 {
+		return nil
+	}
+	if max < 0 {
+		max = len(events)
+	}
+	out := make([]*pb.Event, 0, len(events))
+	for _, ev := range events {
+		if ev == nil {
+			continue
+		}
+		out = append(out, ev)
+		if len(out) >= max {
+			break
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func formatDateTimeOrNA(unix int64) string {

@@ -434,3 +434,42 @@ func TestFilteredContainerRowsForDetailSkipsNilEntries(t *testing.T) {
 		t.Fatalf("expected id-a row, got %#v", rows[0])
 	}
 }
+
+func TestCompactEventsFiltersNilAndAppliesLimit(t *testing.T) {
+	events := []*pb.Event{
+		nil,
+		{Id: "a"},
+		nil,
+		{Id: "b"},
+		{Id: "c"},
+	}
+
+	got := compactEvents(events, 2)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 compacted events, got %d", len(got))
+	}
+	if got[0].GetId() != "a" || got[1].GetId() != "b" {
+		t.Fatalf("unexpected compacted order: %#v", got)
+	}
+
+	if got := compactEvents(events, 0); got != nil {
+		t.Fatalf("expected nil when max=0, got %#v", got)
+	}
+	if got := compactEvents(events, -1); len(got) != 3 {
+		t.Fatalf("expected all non-nil events when max<0, got %#v", got)
+	}
+	if got := compactEvents([]*pb.Event{nil, nil}, 10); got != nil {
+		t.Fatalf("expected nil when all events are nil, got %#v", got)
+	}
+}
+
+func TestLastEventTypeSkipsNilEntries(t *testing.T) {
+	m := newTUIModel()
+	m.events = []*pb.Event{
+		nil,
+		{ContainerId: "id-a", Type: "started"},
+	}
+	if got := m.lastEventType("id-a"); got != "started" {
+		t.Fatalf("expected last event type started, got %q", got)
+	}
+}
