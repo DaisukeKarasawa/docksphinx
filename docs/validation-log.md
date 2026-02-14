@@ -3095,3 +3095,29 @@ make quality
 - `cmd/docksphinx.waitOrDone` に `ctx==nil` ガードを追加し、nil context 入力でも panic せず timer 完了で `nil` を返す no-op 契約へ強化。
 - `main_test.go` に `TestWaitOrDone` を追加し、`already canceled context` で `context.Canceled` を返すこと、および active context の timer 完了で `nil` を返すことを回帰固定。
 - 初回テストで `staticcheck SA1012`（nil context 直渡し）を検出し、lint 準拠のため nil 直渡しケースを削除したうえで品質ゲート再通過を確認。
+
+---
+
+## 2026-02-14 (stop wait helper nil-checker guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinxd.waitForProcessExit` に `checker==nil` ガードを追加し、nil function 呼び出し panic ではなく明示エラー（`process checker is nil`）を返す契約へ強化。
+- `main_test.go` に `TestWaitForProcessExitNilChecker` を追加し、nil checker 入力時の明示エラー契約を回帰固定。
