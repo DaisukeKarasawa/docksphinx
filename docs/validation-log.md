@@ -2759,3 +2759,29 @@ make quality
 - `internal/monitor.Start` で、部分初期化状態の実行時依存（`ctx/cancel/eventChan/stateManager/detector/thresholdMon/history`）を補完するガードを追加。
 - `Start` 内でも `Interval` / `ResourceInterval` / `EventHistoryMax` を既定値補正し、`NewEngine` 非経由の起動での ticker/context 由来 panic を回避。
 - `engine_test.go` に `TestEngineStartInitializesMissingRuntimeDependencies` を追加し、依存補完と既定値補正の契約を回帰固定。
+
+---
+
+## 2026-02-14 (grpc broadcaster zero-value subscribe hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Broadcaster.Subscribe` で `subscribers` map の遅延初期化を追加し、`&Broadcaster{}` のゼロ値構築経路でも subscribe 時に panic しないよう強化。
+- `broadcast_test.go` に `TestBroadcasterSubscribeInitializesNilSubscriberMap` を追加し、ゼロ値 broadcaster で subscribe/unsubscribe 契約（登録1件・unsubでclose）を回帰固定。
