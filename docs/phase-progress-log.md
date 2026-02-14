@@ -136,3 +136,39 @@
   - 各コマンドを実行し出力を記録
 - Remaining risks
   - govulncheck/gosec の一部は環境要因で完走不可
+
+---
+
+## フェーズ7: 運用ドキュメント強化（適用・監査・保守導線）
+
+### 開始時（狙い/変更予定/リスク）
+- 狙い: 実装提案の適用性を高めるため、運用/監査/引き継ぎ導線を強化する。
+- 変更予定: quickstart, handover, traceability, risk, incident, security baseline, regression suite などを追加。
+- リスク: 文書が増えすぎて探索性が下がる。
+
+### 終了時
+- What changed
+  - 運用導線文書を追加:
+    - `quickstart.md`
+    - `handover-checklist.md`
+    - `contribution-workflow.md`
+    - `incident-playbook.md`
+    - `macos-launchd-checklist.md`
+  - 品質/監査文書を追加:
+    - `requirements-traceability.md`
+    - `risk-register.md`
+    - `security-baseline-checklist.md`
+    - `minimal-regression-suite.md`
+    - `validation-log-template.md`
+    - `command-output-samples.md`
+  - 索引/導線を更新:
+    - `README.md`
+    - `docs/index.md`
+    - `docs/link-audit.md`
+- Where
+  - `docs/*`（上記）
+- How verified
+  - READMEリンク抽出とdocs実在確認（link audit）
+  - git履歴で変更反映確認
+- Remaining risks
+  - 実コード未適用である点は継続（運用ルール制約）
