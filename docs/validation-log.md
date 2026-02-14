@@ -2866,3 +2866,33 @@ make quality
 
 - `internal/grpc.NewServer` で `ServerOptions` をローカルコピーへ解決してから `Address` trim / `RecentEventLimit` default 補正を適用し、呼び出し元 `opts` を非破壊に変更。
 - `server_test.go` に `TestNewServerDoesNotMutateCallerOptions` を追加し、constructor 実行後も caller 側 options が不変であること、および server 側には default 補正値が反映されることを回帰固定。
+
+---
+
+## 2026-02-14 (grpc server stop cleanup hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Server.Stop` を強化し、`bcastCancel` を常に実行して nil へクリア、`grpc` 停止後に listener を明示 close して nil へクリアするよう修正。
+- `server_test.go` に `TestServerStopCleansUpPartialInitializationState` を追加し、部分初期化サーバー（`grpc=nil`）でも:
+  - broadcaster cancel 実行
+  - listener 解放
+  - address 再バインド可能
+ であることを回帰固定。
