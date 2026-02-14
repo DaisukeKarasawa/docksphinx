@@ -1290,3 +1290,29 @@ make quality
 
 - `cmd/docksphinx.selectRecentEvents` を最適化し、全候補 clone ではなく「ソート後の上位 `limit` 件のみ clone」へ変更。
 - 既存の alias-isolation 回帰テスト（pointer inequality / data non-propagation）が引き続き PASS することを確認。
+
+---
+
+## 2026-02-14 (grpc StateToSnapshot non-mutating sorting regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.TestStateToSnapshotSortsComposeGroupsAndFields` を拡張し、`StateToSnapshot` 実行後も `StateManager` 側の `Groups` 順序および group 内スライス順序が未変更であることを確認。
+- 併せて、呼び出し元入力スライス（`inputGroups`）が変更されないことを確認。
