@@ -199,7 +199,7 @@ func (e *Engine) collectAndDetect() {
 			NetworkNames:   append([]string(nil), container.NetworkNames...),
 		}
 
-		if exists {
+		if exists && oldState != nil {
 			newState.StartedAt = oldState.StartedAt
 			newState.RestartCount = oldState.RestartCount
 			newState.VolumeMountCount = oldState.VolumeMountCount
@@ -227,14 +227,13 @@ func (e *Engine) collectAndDetect() {
 			}
 		}
 
-		if exists {
+		if exists && oldState != nil {
 			newState.CPUThresholdCount = oldState.CPUThresholdCount
 			newState.MemoryThresholdCount = oldState.MemoryThresholdCount
 		}
 
 		// Detect state changes before update (detector uses GetState, which still has old state)
-		stateChanged := !exists && container.State == "running" ||
-			(exists && oldState.State != container.State)
+		stateChanged := didStateChange(exists, oldState, container.State)
 		if stateChanged {
 			events := e.detector.DetectStateChange(
 				container.ID,
@@ -272,6 +271,13 @@ func (e *Engine) collectAndDetect() {
 	}
 
 	e.collectResources(ctx, now)
+}
+
+func didStateChange(exists bool, oldState *ContainerState, currentState string) bool {
+	if !exists || oldState == nil {
+		return currentState == "running"
+	}
+	return oldState.State != currentState
 }
 
 // GetEventChannel returns the event channel

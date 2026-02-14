@@ -420,3 +420,36 @@ func TestEngineLoggerNilSafetyOnInternalPaths(t *testing.T) {
 		}
 	})
 }
+
+func TestDidStateChangeHandlesNilOldState(t *testing.T) {
+	t.Run("new running container is a change", func(t *testing.T) {
+		if !didStateChange(false, nil, "running") {
+			t.Fatal("expected state change for new running container")
+		}
+	})
+
+	t.Run("new non-running container is not treated as start event", func(t *testing.T) {
+		if didStateChange(false, nil, "exited") {
+			t.Fatal("expected no state change event for new non-running container")
+		}
+	})
+
+	t.Run("missing oldState with exists flag does not panic", func(t *testing.T) {
+		if !didStateChange(true, nil, "running") {
+			t.Fatal("expected running state to be treated as change when old state is missing")
+		}
+		if didStateChange(true, nil, "exited") {
+			t.Fatal("expected exited state not to be treated as start change when old state is missing")
+		}
+	})
+
+	t.Run("existing state compares previous and current values", func(t *testing.T) {
+		old := &ContainerState{State: "running"}
+		if didStateChange(true, old, "running") {
+			t.Fatal("expected no change when state is unchanged")
+		}
+		if !didStateChange(true, old, "exited") {
+			t.Fatal("expected change when state transitions")
+		}
+	})
+}
