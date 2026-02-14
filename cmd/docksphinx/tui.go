@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -58,24 +59,13 @@ func runTUI(parent context.Context, address string) error {
 	ctx, cancel := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	client, err := dgrpc.NewClient(ctx, address)
-	if err != nil {
-		return wrapDaemonError("connect", address, err)
-	}
-	defer client.Close()
-
-	stream, err := client.Stream(ctx, true)
-	if err != nil {
-		return wrapDaemonError("stream", address, err)
-	}
-
 	app := tview.NewApplication()
 	model := newTUIModel()
 	root := model.layout(app)
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- model.consumeStream(ctx, app, stream)
+		errCh <- model.streamLoop(ctx, app, address)
 	}()
 
 	app.SetRoot(root, true)
@@ -92,6 +82,54 @@ func runTUI(parent context.Context, address string) error {
 	default:
 	}
 	return runErr
+}
+
+func (m *tuiModel) streamLoop(ctx context.Context, app *tview.Application, address string) error {
+	backoff := 500 * time.Millisecond
+	for {
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		client, err := dgrpc.NewClient(ctx, address)
+		if err != nil {
+			m.queueStatus(app, fmt.Sprintf("stream connect failed: %v (retrying)", err))
+			if err := waitOrDone(ctx, backoff); err != nil {
+				return nil
+			}
+			backoff = nextBackoff(backoff)
+			continue
+		}
+
+		stream, err := client.Stream(ctx, true)
+		if err != nil {
+			_ = client.Close()
+			m.queueStatus(app, fmt.Sprintf("stream subscribe failed: %v (retrying)", err))
+			if err := waitOrDone(ctx, backoff); err != nil {
+				return nil
+			}
+			backoff = nextBackoff(backoff)
+			continue
+		}
+
+		m.queueStatus(app, "stream connected")
+		backoff = 500 * time.Millisecond
+
+		recvErr := m.consumeStream(ctx, app, stream)
+		_ = client.Close()
+		if recvErr == nil || errors.Is(recvErr, context.Canceled) || errors.Is(recvErr, io.EOF) {
+			if ctx.Err() != nil {
+				return nil
+			}
+		} else {
+			m.queueStatus(app, fmt.Sprintf("stream disconnected: %v (reconnecting)", recvErr))
+		}
+
+		if err := waitOrDone(ctx, backoff); err != nil {
+			return nil
+		}
+		backoff = nextBackoff(backoff)
+	}
 }
 
 func newTUIModel() *tuiModel {
@@ -316,6 +354,15 @@ func (m *tuiModel) consumeStream(
 			}
 		})
 	}
+}
+
+func (m *tuiModel) queueStatus(app *tview.Application, message string) {
+	if app == nil {
+		return
+	}
+	app.QueueUpdateDraw(func() {
+		m.renderStatus(message)
+	})
 }
 
 func (m *tuiModel) setTarget(target string) {
