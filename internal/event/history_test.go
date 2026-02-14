@@ -104,6 +104,41 @@ func TestHistoryPreservesTypedNilDataValues(t *testing.T) {
 	}
 }
 
+func TestHistoryPreservesTypedNilInNestedContainers(t *testing.T) {
+	h := NewHistory(2)
+	var nestedNilMap map[string]string
+	var nestedNilSlice []string
+
+	h.Add(&Event{
+		ID: "typed-nil-nested",
+		Data: map[string]interface{}{
+			"nestedMap": map[string]interface{}{
+				"nilMap": nestedNilMap,
+			},
+			"nestedSlice": []interface{}{nestedNilSlice},
+		},
+	})
+
+	got := h.Recent(1)
+	if len(got) != 1 {
+		t.Fatalf("expected one event, got %d", len(got))
+	}
+	nm, ok := got[0].Data["nestedMap"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected nestedMap to remain map, got %#v", got[0].Data["nestedMap"])
+	}
+	if v, ok := nm["nilMap"].(map[string]string); !ok || v != nil {
+		t.Fatalf("expected nested typed nil map, got %#v", nm["nilMap"])
+	}
+	ns, ok := got[0].Data["nestedSlice"].([]interface{})
+	if !ok || len(ns) != 1 {
+		t.Fatalf("expected nestedSlice with one element, got %#v", got[0].Data["nestedSlice"])
+	}
+	if v, ok := ns[0].([]string); !ok || v != nil {
+		t.Fatalf("expected nested typed nil slice, got %#v", ns[0])
+	}
+}
+
 func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	h := NewHistory(5)
 
