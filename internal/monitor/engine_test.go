@@ -192,6 +192,18 @@ func TestDetector(t *testing.T) {
 	}
 }
 
+func TestDetectorNilSafetyContracts(t *testing.T) {
+	var nilDetector *Detector
+	if events := nilDetector.DetectStateChange("cid", "cname", "img", "running"); len(events) != 0 {
+		t.Fatalf("expected nil receiver detector to return empty events, got %#v", events)
+	}
+
+	detector := NewDetector(nil)
+	if events := detector.DetectStateChange("cid", "cname", "img", "running"); len(events) != 0 {
+		t.Fatalf("expected detector with nil state manager to return empty events, got %#v", events)
+	}
+}
+
 func TestThresholdMonitor(t *testing.T) {
 	config := DefaultThresholdConfig()
 	th := NewThresholdMonitor(config)
