@@ -115,3 +115,41 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		t.Fatalf("expected event.max_history=777, got %d", loaded.Event.MaxHistory)
 	}
 }
+
+func TestResolveConfigPathFindsWorkingDirectoryConfig(t *testing.T) {
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, "configs")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatalf("failed to create configs dir: %v", err)
+	}
+	configPath := filepath.Join(configDir, "docksphinx.yaml")
+	if err := os.WriteFile(configPath, []byte("monitor:\n  interval: 5\n"), 0o644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	oldWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd failed: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir failed: %v", err)
+	}
+	defer func() { _ = os.Chdir(oldWD) }()
+
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(dir, "xdg-empty"))
+	got, err := ResolveConfigPath("")
+	if err != nil {
+		t.Fatalf("ResolveConfigPath returned error: %v", err)
+	}
+	if got != configPath {
+		t.Fatalf("expected %s, got %s", configPath, got)
+	}
+}
+
+func TestResolveConfigPathExplicitMissingReturnsError(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing.yaml")
+	_, err := ResolveConfigPath(missing)
+	if err == nil {
+		t.Fatal("expected error for missing explicit config path")
+	}
+}
