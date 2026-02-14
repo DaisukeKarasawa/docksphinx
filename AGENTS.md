@@ -52,6 +52,7 @@ This file defines instructions for coding agents working on this project.
 - gRPC server constructors should trim/validate listen addresses and reject whitespace-only inputs before net.Listen.
 - Constructors accepting options structs should normalize on local copies to avoid mutating caller-provided option objects.
 - Stop/cleanup methods should release auxiliary resources as well (cancel funcs, listeners/channels) even in partially initialized states.
+- Cleanup routines should not rely solely on running flags; release any owned resources even when not running, then nil them for idempotent re-entry.
 - Docker client wrappers should guard nil receivers/internal api clients and return explicit errors instead of panic-prone dereferences.
 - When mapping Docker inspect responses, treat nested pointer sections (e.g., `State`, `Config`) as optional and build output fields with nil-safe fallbacks.
 - Shared conversion helpers (e.g., state/proto builders) should be nil-safe and return explicit empty results instead of panicking on nil inputs.
