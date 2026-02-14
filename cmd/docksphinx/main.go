@@ -394,7 +394,7 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 	sorted := make([]*pb.Event, 0, len(events))
 	for _, ev := range events {
 		if ev != nil {
-			sorted = append(sorted, proto.Clone(ev).(*pb.Event))
+			sorted = append(sorted, ev)
 		}
 	}
 	if len(sorted) == 0 {
@@ -406,10 +406,14 @@ func selectRecentEvents(events []*pb.Event, limit int) []*pb.Event {
 		}
 		return sorted[i].GetId() < sorted[j].GetId()
 	})
-	if len(sorted) <= limit {
-		return sorted
+	if limit > len(sorted) {
+		limit = len(sorted)
 	}
-	return sorted[:limit]
+	out := make([]*pb.Event, 0, limit)
+	for _, ev := range sorted[:limit] {
+		out = append(out, proto.Clone(ev).(*pb.Event))
+	}
+	return out
 }
 
 func waitOrDone(ctx context.Context, d time.Duration) error {
