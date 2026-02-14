@@ -38,6 +38,14 @@ func TestValidateAllowsNonLoopbackWhenEnabled(t *testing.T) {
 	}
 }
 
+func TestValidateAllowsLocalhostCaseInsensitive(t *testing.T) {
+	cfg := Default()
+	cfg.GRPC.Address = "LOCALHOST:50051"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected LOCALHOST loopback to be valid: %v", err)
+	}
+}
+
 func TestValidateRejectsInvalidRegex(t *testing.T) {
 	cfg := Default()
 	cfg.Monitor.Filters.ContainerNames = []string{"["}

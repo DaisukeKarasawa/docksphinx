@@ -124,7 +124,7 @@ func validateGRPCAddress(addr string, allowNonLoopback bool) error {
 }
 
 func isLoopbackHost(host string) bool {
-	if host == "localhost" {
+	if strings.EqualFold(host, "localhost") {
 		return true
 	}
 	ip := net.ParseIP(host)
