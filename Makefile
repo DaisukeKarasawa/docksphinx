@@ -116,4 +116,4 @@ install: build
 # 開発用: ホットリロード（air等を使用する場合）
 dev:
 	@echo "Starting development mode..."
-	# TODO: air等のホットリロードツールを設定
+	@echo "No built-in hot reload target. Use your preferred tool (e.g. air) with docksphinx commands."
