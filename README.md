@@ -25,6 +25,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 実行チェンジログ: `docs/execution-changelog.md`
 - 用語集: `docs/glossary.md`
 - 最終ステータス: `docs/final-status.md`
+- リスク台帳: `docs/risk-register.md`
 
 ## 補足
 
