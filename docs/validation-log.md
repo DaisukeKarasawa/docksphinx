@@ -1942,3 +1942,33 @@ make quality
 - `TestLessComposeGroupCanonicalizesSlicesAndKeepsInputsUnchanged` を追加し、以下を確認:
   - 比較時に内部スライス順を正規化して順序判定されること
   - 比較処理が元の `ComposeGroup` スライスを破壊しないこと（non-mutating）
+
+---
+
+## 2026-02-14 (cli/tui nil-entry render skip hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.printSnapshotTo` の各セクション（containers/recent events/groups/networks/volumes/images）で `nil` 要素を明示スキップし、空行/空リソース行アーティファクトを抑止。
+- `cmd/docksphinx/tui.go` の `renderContainers` / `renderImages` / `renderNetworks` / `renderVolumes` / `renderGroups` / `filteredContainerRowsForDetail` で `nil` 要素をスキップ。
+- 追加テスト:
+  - `TestPrintSnapshotToSkipsNilResourceEntries`
+  - `TestRenderResourcesSkipNilEntries`
+  - `TestFilteredContainerRowsForDetailSkipsNilEntries`
