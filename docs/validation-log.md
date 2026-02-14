@@ -1519,3 +1519,37 @@ make quality
 
 - `cmd/docksphinx` の `renderContainers` と `filteredContainerRowsForDetail` の `sortCPU/sortMemory/sortUptime` に、同値時 `ContainerName asc` タイブレークを追加し、表示順の揺れを抑制。
 - `TestFilteredContainerRowsForDetailUsesNameTieBreakForStableOrdering` を追加し、CPU/MEM/Uptime 同値ケースで name tie-break が適用されることを確認。
+
+---
+
+## 2026-02-14 (snapshot/conversion deterministic tie-break hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `cmd/docksphinx.printSnapshotTo` のソートに同値時タイブレークを追加:
+  - containers: `container_name asc` → tie `container_id asc`
+  - networks: `name asc` → tie `driver/scope/network_id asc`
+  - volumes: `name asc` → tie `driver/mountpoint/usage_note/ref_count asc`
+  - images: `repository/tag asc` → tie `image_id asc`
+  - groups: `project/service asc` → tie `container_ids/network_names` 連結値 asc
+- `internal/grpc.StateToSnapshot` にも同等の tie-break を追加し、変換結果順の決定性を強化。
+- 追加テスト:
+  - `cmd/docksphinx.TestPrintSnapshotToUsesDeterministicTieBreakers`
+  - `internal/grpc.TestStateToSnapshotUsesDeterministicTieBreakers`
