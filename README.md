@@ -14,6 +14,7 @@ make build
 make test
 make test-race
 make security
+make quality
 ```
 
 `make security` は `staticcheck` / `gosec` / `govulncheck` を実行します。  
