@@ -22,6 +22,7 @@
 - `security-baseline-checklist.md`
 - `minimal-regression-suite.md`
 - `acceptance-signoff-template.md`
+- `review-sequence.md`
 - `ci-gate-template.md`
 - `reviewer-checklist.md`
 - `link-audit.md`
