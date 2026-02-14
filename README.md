@@ -30,6 +30,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 検証ログテンプレート: `docs/validation-log-template.md`
 - ハンドオーバーチェックリスト: `docs/handover-checklist.md`
 - PLAN完了チェックリスト: `docs/plan-completion-checklist.md`
+- コマンド出力サンプル（実行証跡）: `docs/command-output-samples.md`
 
 ## 補足
 
