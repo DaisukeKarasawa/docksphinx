@@ -115,3 +115,44 @@ func TestRemovePIDFileIfExistsNoOpCases(t *testing.T) {
 		t.Fatalf("expected missing file no-op success, got: %v", err)
 	}
 }
+
+func TestDescribePIDStatus(t *testing.T) {
+	dir := t.TempDir()
+	pidPath := filepath.Join(dir, "docksphinxd.pid")
+	if err := os.WriteFile(pidPath, []byte("123\n"), 0o600); err != nil {
+		t.Fatalf("failed to create pid file: %v", err)
+	}
+
+	status, stale, err := describePIDStatus(pidPath, func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected alive process to not be stale")
+	}
+	if !strings.Contains(status, "(alive)") {
+		t.Fatalf("expected alive status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(pidPath, func(_ int) error { return syscall.ESRCH })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !stale {
+		t.Fatal("expected stale=true for ESRCH")
+	}
+	if !strings.Contains(status, "(stale)") {
+		t.Fatalf("expected stale status, got %q", status)
+	}
+
+	status, stale, err = describePIDStatus(filepath.Join(dir, "missing.pid"), func(_ int) error { return nil })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stale {
+		t.Fatal("expected stale=false for missing pid")
+	}
+	if status != "pid: not found" {
+		t.Fatalf("expected not found status, got %q", status)
+	}
+}

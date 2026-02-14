@@ -117,12 +117,17 @@ func runStatus(ctx context.Context, cmd *cli.Command) error {
 		return err
 	}
 
-	pidStatus := "pid: not found"
-	if pid, err := readPID(cfg.Daemon.PIDFile); err == nil {
-		if err := syscall.Kill(pid, 0); err == nil {
-			pidStatus = fmt.Sprintf("pid: %d (alive)", pid)
+	pidStatus, stale, err := describePIDStatus(cfg.Daemon.PIDFile, func(pid int) error {
+		return syscall.Kill(pid, 0)
+	})
+	if err != nil {
+		return err
+	}
+	if stale {
+		if rmErr := removePIDFileIfExists(cfg.Daemon.PIDFile); rmErr != nil {
+			pidStatus = pidStatus + " (failed to remove stale pid file)"
 		} else {
-			pidStatus = fmt.Sprintf("pid: %d (stale)", pid)
+			pidStatus = pidStatus + " (stale pid file removed)"
 		}
 	}
 
@@ -214,4 +219,23 @@ func removePIDFileIfExists(path string) error {
 		return err
 	}
 	return nil
+}
+
+func describePIDStatus(pidFile string, checker func(int) error) (status string, stale bool, err error) {
+	pid, err := readPID(pidFile)
+	if err != nil {
+		return "pid: not found", false, nil
+	}
+
+	checkErr := checker(pid)
+	if checkErr == nil {
+		return fmt.Sprintf("pid: %d (alive)", pid), false, nil
+	}
+	if errors.Is(checkErr, syscall.ESRCH) {
+		return fmt.Sprintf("pid: %d (stale)", pid), true, nil
+	}
+	if errors.Is(checkErr, syscall.EPERM) {
+		return fmt.Sprintf("pid: %d (permission denied)", pid), false, nil
+	}
+	return fmt.Sprintf("pid: %d (unknown)", pid), false, nil
 }
