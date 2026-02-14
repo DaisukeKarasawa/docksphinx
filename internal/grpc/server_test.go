@@ -282,6 +282,15 @@ func TestServerGetSnapshotReturnsContextErrorWhenCanceled(t *testing.T) {
 	}
 }
 
+func TestServerGetSnapshotHandlesNilLikeContext(t *testing.T) {
+	srv := &Server{}
+	ctxMap := map[string]context.Context{}
+	_, err := srv.GetSnapshot(ctxMap["missing"], &pb.GetSnapshotRequest{})
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine with nil-like context, got %v", err)
+	}
+}
+
 func TestServerStreamReturnsInitialSnapshotSendError(t *testing.T) {
 	engine, err := monitor.NewEngine(monitor.EngineConfig{
 		Interval:         time.Second,
@@ -434,6 +443,14 @@ func TestServerStreamReturnsContextErrorWhenAlreadyCanceled(t *testing.T) {
 	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
 	if status.Code(err) != codes.Canceled {
 		t.Fatalf("expected canceled error, got %v", err)
+	}
+}
+
+func TestServerStreamHandlesNilStreamContext(t *testing.T) {
+	stream := &stubStreamServer{ctx: nil}
+	err := (&Server{}).Stream(&pb.StreamRequest{}, stream)
+	if status.Code(err) != codes.Unavailable {
+		t.Fatalf("expected unavailable for missing engine with nil stream context, got %v", err)
 	}
 }
 

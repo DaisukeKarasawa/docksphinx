@@ -111,10 +111,9 @@ func (s *Server) GetSnapshot(ctx context.Context, req *pb.GetSnapshotRequest) (*
 	if s == nil {
 		return nil, status.Error(codes.Unavailable, "server not available")
 	}
-	if ctx != nil {
-		if err := ctx.Err(); err != nil {
-			return nil, status.FromContextError(err).Err()
-		}
+	ctx = normalizeContext(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, status.FromContextError(err).Err()
 	}
 	if s.engine == nil {
 		return nil, status.Error(codes.Unavailable, "engine not available")
@@ -136,7 +135,8 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 	if stream == nil {
 		return status.Error(codes.InvalidArgument, "stream is nil")
 	}
-	if err := stream.Context().Err(); err != nil {
+	streamCtx := normalizeContext(stream.Context())
+	if err := streamCtx.Err(); err != nil {
 		return status.FromContextError(err).Err()
 	}
 	if s.engine == nil {
@@ -159,7 +159,7 @@ func (s *Server) Stream(req *pb.StreamRequest, stream pb.DocksphinxService_Strea
 	defer unsub()
 	for {
 		select {
-		case <-stream.Context().Done():
+		case <-streamCtx.Done():
 			return nil
 		case ev, ok := <-sub:
 			if !ok {
@@ -181,4 +181,11 @@ func (s *Server) recentEventLimit() int {
 		return 50
 	}
 	return s.opts.RecentEventLimit
+}
+
+func normalizeContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
