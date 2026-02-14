@@ -17,7 +17,9 @@ make security
 ```
 
 `make security` は `staticcheck` / `gosec` / `govulncheck` を実行します。  
-`govulncheck` は環境依存で内部エラーになる場合があるため、詳細は `docs/security-check-summary.md` を参照してください。
+`govulncheck` は環境依存で内部エラーになる場合があり、その場合は warning を表示して継続します。  
+internal error 以外の失敗は `make security` をエラー終了します。  
+詳細は `docs/security-check-summary.md` を参照してください。
 
 ## Daemon
 
