@@ -699,3 +699,28 @@ make quality
 ### Focused regression assertion
 
 - `internal/grpc` の `TestStateToSnapshotSortsComposeGroupsAndFields` で、`StateToSnapshot` が `groups` と内部配列（ids/names/networks）を決定的順序に整列することを検証。
+
+---
+
+## 2026-02-14 (monitor compose group container-id ordering stabilization pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor` の `TestBuildComposeGroupsUsesComposeLabels` で、group 内 `ContainerIDs` が昇順で安定化されることを検証。
