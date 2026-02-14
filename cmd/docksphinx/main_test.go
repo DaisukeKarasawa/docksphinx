@@ -171,6 +171,18 @@ func TestSelectRecentEvents(t *testing.T) {
 	if aliasInput[0].GetData()["k"] != "v" {
 		t.Fatalf("expected source event data unchanged, got %#v", aliasInput[0].GetData())
 	}
+
+	aliasGotAgain := selectRecentEvents(aliasInput, 1)
+	if len(aliasGotAgain) != 1 {
+		t.Fatalf("expected one selected event in second call, got len=%d", len(aliasGotAgain))
+	}
+	if aliasGotAgain[0] == aliasGot[0] {
+		t.Fatalf("expected independent cloned event across calls, but pointers are identical")
+	}
+	aliasGot[0].Data["k"] = "changed-again"
+	if aliasGotAgain[0].GetData()["k"] != "v" {
+		t.Fatalf("expected second call clone data unchanged, got %#v", aliasGotAgain[0].GetData())
+	}
 }
 
 func TestPrintSnapshotToIncludesSectionsAndNA(t *testing.T) {
