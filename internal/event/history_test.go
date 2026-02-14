@@ -2,6 +2,7 @@ package event
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 )
@@ -91,4 +92,43 @@ func TestHistoryAddAndRecentAreMutationSafe(t *testing.T) {
 	if gotTags, ok := gotAgain[0].Data["tags"].([]interface{}); !ok || len(gotTags) != 2 || gotTags[0] != "x" {
 		t.Fatalf("expected nested slice in history to stay unchanged, got %#v", gotAgain[0].Data["tags"])
 	}
+}
+
+func TestHistoryConcurrentAddAndRecent(t *testing.T) {
+	h := NewHistory(50)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 2000; i++ {
+			h.Add(&Event{
+				ID:        "ev",
+				Timestamp: time.Now(),
+				Data: map[string]interface{}{
+					"i": i,
+				},
+			})
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 2000; i++ {
+			got := h.Recent(10)
+			if len(got) > 10 {
+				t.Errorf("recent size exceeded limit: %d", len(got))
+				return
+			}
+			for _, ev := range got {
+				if ev == nil {
+					t.Errorf("recent returned nil event")
+					return
+				}
+			}
+		}
+	}()
+
+	wg.Wait()
 }
