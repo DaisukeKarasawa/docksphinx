@@ -2954,3 +2954,32 @@ make quality
 - `internal/daemon.cleanup` で `running` フラグによる早期 return を廃止し、非稼働状態でも保有リソース（grpc server / engine / docker client / log sink / pid file）を解放するよう強化。
 - cleanup 後に `grpcServer` / `engine` / `dockerClient` / `logSink` を nil クリアし、再実行時の二重解放を回避する idempotent 挙動へ修正。
 - `daemon_test.go` に `TestDaemonCleanupRunsEvenWhenNotRunningAndIsIdempotent` を追加し、`running=false` でも cleanup が動作すること、2回目 cleanup で追加 close が発生しないことを回帰固定。
+
+---
+
+## 2026-02-14 (grpc client close determinism hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Client.Close` で `conn` / `client` を先に nil クリアし、close 後再利用を常に `client is nil` 契約へ収束させるよう修正（接続がある場合のみ `conn.Close()` 実行）。
+- `client_test.go` に以下を追加:
+  - `TestClientCloseClearsClientForPostCloseCalls`
+  - `TestClientCloseIsIdempotent`
+- close 後再利用時の挙動を下流 gRPC 実装依存から切り離し、決定的エラー契約を回帰固定。
