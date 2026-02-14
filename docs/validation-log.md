@@ -2590,3 +2590,31 @@ make quality
 - `ctx==nil` 時は `context.Background()` に正規化する防御を追加（既存呼び出しとの互換維持）。
 - `broadcast_test.go` に `TestBroadcasterRunReturnsWhenSourceIsNil` を追加し、nil source 引数で即時 return する契約を回帰固定。
 - 実装中に `Run(nil, ...)` テストを一度追加したが、`staticcheck SA1012` に従い nil context 直渡しケースは削除して lint 準拠化。
+
+---
+
+## 2026-02-14 (engine logger nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.Engine` のログ出力箇所（`collectAndDetect` / `publishEvent` / `fillContainerDetails` / `collectResources`）で `e.logger != nil` ガードを追加し、nil logger 注入時の panic を回避。
+- `engine_test.go` に `TestEngineLoggerNilSafetyOnInternalPaths` を追加し、以下を回帰固定:
+  - `collectAndDetect` の early-return 経路が nil logger でも panic しない
+  - `publishEvent` の full-channel warning 経路が nil logger でも panic しない（履歴追加は継続）
