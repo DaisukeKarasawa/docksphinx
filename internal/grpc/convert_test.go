@@ -75,23 +75,24 @@ func TestStateToSnapshotClampsLargeValues(t *testing.T) {
 
 func TestStateToSnapshotSortsComposeGroupsAndFields(t *testing.T) {
 	sm := monitor.NewStateManager()
-	sm.UpdateResources(monitor.ResourceState{
-		Groups: []monitor.ComposeGroup{
-			{
-				Project:        "zeta",
-				Service:        "api",
-				ContainerIDs:   []string{"cid-2", "cid-1"},
-				ContainerNames: []string{"web-2", "web-1"},
-				NetworkNames:   []string{"net-b", "net-a"},
-			},
-			{
-				Project:        "alpha",
-				Service:        "worker",
-				ContainerIDs:   []string{"cid-4", "cid-3"},
-				ContainerNames: []string{"job-2", "job-1"},
-				NetworkNames:   []string{"net-d", "net-c"},
-			},
+	inputGroups := []monitor.ComposeGroup{
+		{
+			Project:        "zeta",
+			Service:        "api",
+			ContainerIDs:   []string{"cid-2", "cid-1"},
+			ContainerNames: []string{"web-2", "web-1"},
+			NetworkNames:   []string{"net-b", "net-a"},
 		},
+		{
+			Project:        "alpha",
+			Service:        "worker",
+			ContainerIDs:   []string{"cid-4", "cid-3"},
+			ContainerNames: []string{"job-2", "job-1"},
+			NetworkNames:   []string{"net-d", "net-c"},
+		},
+	}
+	sm.UpdateResources(monitor.ResourceState{
+		Groups: inputGroups,
 	})
 
 	snapshot := StateToSnapshot(sm)
@@ -129,6 +130,27 @@ func TestStateToSnapshotSortsComposeGroupsAndFields(t *testing.T) {
 	}
 	if !reflect.DeepEqual(second.GetNetworkNames(), []string{"net-a", "net-b"}) {
 		t.Fatalf("unexpected sorted network names for second group: %#v", second.GetNetworkNames())
+	}
+
+	// Non-mutating contract: StateToSnapshot sorting must not alter source resources.
+	if !reflect.DeepEqual(inputGroups[0].ContainerIDs, []string{"cid-2", "cid-1"}) {
+		t.Fatalf("expected caller input groups unchanged, got %#v", inputGroups[0].ContainerIDs)
+	}
+	resourcesAfter := sm.GetResources()
+	if len(resourcesAfter.Groups) != 2 {
+		t.Fatalf("expected 2 source groups after snapshot conversion, got %d", len(resourcesAfter.Groups))
+	}
+	if resourcesAfter.Groups[0].Project != "zeta" || resourcesAfter.Groups[1].Project != "alpha" {
+		t.Fatalf("expected source group order unchanged [zeta alpha], got [%s %s]", resourcesAfter.Groups[0].Project, resourcesAfter.Groups[1].Project)
+	}
+	if !reflect.DeepEqual(resourcesAfter.Groups[0].ContainerIDs, []string{"cid-2", "cid-1"}) {
+		t.Fatalf("expected source group container id order unchanged, got %#v", resourcesAfter.Groups[0].ContainerIDs)
+	}
+	if !reflect.DeepEqual(resourcesAfter.Groups[0].ContainerNames, []string{"web-2", "web-1"}) {
+		t.Fatalf("expected source group container name order unchanged, got %#v", resourcesAfter.Groups[0].ContainerNames)
+	}
+	if !reflect.DeepEqual(resourcesAfter.Groups[0].NetworkNames, []string{"net-b", "net-a"}) {
+		t.Fatalf("expected source group network order unchanged, got %#v", resourcesAfter.Groups[0].NetworkNames)
 	}
 }
 
