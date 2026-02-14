@@ -1391,3 +1391,28 @@ make quality
 ### Focused regression assertion
 
 - `cmd/docksphinx.TestPrintSnapshotToDoesNotMutateSnapshotOrderingFields` を拡張し、`printSnapshotTo` 実行後も `Snapshot.Containers` および `Snapshot.RecentEvents` の入力順序が変化しないことを確認。
+
+---
+
+## 2026-02-14 (grpc resource sorting non-mutating regression pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.TestStateToSnapshotSortsResourcesWithoutMutatingSource` を追加し、`StateToSnapshot` が `Images/Networks/Volumes` を出力用にソートしても、呼び出し元入力および `StateManager` 内の保持順序を変更しないことを確認。
