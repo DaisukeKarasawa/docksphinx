@@ -449,6 +449,9 @@ func (m *tuiModel) renderContainers() {
 	case sortCPU:
 		sort.Slice(rows, func(i, j int) bool {
 			if rows[i].cpu == rows[j].cpu {
+				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+				}
 				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
 			}
 			return rows[i].cpu > rows[j].cpu
@@ -456,6 +459,9 @@ func (m *tuiModel) renderContainers() {
 	case sortMemory:
 		sort.Slice(rows, func(i, j int) bool {
 			if rows[i].mem == rows[j].mem {
+				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+				}
 				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
 			}
 			return rows[i].mem > rows[j].mem
@@ -463,12 +469,20 @@ func (m *tuiModel) renderContainers() {
 	case sortUptime:
 		sort.Slice(rows, func(i, j int) bool {
 			if rows[i].c.GetUptimeSeconds() == rows[j].c.GetUptimeSeconds() {
+				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+				}
 				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
 			}
 			return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds()
 		})
 	default:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].c.GetContainerName() < rows[j].c.GetContainerName() })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+				return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+			}
+			return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+		})
 	}
 
 	for i, r := range rows {
@@ -739,6 +753,9 @@ func (m *tuiModel) filteredContainerRowsForDetail() []*pb.ContainerInfo {
 	case sortCPU:
 		sort.Slice(rows, func(i, j int) bool {
 			if rows[i].cpu == rows[j].cpu {
+				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+				}
 				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
 			}
 			return rows[i].cpu > rows[j].cpu
@@ -746,6 +763,9 @@ func (m *tuiModel) filteredContainerRowsForDetail() []*pb.ContainerInfo {
 	case sortMemory:
 		sort.Slice(rows, func(i, j int) bool {
 			if rows[i].mem == rows[j].mem {
+				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+				}
 				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
 			}
 			return rows[i].mem > rows[j].mem
@@ -753,12 +773,20 @@ func (m *tuiModel) filteredContainerRowsForDetail() []*pb.ContainerInfo {
 	case sortUptime:
 		sort.Slice(rows, func(i, j int) bool {
 			if rows[i].c.GetUptimeSeconds() == rows[j].c.GetUptimeSeconds() {
+				if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+					return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+				}
 				return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
 			}
 			return rows[i].c.GetUptimeSeconds() > rows[j].c.GetUptimeSeconds()
 		})
 	default:
-		sort.Slice(rows, func(i, j int) bool { return rows[i].c.GetContainerName() < rows[j].c.GetContainerName() })
+		sort.Slice(rows, func(i, j int) bool {
+			if rows[i].c.GetContainerName() == rows[j].c.GetContainerName() {
+				return rows[i].c.GetContainerId() < rows[j].c.GetContainerId()
+			}
+			return rows[i].c.GetContainerName() < rows[j].c.GetContainerName()
+		})
 	}
 	out := make([]*pb.ContainerInfo, 0, len(rows))
 	for _, r := range rows {

@@ -142,3 +142,38 @@ func TestFilteredContainerRowsForDetailUsesNameTieBreakForStableOrdering(t *test
 	assertOrder(sortMemory, []string{"a-web", "b-web"})
 	assertOrder(sortUptime, []string{"a-web", "b-web"})
 }
+
+func TestFilteredContainerRowsForDetailUsesContainerIDTieBreakWhenNamesEqual(t *testing.T) {
+	m := newTUIModel()
+	m.snapshot = &pb.Snapshot{
+		Containers: []*pb.ContainerInfo{
+			{ContainerId: "id-b", ContainerName: "same", ImageName: "b:latest", State: "running", UptimeSeconds: 20},
+			{ContainerId: "id-a", ContainerName: "same", ImageName: "a:latest", State: "running", UptimeSeconds: 20},
+		},
+		Metrics: map[string]*pb.ContainerMetrics{
+			"id-b": {CpuPercent: 50, MemoryPercent: 60},
+			"id-a": {CpuPercent: 50, MemoryPercent: 60},
+		},
+	}
+
+	assertOrder := func(mode sortMode, want []string) {
+		t.Helper()
+		m.sortMode = mode
+		rows := m.filteredContainerRowsForDetail()
+		if len(rows) != len(want) {
+			t.Fatalf("expected %d rows, got %d", len(want), len(rows))
+		}
+		got := make([]string, 0, len(rows))
+		for _, r := range rows {
+			got = append(got, r.GetContainerId())
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("unexpected id order for mode=%v: got=%v want=%v", mode, got, want)
+		}
+	}
+
+	assertOrder(sortCPU, []string{"id-a", "id-b"})
+	assertOrder(sortMemory, []string{"id-a", "id-b"})
+	assertOrder(sortUptime, []string{"id-a", "id-b"})
+	assertOrder(sortName, []string{"id-a", "id-b"})
+}
