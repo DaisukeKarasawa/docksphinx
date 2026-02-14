@@ -2562,3 +2562,31 @@ make quality
   - `TestValidateAcceptsTrimmedCaseInsensitiveLogLevel`
   - `TestValidateAcceptsTrimmedAbsolutePaths`
 - `Validate` 単独呼び出しでも前後空白や大文字混在入力を安定的に扱えることを回帰固定。
+
+---
+
+## 2026-02-14 (grpc broadcaster nil-source guard hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/grpc.Broadcaster.Run` に `src==nil` ガードを追加し、nil source channel での無限ブロックを回避。
+- `ctx==nil` 時は `context.Background()` に正規化する防御を追加（既存呼び出しとの互換維持）。
+- `broadcast_test.go` に `TestBroadcasterRunReturnsWhenSourceIsNil` を追加し、nil source 引数で即時 return する契約を回帰固定。
+- 実装中に `Run(nil, ...)` テストを一度追加したが、`staticcheck SA1012` に従い nil context 直渡しケースは削除して lint 準拠化。
