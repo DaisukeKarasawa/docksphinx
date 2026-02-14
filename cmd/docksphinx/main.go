@@ -479,6 +479,9 @@ func isLoopback(address string) bool {
 
 func warnInsecure(address string, insecure bool) {
 	normalizedAddress := strings.TrimSpace(address)
+	if normalizedAddress == "" {
+		return
+	}
 	if insecure || isLoopback(normalizedAddress) {
 		return
 	}

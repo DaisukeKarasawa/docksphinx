@@ -512,6 +512,24 @@ func TestWarnInsecure(t *testing.T) {
 		}
 	})
 
+	t.Run("whitespace-only address does not warn", func(t *testing.T) {
+		orig := os.Stderr
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("pipe setup failed: %v", err)
+		}
+		os.Stderr = w
+		warnInsecure("   ", false)
+		_ = w.Close()
+		os.Stderr = orig
+
+		var buf bytes.Buffer
+		_, _ = io.Copy(&buf, r)
+		if got := buf.String(); got != "" {
+			t.Fatalf("expected no warning for whitespace-only address, got: %q", got)
+		}
+	})
+
 	t.Run("non-loopback warns unless insecure flag set", func(t *testing.T) {
 		orig := os.Stderr
 		r, w, err := os.Pipe()
