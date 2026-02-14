@@ -2814,3 +2814,29 @@ make quality
   - `TestNewServerRejectsWhitespaceAddress`
   - `TestNewServerTrimsAddressBeforeListen`
 - gRPC server 側でも address 入力境界（trim + empty reject）の契約を回帰固定。
+
+---
+
+## 2026-02-14 (monitor detector/state-manager rebind hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/monitor.Start` の detector 補完条件を強化し、`detector.stateManager != engine.stateManager` の不整合時も `NewDetector(engine.stateManager)` へ再接続するよう修正。
+- `engine_test.go` に `TestEngineStartRebindsDetectorToCurrentStateManager` を追加し、部分構築時の detector/state manager 不整合が起動時に自己修復される契約を回帰固定。
