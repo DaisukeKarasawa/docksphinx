@@ -28,6 +28,7 @@ Docker環境を読み取り専用で監視し、CLI/TUIで状態を可視化す�
 - 最終ステータス: `docs/final-status.md`
 - リスク台帳: `docs/risk-register.md`
 - 検証ログテンプレート: `docs/validation-log-template.md`
+- ハンドオーバーチェックリスト: `docs/handover-checklist.md`
 
 ## 補足
 
