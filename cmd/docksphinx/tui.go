@@ -14,6 +14,7 @@ import (
 
 	pb "docksphinx/api/docksphinx/v1"
 	dgrpc "docksphinx/internal/grpc"
+	"docksphinx/internal/snapshotorder"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -521,13 +522,7 @@ func (m *tuiModel) renderImages() {
 	}
 	images := append([]*pb.ImageInfo(nil), m.snapshot.GetImages()...)
 	sort.Slice(images, func(i, j int) bool {
-		if images[i].GetRepository() != images[j].GetRepository() {
-			return images[i].GetRepository() < images[j].GetRepository()
-		}
-		if images[i].GetTag() != images[j].GetTag() {
-			return images[i].GetTag() < images[j].GetTag()
-		}
-		return images[i].GetImageId() < images[j].GetImageId()
+		return snapshotorder.LessImageInfo(images[i], images[j])
 	})
 
 	row := 1
@@ -558,16 +553,7 @@ func (m *tuiModel) renderNetworks() {
 	}
 	networks := append([]*pb.NetworkInfo(nil), m.snapshot.GetNetworks()...)
 	sort.Slice(networks, func(i, j int) bool {
-		if networks[i].GetName() != networks[j].GetName() {
-			return networks[i].GetName() < networks[j].GetName()
-		}
-		if networks[i].GetDriver() != networks[j].GetDriver() {
-			return networks[i].GetDriver() < networks[j].GetDriver()
-		}
-		if networks[i].GetScope() != networks[j].GetScope() {
-			return networks[i].GetScope() < networks[j].GetScope()
-		}
-		return networks[i].GetNetworkId() < networks[j].GetNetworkId()
+		return snapshotorder.LessNetworkInfo(networks[i], networks[j])
 	})
 	row := 1
 	for _, n := range networks {
@@ -598,19 +584,7 @@ func (m *tuiModel) renderVolumes() {
 	}
 	volumes := append([]*pb.VolumeInfo(nil), m.snapshot.GetVolumes()...)
 	sort.Slice(volumes, func(i, j int) bool {
-		if volumes[i].GetName() != volumes[j].GetName() {
-			return volumes[i].GetName() < volumes[j].GetName()
-		}
-		if volumes[i].GetDriver() != volumes[j].GetDriver() {
-			return volumes[i].GetDriver() < volumes[j].GetDriver()
-		}
-		if volumes[i].GetMountpoint() != volumes[j].GetMountpoint() {
-			return volumes[i].GetMountpoint() < volumes[j].GetMountpoint()
-		}
-		if volumes[i].GetUsageNote() != volumes[j].GetUsageNote() {
-			return volumes[i].GetUsageNote() < volumes[j].GetUsageNote()
-		}
-		return volumes[i].GetRefCount() < volumes[j].GetRefCount()
+		return snapshotorder.LessVolumeInfo(volumes[i], volumes[j])
 	})
 	row := 1
 	for _, v := range volumes {
@@ -641,18 +615,7 @@ func (m *tuiModel) renderGroups() {
 	}
 	groups := append([]*pb.ComposeGroup(nil), m.snapshot.GetGroups()...)
 	sort.Slice(groups, func(i, j int) bool {
-		if groups[i].GetProject() != groups[j].GetProject() {
-			return groups[i].GetProject() < groups[j].GetProject()
-		}
-		if groups[i].GetService() != groups[j].GetService() {
-			return groups[i].GetService() < groups[j].GetService()
-		}
-		li := strings.Join(groups[i].GetContainerIds(), ",")
-		lj := strings.Join(groups[j].GetContainerIds(), ",")
-		if li != lj {
-			return li < lj
-		}
-		return strings.Join(groups[i].GetNetworkNames(), ",") < strings.Join(groups[j].GetNetworkNames(), ",")
+		return snapshotorder.LessComposeGroup(groups[i], groups[j])
 	})
 	row := 1
 	for _, g := range groups {

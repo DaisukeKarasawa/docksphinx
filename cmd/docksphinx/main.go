@@ -17,6 +17,7 @@ import (
 	"docksphinx/internal/config"
 	"docksphinx/internal/eventorder"
 	dgrpc "docksphinx/internal/grpc"
+	"docksphinx/internal/snapshotorder"
 	"github.com/urfave/cli/v3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -228,10 +229,7 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 	fmt.Fprintln(out, "CONTAINER ID\tNAME\tSTATE\tCPU%\tMEM%\tUPTIME(s)\tIMAGE")
 	containers := append([]*pb.ContainerInfo(nil), snapshot.GetContainers()...)
 	sort.Slice(containers, func(i, j int) bool {
-		if containers[i].GetContainerName() == containers[j].GetContainerName() {
-			return containers[i].GetContainerId() < containers[j].GetContainerId()
-		}
-		return containers[i].GetContainerName() < containers[j].GetContainerName()
+		return snapshotorder.LessContainerInfo(containers[i], containers[j])
 	})
 	for _, c := range containers {
 		m := snapshot.GetMetrics()[c.GetContainerId()]
@@ -275,18 +273,7 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 		fmt.Fprintln(out, "\nGROUPS")
 		groups := append([]*pb.ComposeGroup(nil), snapshot.GetGroups()...)
 		sort.Slice(groups, func(i, j int) bool {
-			if groups[i].GetProject() != groups[j].GetProject() {
-				return groups[i].GetProject() < groups[j].GetProject()
-			}
-			if groups[i].GetService() != groups[j].GetService() {
-				return groups[i].GetService() < groups[j].GetService()
-			}
-			li := strings.Join(groups[i].GetContainerIds(), ",")
-			lj := strings.Join(groups[j].GetContainerIds(), ",")
-			if li != lj {
-				return li < lj
-			}
-			return strings.Join(groups[i].GetNetworkNames(), ",") < strings.Join(groups[j].GetNetworkNames(), ",")
+			return snapshotorder.LessComposeGroup(groups[i], groups[j])
 		})
 		for _, g := range groups {
 			networkNames := append([]string(nil), g.GetNetworkNames()...)
@@ -306,16 +293,7 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 		fmt.Fprintln(out, "\nNETWORKS")
 		networks := append([]*pb.NetworkInfo(nil), snapshot.GetNetworks()...)
 		sort.Slice(networks, func(i, j int) bool {
-			if networks[i].GetName() != networks[j].GetName() {
-				return networks[i].GetName() < networks[j].GetName()
-			}
-			if networks[i].GetDriver() != networks[j].GetDriver() {
-				return networks[i].GetDriver() < networks[j].GetDriver()
-			}
-			if networks[i].GetScope() != networks[j].GetScope() {
-				return networks[i].GetScope() < networks[j].GetScope()
-			}
-			return networks[i].GetNetworkId() < networks[j].GetNetworkId()
+			return snapshotorder.LessNetworkInfo(networks[i], networks[j])
 		})
 		for _, n := range networks {
 			fmt.Fprintf(
@@ -333,19 +311,7 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 		fmt.Fprintln(out, "\nVOLUMES")
 		volumes := append([]*pb.VolumeInfo(nil), snapshot.GetVolumes()...)
 		sort.Slice(volumes, func(i, j int) bool {
-			if volumes[i].GetName() != volumes[j].GetName() {
-				return volumes[i].GetName() < volumes[j].GetName()
-			}
-			if volumes[i].GetDriver() != volumes[j].GetDriver() {
-				return volumes[i].GetDriver() < volumes[j].GetDriver()
-			}
-			if volumes[i].GetMountpoint() != volumes[j].GetMountpoint() {
-				return volumes[i].GetMountpoint() < volumes[j].GetMountpoint()
-			}
-			if volumes[i].GetUsageNote() != volumes[j].GetUsageNote() {
-				return volumes[i].GetUsageNote() < volumes[j].GetUsageNote()
-			}
-			return volumes[i].GetRefCount() < volumes[j].GetRefCount()
+			return snapshotorder.LessVolumeInfo(volumes[i], volumes[j])
 		})
 		for _, v := range volumes {
 			fmt.Fprintf(
@@ -363,13 +329,7 @@ func printSnapshotTo(snapshot *pb.Snapshot, out io.Writer) {
 		fmt.Fprintln(out, "\nIMAGES")
 		images := append([]*pb.ImageInfo(nil), snapshot.GetImages()...)
 		sort.Slice(images, func(i, j int) bool {
-			if images[i].GetRepository() != images[j].GetRepository() {
-				return images[i].GetRepository() < images[j].GetRepository()
-			}
-			if images[i].GetTag() != images[j].GetTag() {
-				return images[i].GetTag() < images[j].GetTag()
-			}
-			return images[i].GetImageId() < images[j].GetImageId()
+			return snapshotorder.LessImageInfo(images[i], images[j])
 		})
 		for _, img := range images {
 			fmt.Fprintf(

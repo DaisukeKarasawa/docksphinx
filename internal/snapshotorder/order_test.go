@@ -1,0 +1,123 @@
+package snapshotorder
+
+import (
+	"fmt"
+	"reflect"
+	"sort"
+	"testing"
+
+	pb "docksphinx/api/docksphinx/v1"
+)
+
+func TestLessContainerInfo(t *testing.T) {
+	items := []*pb.ContainerInfo{
+		{ContainerName: "same", ContainerId: "id-b"},
+		{ContainerName: "same", ContainerId: "id-a"},
+		{ContainerName: "alpha", ContainerId: "id-z"},
+	}
+	sort.Slice(items, func(i, j int) bool { return LessContainerInfo(items[i], items[j]) })
+	got := []string{
+		items[0].GetContainerName() + "/" + items[0].GetContainerId(),
+		items[1].GetContainerName() + "/" + items[1].GetContainerId(),
+		items[2].GetContainerName() + "/" + items[2].GetContainerId(),
+	}
+	want := []string{"alpha/id-z", "same/id-a", "same/id-b"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected order: got=%v want=%v", got, want)
+	}
+}
+
+func TestLessComposeGroup(t *testing.T) {
+	items := []*pb.ComposeGroup{
+		{Project: "same", Service: "svc", ContainerIds: []string{"b", "a"}, NetworkNames: []string{"n2", "n1"}},
+		{Project: "same", Service: "svc", ContainerIds: []string{"a"}, NetworkNames: []string{"n2", "n1"}},
+		{Project: "alpha", Service: "svc", ContainerIds: []string{"z"}, NetworkNames: []string{"n9"}},
+	}
+	sort.Slice(items, func(i, j int) bool { return LessComposeGroup(items[i], items[j]) })
+	got := []string{
+		items[0].GetProject() + "/" + items[0].GetService() + ":" + join(items[0].GetContainerIds()) + ":" + join(items[0].GetNetworkNames()),
+		items[1].GetProject() + "/" + items[1].GetService() + ":" + join(items[1].GetContainerIds()) + ":" + join(items[1].GetNetworkNames()),
+		items[2].GetProject() + "/" + items[2].GetService() + ":" + join(items[2].GetContainerIds()) + ":" + join(items[2].GetNetworkNames()),
+	}
+	want := []string{
+		"alpha/svc:z:n9",
+		"same/svc:a:n2,n1",
+		"same/svc:b,a:n2,n1",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected order: got=%v want=%v", got, want)
+	}
+}
+
+func TestLessNetworkInfo(t *testing.T) {
+	items := []*pb.NetworkInfo{
+		{Name: "same", Driver: "bridge", Scope: "local", NetworkId: "n2"},
+		{Name: "same", Driver: "bridge", Scope: "local", NetworkId: "n1"},
+		{Name: "alpha", Driver: "bridge", Scope: "local", NetworkId: "n0"},
+	}
+	sort.Slice(items, func(i, j int) bool { return LessNetworkInfo(items[i], items[j]) })
+	got := []string{
+		items[0].GetName() + "/" + items[0].GetNetworkId(),
+		items[1].GetName() + "/" + items[1].GetNetworkId(),
+		items[2].GetName() + "/" + items[2].GetNetworkId(),
+	}
+	want := []string{"alpha/n0", "same/n1", "same/n2"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected order: got=%v want=%v", got, want)
+	}
+}
+
+func TestLessVolumeInfo(t *testing.T) {
+	items := []*pb.VolumeInfo{
+		{Name: "same", Driver: "local", Mountpoint: "/m", UsageNote: "note", RefCount: 2},
+		{Name: "same", Driver: "local", Mountpoint: "/m", UsageNote: "note", RefCount: 1},
+		{Name: "alpha", Driver: "local", Mountpoint: "/a", UsageNote: "note", RefCount: 9},
+	}
+	sort.Slice(items, func(i, j int) bool { return LessVolumeInfo(items[i], items[j]) })
+	got := []string{
+		fmt.Sprintf("%s/%s/%s/%s/%d", items[0].GetName(), items[0].GetDriver(), items[0].GetMountpoint(), items[0].GetUsageNote(), items[0].GetRefCount()),
+		fmt.Sprintf("%s/%s/%s/%s/%d", items[1].GetName(), items[1].GetDriver(), items[1].GetMountpoint(), items[1].GetUsageNote(), items[1].GetRefCount()),
+		fmt.Sprintf("%s/%s/%s/%s/%d", items[2].GetName(), items[2].GetDriver(), items[2].GetMountpoint(), items[2].GetUsageNote(), items[2].GetRefCount()),
+	}
+	want := []string{
+		"alpha/local//a/note/9",
+		"same/local//m/note/1",
+		"same/local//m/note/2",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected order: got=%v want=%v", got, want)
+	}
+}
+
+func TestLessImageInfo(t *testing.T) {
+	items := []*pb.ImageInfo{
+		{Repository: "same", Tag: "latest", ImageId: "img-b"},
+		{Repository: "same", Tag: "latest", ImageId: "img-a"},
+		{Repository: "alpha", Tag: "latest", ImageId: "img-z"},
+	}
+	sort.Slice(items, func(i, j int) bool { return LessImageInfo(items[i], items[j]) })
+	got := []string{
+		items[0].GetRepository() + ":" + items[0].GetTag() + ":" + items[0].GetImageId(),
+		items[1].GetRepository() + ":" + items[1].GetTag() + ":" + items[1].GetImageId(),
+		items[2].GetRepository() + ":" + items[2].GetTag() + ":" + items[2].GetImageId(),
+	}
+	want := []string{
+		"alpha:latest:img-z",
+		"same:latest:img-a",
+		"same:latest:img-b",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected order: got=%v want=%v", got, want)
+	}
+}
+
+func join(parts []string) string {
+	out := ""
+	for i, p := range parts {
+		if i > 0 {
+			out += ","
+		}
+		out += p
+	}
+	return out
+}
