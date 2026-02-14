@@ -83,3 +83,32 @@ func TestBroadcasterSendDoesNotBlockWhenSubscriberIsSlow(t *testing.T) {
 	default:
 	}
 }
+
+func TestBroadcasterNilSafetyContracts(t *testing.T) {
+	var b *Broadcaster
+
+	ch, unsub := b.Subscribe()
+	unsub() // should not panic
+	select {
+	case _, ok := <-ch:
+		if ok {
+			t.Fatal("expected closed channel from nil broadcaster subscribe")
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected nil broadcaster subscribe channel to be closed immediately")
+	}
+
+	b.Unsubscribe(nil) // should not panic
+	b.Send(nil)        // should not panic
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		b.Run(context.Background(), make(chan *event.Event))
+	}()
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected nil broadcaster run to return immediately")
+	}
+}

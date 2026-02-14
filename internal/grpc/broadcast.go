@@ -25,6 +25,11 @@ func NewBroadcaster() *Broadcaster {
 // Subscribe adds a new subscriber and returns a channel and an unsubscribe function.
 // Call the returned function (e.g. defer unsub()) when done receiving.
 func (b *Broadcaster) Subscribe() (ch <-chan *event.Event, unsub func()) {
+	if b == nil {
+		closed := make(chan *event.Event)
+		close(closed)
+		return closed, func() {}
+	}
 	writable := make(chan *event.Event, subscriberChanBuf)
 	b.mu.Lock()
 	b.subscribers[writable] = struct{}{}
@@ -34,6 +39,9 @@ func (b *Broadcaster) Subscribe() (ch <-chan *event.Event, unsub func()) {
 
 // Unsubscribe removes the subscriber and closes its channel
 func (b *Broadcaster) Unsubscribe(ch chan *event.Event) {
+	if b == nil || ch == nil {
+		return
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if _, ok := b.subscribers[ch]; ok {
@@ -44,6 +52,9 @@ func (b *Broadcaster) Unsubscribe(ch chan *event.Event) {
 
 // Send sends the event to all current subscribers (non-blocking; drops if channel full)
 func (b *Broadcaster) Send(ev *event.Event) {
+	if b == nil {
+		return
+	}
 	if ev == nil {
 		return
 	}
@@ -61,6 +72,9 @@ func (b *Broadcaster) Send(ev *event.Event) {
 // Run reads from src and forwards to all subscribers. Call in a goroutine;
 // stops when ctx is canceled or src is closed.
 func (b *Broadcaster) Run(ctx context.Context, src <-chan *event.Event) {
+	if b == nil {
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
