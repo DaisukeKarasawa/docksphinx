@@ -2449,3 +2449,33 @@ make quality
 - `internal/docker.GetContainerDetails` で `containerInspect.State` が nil の場合でも panic せず `State/StartedAt/FinishedAt` を安全に組み立てるよう修正。
 - `calculateStatus` を nil-safe 化し、`nil` 入力時は `"Unknown"` を返す契約を追加。
 - `internal/docker/client_nil_safety_test.go` に `TestCalculateStatusNilState` / `TestCalculateStatusKnownStates` を追加し、nil/既知ステータスの表示契約を回帰固定。
+
+---
+
+## 2026-02-14 (daemon lifecycle nil-safety hardening pass)
+
+### Unified gate run
+
+```bash
+go test ./...
+make quality
+```
+
+結果:
+- `go test ./...`: PASS
+- `make quality`: PASS
+  - `make test`: PASS
+  - `make test-race`: PASS
+  - `make security`: PASS
+    - `gosec`: PASS (Issues: 0)
+    - `govulncheck -mode=binary`: PASS
+    - `govulncheck ./...`: known internal error (warning)
+
+### Focused regression assertion
+
+- `internal/daemon.Daemon.Run` を hardening:
+  - nil receiver は `daemon is nil` エラー
+  - 未初期化依存（cfg/engine/grpc/docker client 欠落）は `daemon is not initialized` エラー
+  - `ctx=nil` を `context.Background()` へ正規化
+- `Stop`/`cleanup`/`writePID`/`removePID` に nil-safe ガードを追加し、部分初期化状態や nil receiver でも panic を回避。
+- `internal/daemon/daemon_test.go` を新規追加し、nil receiver / 未初期化 / 部分初期化 cleanup の契約を回帰固定。
