@@ -58,8 +58,17 @@ func (b *Broadcaster) Send(ev *event.Event) {
 }
 
 // Run reads from src and forwards to all subscribers. Call in a goroutine; stops when src is closed.
+// When src is closed, all subscriber channels are closed so that Stream handlers can detect
+// the shutdown and return, allowing GracefulStop to complete without deadlock.
 func (b *Broadcaster) Run(src <-chan *event.Event) {
 	for ev := range src {
 		b.Send(ev)
+	}
+	// Source closed — close all subscriber channels so Stream handlers unblock.
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for ch := range b.subscribers {
+		close(ch)
+		delete(b.subscribers, ch)
 	}
 }
